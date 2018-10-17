@@ -1,3 +1,5 @@
+#TODO : perform the computation of resps (l35) mod o to save time
+#TODO : remove G from parameters, useless
 import random, string
 from collections import namedtuple 
 from petlib.ec import EcGroup
