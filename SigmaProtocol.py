@@ -2,7 +2,7 @@ import random, string
 from collections import namedtuple 
 from petlib.ec import EcGroup
 
-SetupOutputParams = namedtuple("SetupOutputParams", "G g1 g2 o")
+SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
 class SigmaProtocol:
 	def __init__(self, verifierClass, proverClass):
 		self.verifierClass = verifierClass
@@ -14,7 +14,7 @@ class SigmaProtocol:
 	def run(self): 
 		params = self.setup()
 
-		victor = self.verifierClass(params)
+		victor = self.verifierClass(mask(params))
 		peggy = self.proverClass(params)
 
 		commitment, publicInfo = peggy.commit()
@@ -22,9 +22,12 @@ class SigmaProtocol:
 		response = peggy.computeResponse(challenge)
 		victor.verify(response)
 
+	def mask(params):
+		return (tuple(params[:end-1]))
+
 class Prover:
 	def __init__(self, params):
-		self.params = params
+		self.params = params()
 
 	def commit(self):
 		pass

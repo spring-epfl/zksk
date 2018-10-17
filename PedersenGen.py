@@ -10,10 +10,6 @@ SetupOutputParams = namedtuple("SetupOutputParams", "G g_tab o")
 class PedersenProver(Prover):
 	def __init__(self, params):
 		self.params = params
-		self.secrets = []
-		for i in range(len(params.g_tab)): #we build N secrets
-			self.secrets.append(params.o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
-		print(len(self.secrets), 'secrets : ', self.secrets)
 
 	def commit(self):
 		print('\ncommiting')
@@ -95,7 +91,12 @@ class PedersenProtocol(SigmaProtocol):
 				randWord = randomword(30).encode("UTF-8")
 				g_tab.append(G.hash_to_point(randWord)) # a second generator for G
 			o = G.order()
-			return SetupOutputParams(G, g_tab, o)
+
+			self.secrets = []
+			for i in range(len(g_tab)): #we build N secrets
+				self.secrets.append(params.o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
+		
+			return SetupOutputParams(g_tab, o, self.secrets)
 
 
 
