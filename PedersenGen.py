@@ -8,22 +8,31 @@ SetupOutputParams = namedtuple("SetupOutputParams", "G g_tab o")
 class PedersenProver(Prover):
 	def __init__(self, params):
 		self.params = params
-		self.secret1 = params.o.random() # peggy wishes to prove she knows the discrete logarithm equal to this value
-		self.secret2 = params.o.random()
+		self.secrets = []
+		for i in range(len(params.g_tab)): #we build N secrets
+			self.secrets.append(params.o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
+		print(len(self.secrets), 'secrets : ', self.secrets)
 
 	def commit(self):
+		print('\ncommiting')
 		G, g_tab, o = self.params
-		self.k1 = o.random()
-		self.k2 = o.random()
+		self.ks = []
+		for i in range(len(g_tab)): #we build a N-commitments
+			self.ks.append(o.random())
 		# one could create an array ks and secrets to generalize this algorithm. 
 		# with |array of ks| = 1 and |array of secrets| = 1 we would obtain the schnorr zkp
-		commitment = 
-		#(self.k1 * g1, self.k2 * g2) 
-		publicInfo = (self.secret1 * g1, self.secret2 * g2)
+		commitment = (a*b for a,b in zip(self.ks, g_tab))
+		commitment = tuple(commitment)
+		publicInfo = (a*b for a,b in zip (self.secrets, g_tab))
+		publicInfo = tuple(publicInfo)
+		print ('\ncommitment = ', commitment, '\npublicInfo = ', publicInfo)
 		return commitment, publicInfo
 
 	def computeResponse(self, challenge):
-		return (self.k1 + challenge * self.secret1, self.k2 + challenge * self.secret2)
+		wchal = [challenge*x for x in self.secrets]
+		resps = [self.ks[i]+wchal[i] for i in range(len(self.ks))]
+		print('\n responses : ', resps)
+		return resps
 
 	def sendResponse(self, challenge):
 		response = self.computeResponse(challenge) #could create a private non defined method called compute response in an interface Prover
@@ -37,15 +46,29 @@ class PedersenVerifier(Verifier):
 		self.commitment = commitment
 		self.publicInfo = publicInfo	
 		self.challenge = self.params.o.random()
+		print('\nchallenge is ', self.challenge)
 		return self.challenge
 					
 	def verify(self, response):
 		G, g_tab, o = self.params
-		(y1, y2) = self.publicInfo 
-		(r1, r2) = self.commitment
-		leftSide = (response[0] * g1) + (response[1] * g2)
-		rightSide = (self.challenge * y1 + r1) + (self.challenge * y2 + r2)
-		if leftSide == rightSide:
+		y = self.publicInfo 
+		r = self.commitment
+
+		
+		leftSide =  [a*b for a,b in zip(response, g_tab)]
+		sumleft = leftSide[0] #Ugly but simpler than converting 0 in Bn
+		for i in range(2,len(leftSide)):
+			sumleft+= leftSide[i]
+		#leftSide = (response[0] * g1) + (response[1] * g2) ...
+
+		#rightSide = (challenge * y1 + r1) + (challenge*y2+r2) ...
+		# (generalization of rightSide = challenge*y + r in Schnorr)
+		rightSide = [self.challenge*yelem + relem for yelem, relem in zip(y, r)]
+		sumright = rightSide[0] #Ugly but simpler than converting 0 in Bn
+		for i in range(2,len(rightSide)):
+			sumright+= rightSide[i]
+
+		if sumright == sumleft: #If the result
 			print("Verified")
 		else:
 			print("Not verified")
@@ -55,8 +78,8 @@ def randomword(length):
     return ''.join(random.choice(letters) for i in range(length))
 
 class PedersenProtocol(SigmaProtocol):
-	def __init__(self, verifierClass, proverClass, N)
-		#super().__init__
+	def __init__(self, verifierClass, proverClass, N):
+		super().__init__(verifierClass, proverClass)
 		self.nbases = N
 
 	def setup(self):
@@ -74,6 +97,6 @@ class PedersenProtocol(SigmaProtocol):
 
 
 
-N= 4
+N= 6
 pedersenProtocol = PedersenProtocol(PedersenVerifier, PedersenProver, N)
 pedersenProtocol.run()
