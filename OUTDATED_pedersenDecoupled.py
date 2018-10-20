@@ -19,7 +19,7 @@ class PedersenProver(RandomlySimulatableProver):
 		# with |array of ks| = 1 and |array of secrets| = 1 we would obtain the schnorr zkp
 		commitment = (self.k1 * g1, self.k2 * g2) 
 		public_info = (self.secret1 * g1, self.secret2 * g2)
-		return commitment, public_info
+		return (commitment, public_info)
 
 	def computeResponse(self, challenge):
 		return (self.k1 + challenge * self.secret1, self.k2 + challenge * self.secret2)

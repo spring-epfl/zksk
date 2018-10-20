@@ -59,7 +59,7 @@ class RandomlySimulatableProver(SimulatableProver):
 	def randomlySimulate(self):
 		c = self.generateRandomChallenge()
 		s = self.generateRandomResponse()
-		return (c, s, self.simulate(c, s))
+		return self.simulate(c, s)
 
 
 class Verifier:

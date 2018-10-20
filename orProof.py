@@ -9,40 +9,36 @@ class OrVerifier:
 		self.or_verifier1 = or_verifier1(params[0])
 		self.or_verifier2 = or_verifier2(params[1])
 
-	def sendChallenge(self, commitment, public_info):
-		(commitment1, commitment2) = commitment
-		(public_info1, public_info2, challenge2) = public_info
-		self.challenge1 = self.or_verifier1.sendChallenge(commitment1, public_info1)
-
-		return (self.challenge1, challenge2) 
+	def sendChallenge(self, commitment1, public_info1):
+		return self.or_verifier1.sendChallenge(commitment1, public_info1)
 	
 	def verify(self, commitment, challenge, response, public_info):
-		print("commitment {0}".format(commitment))
 		commitment1, commitment2 = commitment
 		challenge1, challenge2 = challenge
 		response1, response2 = response
-		(public_info1, public_info2, _) = public_info
+		(public_info1, public_info2) = public_info
 		#in the book there is c = c1 XOR c2 but why do that since c is computed as c = c1 XOR c2 by the prover?
 		return self.or_verifier1.verify(commitment1, challenge1, response1, public_info1) and self.or_verifier2.verify(commitment2, challenge2, response2, public_info2)
 
 class OrProver(Prover):
 	def __init__(self, p1: Prover, p2: SimulatableProver, params):
 		self.params = params
-		self.p1 = p1(params[0]) #the first prover holds a secret while the other doesn't
+		self.p1 = p1(params[0]) 
 		self.p2 = p2(params[1])
 
 	def commit(self):
 		(commitment1, public_info1) = self.p1.commit()
-		(_, public_info2) = self.p2.commit()
-		challenge2, response2, commitment2 = self.p2.randomlySimulate()
-		self.challenge2 = challenge2 #need to pass challenge2 inside sendChallenge so it gets sent to peggy compute response and to victor.verify, very hackish and ugly but it works...
-		self.response2 = response2
-		return ((commitment1, commitment2), (public_info1, public_info2, challenge2))
 
-	def computeResponse(self, challenge): 
-		challenge1, challenge2 = challenge
-		response1 = self.p1.computeResponse(challenge1)
-		return (response1, self.response2)
+		print("In orProof commit commitment1 {0}\n, public_info1 {1}\n".format(commitment1, public_info1))
+		(commitment_to_trash, public_info2) = self.p2.commit()
+		(challenge2, response2, commitment2) = self.p2.randomlySimulate()
+		print("in orProof commit challenge2{0}\n response2{1}, commitment2{2}".format(challenge2, response2, commitment2))
+		self.challenge2 = challenge2
+		self.response2 = response2
+		return ((commitment1, public_info1), (commitment2, public_info2, challenge2))
+
+	def computeResponse(self, challenge1): 
+		return (self.p1.computeResponse(challenge1), self.response2)
 		
 
 class OrProtocol(SigmaProtocol):
@@ -50,6 +46,16 @@ class OrProtocol(SigmaProtocol):
 		super().__init__(verifier_class_creator, prover_class_creator)
 		self.protocol1 = protocol1
 		self.protocol2 = protocol2
+
+	def verify(self) -> bool:
+		params = self.setup()
+		victor = self.verifierClass(params)
+		peggy = self.proverClass(params)
+		((commitment1, public_info1), (commitment2, public_info2, challenge2)) = peggy.commit()
+		challenge1 = victor.sendChallenge(commitment1, public_info1)
+		(response1, response2) = peggy.computeResponse(challenge1)
+		return victor.verify((commitment1, commitment2), (challenge1, challenge2), (response1, response2), (public_info1, public_info2))
+
 		
 	def setup(self):
 		return (self.protocol1.setup(), self.protocol2.setup())
