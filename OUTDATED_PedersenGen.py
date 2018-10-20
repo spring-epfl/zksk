@@ -5,19 +5,17 @@ from collections import namedtuple
 from petlib.ec import EcGroup
 from SigmaProtocol import Prover, Verifier, SigmaProtocol
 
-SetupOutputParams = namedtuple("SetupOutputParams", "G g_tab o")
+SetupOutputParams = namedtuple("SetupOutputParams", "g_tab secrets")
 
 class PedersenProver(Prover):
 	def __init__(self, params):
 		self.params = params
 
 	def commit(self):
-		print('\ncommiting')
 		G, g_tab, o = self.params
 		self.ks = []
 		for i in range(len(g_tab)): #we build a N-commitments
 			self.ks.append(o.random())
-		# one could create an array ks and secrets to generalize this algorithm. 
 		# with |array of ks| = 1 and |array of secrets| = 1 we would obtain the schnorr zkp
 		commitment = (a*b for a,b in zip(self.ks, g_tab))
 		commitment = tuple(commitment)
@@ -38,17 +36,17 @@ class PedersenProver(Prover):
 
 class PedersenVerifier(Verifier):
 	def __init__(self, params):
-		self.params = params
+		self.g_tab = params
 
 	def sendChallenge(self, commitment, publicInfo):
 		self.commitment = commitment
 		self.publicInfo = publicInfo	
-		self.challenge = self.params.o.random()
+		self.challenge = self.g_tab[0].group.o.random()
 		print('\nchallenge is ', self.challenge)
 		return self.challenge
 					
 	def verify(self, response):
-		G, g_tab, o = self.params
+		g_tab= self.params
 		y = self.publicInfo 
 		r = self.commitment
 
@@ -94,9 +92,9 @@ class PedersenProtocol(SigmaProtocol):
 
 			self.secrets = []
 			for i in range(len(g_tab)): #we build N secrets
-				self.secrets.append(params.o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
+				self.secrets.append(o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
 		
-			return SetupOutputParams(g_tab, o, self.secrets)
+			return SetupOutputParams(g_tab, self.secrets)
 
 
 
