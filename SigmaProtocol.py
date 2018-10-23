@@ -3,7 +3,7 @@ from collections import namedtuple
 from petlib.ec import EcGroup
 
 #SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
-Params = attr.make_class("Params", ["tab_g", "secrets"])
+Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
 # @attr.s
 # class Params:
 # 	g_tab = attr.ib(factory=list)
@@ -18,12 +18,12 @@ class SigmaProtocol:
 		pass
 		
 	def run(self): 
-		params = self.setup()
-		victor = self.verifierClass(params.tab_g)
+		params, params_verif = self.setup()
+		victor = self.verifierClass(params_verif)
 		peggy = self.proverClass(params)
 
-		commitment, publicInfo = peggy.commit()
-		challenge = victor.sendChallenge(commitment, publicInfo)	
+		commitment = peggy.commit()
+		challenge = victor.sendChallenge(commitment)	
 		response = peggy.computeResponse(challenge)
 		victor.verify(response)
 
@@ -39,10 +39,10 @@ class Prover: #The Prover class is built on an array of generators and an array 
 		pass
 
 class Verifier: #The Verifier class is built on an array of generators
-	def __init__(self, generators):
-		self.tab_g = generators
+	def __init__(self, params_verif):
+		self.params = params_verif
 
-	def sendChallenge(self, commitment, publicInfo):
+	def sendChallenge(self, commitment):
 		pass	
 	def verify(self, response):
 		pass
