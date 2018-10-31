@@ -37,6 +37,8 @@ class Prover: #The Prover class is built on an array of generators and an array 
 		pass
 	def computeResponse(self, challenge):
 		pass
+	def simulate(self, commitment, challenge, response):
+		pass
 
 class Verifier: #The Verifier class is built on an array of generators
 	def __init__(self, params_verif):
@@ -44,7 +46,7 @@ class Verifier: #The Verifier class is built on an array of generators
 
 	def sendChallenge(self, commitment):
 		pass	
-	def verify(self, response):
+	def verify(self, response, commitment, challenge):
 		pass
 
 
