@@ -47,7 +47,7 @@ class PedersenVerifier(Verifier):
 		self.commitment = commitment
 		self.challenge = self.o.random() #Replace by a hash of generators + public info
 		#self.challenge = sha256((public_info+tab_g[0]).export()).digest()
-		self.challenge = binascii.hexlify(self.challenge)
+		#self.challenge = binascii.hexlify(self.challenge)
 		print('\nchallenge is ', self.challenge)
 		#raise Exception('stop hammertime')
 		return self.challenge
