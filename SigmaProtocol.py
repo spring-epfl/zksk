@@ -36,13 +36,18 @@ class SigmaProtocol:
 
 
 class Prover: #The Prover class is built on an array of generators and an array of secrets
-	def __init__(self, params):
-		self.params = params
+	def __init__(self, generators, secret_names, secret_values, public_info):
+		self.generators = generators
+		self.secret_names = secret_names
+		self.secret_values = secret_values
+		self.public_info = public_info
 
 	def commit(self):
 		pass
 
 	def computeResponse(self, challenge):
+		pass
+	def simulate(self, commitment, challenge, response):
 		pass
 
 class SimulatableProver(Prover):
@@ -68,6 +73,10 @@ class Verifier:
 
 	def sendChallenge(self, commitment):
 		pass	
+	def verify(self, response, commitment, challenge):
+		pass
+
+
 
 	def verify(self, commitment, challenge, response, public_info):
 		pass

@@ -2,27 +2,34 @@
 
 import random, string
 from collections import namedtuple 
-from petlib.ec import EcGroup
+from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from SigmaProtocol import *
+from hashlib import sha256
+import binascii
 
 
 class PedersenProver(Prover):
 	def commit(self):
 		tab_g= self.params.tab_g
 		public_info = self.params.public_info
-		
-		self.group_order = tab_g[0].group.order()
+		G = tab_g[0].group
+		o = G.order()
 		self.ks = []
 		for i in range(len(tab_g)): #we build a N-commitments
 			self.ks.append(self.group_order.random())
 		# one could create an array ks and secrets to generalize this algorithm. 
 		# with |array of ks| = 1 and |array of secrets| = 1 we would obtain the schnorr zkp
-		commitment = [a*b for a,b in zip(self.ks, tab_g)]
+		commits = [a*b for a,b in zip(self.ks, tab_g)]
 		
-		print ('\ncommitment = ', commitment, '\npublic_info = ', public_info)
-		return commitment #Do we return public info here or is it already accessible to the Verifier?
-
+        #We build the commitment doing the product g1^k1 g2^k2...
+		sum = G.infinite()
+		for com in commits:
+			sum = sum+com
+		
+		print ('\ncommitment = ', sum, '\npublic_info = ', public_info)
+		return sum 
+        
 	def computeResponse(self, challenge): #r = secret*challenge + k 
 		resps = [(self.params.secrets[i].mod_mul(challenge,self.group_order)).mod_add(self.ks[i],self.group_order) for i in range(len(self.ks))]
 		print('\n responses : ', resps)
@@ -38,57 +45,43 @@ class PedersenVerifier(Verifier):
 		tab_g = self.params.tab_g
 		self.o = tab_g[0].group.order()
 		self.commitment = commitment
-		self.challenge = self.o.random()
+		self.challenge = self.o.random() #Replace by a hash of generators + public info
+		#self.challenge = sha256((public_info+tab_g[0]).export()).digest()
+		self.challenge = binascii.hexlify(self.challenge)
 		print('\nchallenge is ', self.challenge)
+		#raise Exception('stop hammertime')
 		return self.challenge
 					
-	def verify(self, response):
+	def verify(self, response, commitment=None, challenge=None):
+
+        #These two parameters exist so we can also inject commitments and challenges and verify simulations
+		if commitment == None :
+			commitment = self.commitment
+		if challenge == None:
+			challenge = self.challenge
+        
 		tab_g = self.params.tab_g
 		y = self.params.public_info 
 		r = self.commitment
 		G = tab_g[0].group
 
 		
-		leftSide =  [a*b for a,b in zip(response, tab_g)]
+		left_arr =  [a*b for a,b in zip(response, tab_g)]
 		
-		sumleft = G.infinite()
-		#sumleft = leftSide[0] #Ugly but simpler than converting 0 in Bn
-		for i in range(len(leftSide)):
-			sumleft+= leftSide[i]
-		#leftSide = (response[0] * g1) + (response[1] * g2) ...
+		leftside = G.infinite()
+		for el in left_arr:
+			leftside+= el
+		#left_arr= (response[0] * g1) + (response[1] * g2) ...
 
-		#rightSide = (challenge * y1 + r1) + (challenge*y2+r2) ...
+		#rightSide = y^c+r = y^c+g1^k1+g2^k2
 		# (generalization of rightSide = challenge*y + r in Schnorr)
-		rightSide = [self.challenge*yelem + relem for yelem, relem in zip(y, r)]
-		sumright = G.infinite()
-	    #sumright = rightSide[0] #Ugly but simpler than converting 0 in Bn
-		for i in range(len(rightSide)):
-			sumright+= rightSide[i]
+		rightside = challenge*y+ commitment
 
 		return sumright == sumleft #If the result
 
 def randomword(length):
 	letters = string.ascii_lowercase
 	return ''.join(random.choice(letters) for i in range(length))
-
-class PedersenProtocol(SigmaProtocol):
-	def __init__(self, verifierClass, proverClass, public_info, tab_g, secrets):
-		for i in range(len(secrets)):
-			if type(secrets[i]) == int:
-				secrets[i] = Bn.from_decimal(str(secrets[i]))
-		super().__init__(verifierClass, proverClass)
-		if len(tab_g) != len(secrets):
-			raise Exception('One secret = one generator, one voice one hope one real decision...')
-		self.params = Params(public_info, tab_g, secrets)
-
-		test_group = tab_g[0].group
-		for g in tab_g:
-			if g.group != test_group:
-				raise Exception('All generators should come from the same group')
-
-	def setup(self): #for compatibility with the SigmaProtocol class
-			params_verif = Params(self.params.public_info, self.params.tab_g, None) #we build a custom parameter object without the secrets 
-			return self.params, params_verif
 
 
 class AndProofCommitment:
@@ -157,62 +150,49 @@ class AndProof:
 	
 
 class PedersenProof: 
+	def __init__(self, generators, secrets_names, public_info):
 
-	#len of secretDict and generators param of __init__ must match exactly or secrets_names must be exactly of size 1 and and then every generator uses the same secret.
-	def __init__(self, generators, secrets_names):
-		if type(generators) != type(dict([])): # we have a single generator
-			raise Exception("generators must be a map from generator name to its values")
-
-		if type(generators) == type(dict([])) and len(generators) == 0:
-			raise Exception("A dictionnary of generators must be of length at least one.")
+		#len of the list of aliases and list of generators (params of __init__) must match exactly 
+		if not isinstance(generators, list) or len(generators) == 0:
+			raise Exception("We need a non-empty list of generators")
 		
-		if type(secrets_names) != type(list()):
-			raise Exception("secrets_names must be a list of secrets names")
+		if if not isinstance(secrets_names, list) or len(secrets_names) == 0:
+			raise Exception("We need a non-empty list of secrets names")
 
-		if len(secrets_names) != len(generators) and len(secrets_names) != 1:
-			raise Exception("secrets_names and generators must be of the same length if length of secret names is not one (secret shared by all generators)")
+		if len(secrets_names) != len(generators):
+			raise Exception("secrets_names and generators must be of the same length")
 
-		if len(secrets_names) != len(generators) and len(secrets_names) == 1:
-			secrets_names = [secrets_names[0] for i in range(len(generators))]	
+		#We check the consistency of the generators
+		test_group = tab_g[0].group
+		for g in tab_g:
+			if g.group != test_group:
+				raise Exception('All generators should come from the same group')
 			
-		if len(secrets_names) == 0:
-			raise Exception("create some entries in this array of secrets' names. ")
-
-
 		self.group_generators = generators
 		self.secrets_names = secrets_names
-	def get_secrets_names():
-		return self.secrets_names
+		self.public_info = public_info
 
 	def getProver(self, secrets_dict): 
+		#Sanity check over the secrets : consistent type and number of unique secrets
+		if len(set(self.secrets_names))!= len(secrets_dict):
+			raise Exception("We expect as many secrets as different aliases")
 		if (type(secrets_dict) != type(dict([]))):
-			raise Exception("secrets_dict should be a dictionnary")
+			raise Exception("secrets_dict should be a dictionary")
 
+		#We check that the aliases match with the keys of the dictionary
 		secrets_names_set = set(self.secrets_names)
 		secrets_keys = set(secrets_dict.keys())
-		diff1 = secrets_keys.difference(secrets_names_set)
+		diff1 = secrets_keys.difference(secrets_names_set) 
 		diff2 = secrets_names_set.difference(secrets_keys)
 		if len(diff1) > 0 or len(diff2) > 0:
 			raise Exception("secrets do not match: those secrets should be checked {0} {1}".format(diff1, diff2))
 
-		secrets_arr = []
-		for name in self.secrets_names:
-			secrets_arr.append(secrets_dict[name])
-			
-		gen_values = list(self.group_generators.values())
-		public_info = [a*g_val for a, g_val in zip (secrets_arr, gen_values)] #The Ys of which we will prove logarithm knowledge
-		self.group_generators.values()
-		self.pedersen_protocol = PedersenProtocol(PedersenVerifier, PedersenProver, public_info, gen_values, secrets_arr)
-		params, params_verif = self.pedersen_protocol.setup()
-		self.params = params
-		self.params_verif = params_verif
-
-		return PedersenProver(self.params)
+		return PedersenProver(self.generators, self.secret_names, secrets_dict, self.public_info)
 
 	def getVerifier(self):
-		return PedersenVerifier(self.params_verif)
+		return PedersenVerifier(self.group_generators, self.secrets_names, self.public_info)
 
- 
+
 if __name__ == "__main__":
 	N = 5
 	G = EcGroup(713)
@@ -227,9 +207,17 @@ if __name__ == "__main__":
 		secrets.append(o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
 
 
-	public_info = [a*b for a,b in zip (secrets, tab_g)] #The Ys of which we will prove logarithm knowledge
+	powers = [a*b for a,b in zip (secrets, tab_g)] #The Ys of which we will prove logarithm knowledge
+	public_info = G.infinite()
+	for y in powers:
+		public_info += y
 
-	pedersen_protocol = PedersenProtocol(PedersenVerifier, PedersenProver, public_info, tab_g, secrets)
+	secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
+	pedersen_proof = PedersenProof(tab_g, secrets_aliases, public_info)
+	Ped_prover = pedersen_proof.getProver(secrets)
+	Ped_verifier = pedersen_proof.getVerifier()
+
+	pedersen_protocol = SigmaProtocol(Ped_verifier, Ped_prover)
 	pedersen_protocol.run()
 
 
