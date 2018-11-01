@@ -1,5 +1,6 @@
 # TODO : remove camelCase
 
+import pdb
 import random, string
 from collections import namedtuple
 from petlib.ec import EcGroup, EcPt
@@ -23,12 +24,12 @@ class PedersenProver(Prover):
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
-        sum = G.infinite()
+        sum_ = G.infinite()
         for com in commits:
-            sum = sum + com
+            sum_ = sum_ + com
 
-        print("\ncommitment = ", sum, "\npublic_info = ", public_info)
-        return sum
+        print("\ncommitment = ", sum_, "\npublic_info = ", public_info)
+        return sum_
 
     def computeResponse(
             self, challenge
@@ -82,7 +83,6 @@ class PedersenVerifier(Verifier):
 
     def verify(self, response, commitment=None, challenge=None):
 
-        # These two parameters exist so we can also inject commitments and challenges and verify simulations
         if commitment == None:
             commitment = self.commitment
         if challenge == None:
@@ -95,11 +95,9 @@ class PedersenVerifier(Verifier):
         left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
 
         leftside = tab_g[0].group.infinite()
-        for el in left_arr:  # We sum all these guys
+        for el in left_arr:
             leftside += el
 
-            # rightSide = y^c+r = y^c+g1^k1+g2^k2
-            # (generalization of rightSide = challenge*y + r in Schnorr)
         rightside = challenge * y + commitment
 
         return rightside.pt_eq(leftside)  # If the result
@@ -110,23 +108,58 @@ def randomword(length):
     return "".join(random.choice(letters) for i in range(length))
 
 
-class PedersenProof:
-    def __init__(self, generators, secrets_names, public_info):
-
-        # len of the list of aliases and list of generators (params of __init__) must match exactly
-        if not isinstance(generators, list) or len(generators) == 0:
-            raise Exception("We need a non-empty list of generators")
-
-        if not isinstance(secrets_names, list) or len(secrets_names) == 0:
-            raise Exception("We need a non-empty list of secrets names")
-
-        if len(secrets_names) != len(generators):
+class PedersenProtocol(SigmaProtocol):
+    def __init__(self, verifierClass, proverClass, public_info, tab_g,
+                 secrets):
+        super().__init__(verifierClass, proverClass)
+        if len(tab_g) != len(secrets):
             raise Exception(
-                "secrets_names and generators must be of the same length")
+                'One secret = one generator, one voice one hope one real decision...'
+            )
+        self.params = Params(public_info, tab_g, secrets)
 
-            # We check the consistency of the generators
         test_group = tab_g[0].group
         for g in tab_g:
+            if g.group != test_group:
+                raise Exception(
+                    'All generators should come from the same group')
+
+    def setup(self):  #for compatibility with the SigmaProtocol class
+        params_verif = Params(
+            self.params.public_info, self.params.tab_g,
+            None)  #we build a custom parameter object without the secrets
+        return self.params, params_verif
+
+
+class PedersenProof:
+
+    #len of secretDict and generators param of __init__ must match exactly or secrets_names must be exactly of size 1 and and then every generator uses the same secret.
+    def __init__(self, generators, secrets_names):
+        if type(generators) != type(dict([])):  # we have a single generator
+            raise Exception(
+                "generators must be a map from generator name to its values")
+
+        if type(generators) == type(dict([])) and len(generators) == 0:
+            raise Exception(
+                "A dictionnary of generators must be of length at least one.")
+
+        if type(secrets_names) != type(list()):
+            raise Exception("secrets_names must be a list of secrets names")
+
+        if len(secrets_names) != len(generators) and len(secrets_names) != 1:
+            raise Exception(
+                "secrets_names and generators must be of the same length if length of secret names is not one (secret shared by all generators)"
+            )
+
+        if len(secrets_names) != len(generators) and len(secrets_names) == 1:
+            secrets_names = [secrets_names[0] for i in range(len(generators))]
+
+        if len(secrets_names) == 0:
+            raise Exception(
+                "create some entries in this array of secrets' names. ")
+        pdb.set_trace()
+        test_group = generators[0].group
+        for g in generators:
             if g.group != test_group:
                 raise Exception(
                     "All generators should come from the same group")
@@ -136,24 +169,34 @@ class PedersenProof:
         self.public_info = public_info
 
     def getProver(self, secrets_dict):
-        # Sanity check over the secrets : consistent type and number of unique secrets
         if len(set(self.secrets_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
-        if type(secrets_dict) != type(dict([])):
-            raise Exception("secrets_dict should be a dictionary")
+        if (type(secrets_dict) != type(dict([]))):
+            raise Exception("secrets_dict should be a dictionnary")
 
-            # We check that the aliases match with the keys of the dictionary
         secrets_names_set = set(self.secrets_names)
         secrets_keys = set(secrets_dict.keys())
         diff1 = secrets_keys.difference(secrets_names_set)
         diff2 = secrets_names_set.difference(secrets_keys)
         if len(diff1) > 0 or len(diff2) > 0:
             raise Exception(
-                "secrets do not match: these secrets should be checked {0} {1}"
+                "secrets do not match: those secrets should be checked {0} {1}"
                 .format(diff1, diff2))
 
-        return PedersenProver(self.generators, self.secret_names, secrets_dict,
-                              self.public_info)
+        secrets_arr = []
+        for name in self.secrets_names:
+            secrets_arr.append(secrets_dict[name])
+
+        gen_values = list(self.group_generators.values())
+        self.group_generators.values()
+        self.pedersen_protocol = PedersenProtocol(PedersenVerifier,
+                                                  PedersenProver, public_info,
+                                                  gen_values, secrets_arr)
+        params, params_verif = self.pedersen_protocol.setup()
+        self.params = params
+        self.params_verif = params_verif
+
+        return PedersenProver(self.params)
 
     def getVerifier(self):
         return PedersenVerifier(self.group_generators, self.secrets_names,
