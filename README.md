@@ -8,5 +8,6 @@ On master branch :
  - others files outdated
   
  On 'SimonDev' branch : new proofs being developed (Or proof)
+ 
  On 'ebauchePedersenProof' branch : new architecture with Protocol objects building Prover and Verifiers being developed
  
