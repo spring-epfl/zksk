@@ -17,10 +17,11 @@ class OrVerifier:
         challenge1, challenge2 = challenge
         response1, response2 = response
         (public_info1, public_info2) = public_info
-        # in the book there is c = c1 XOR c2 but why do that since c is computed as c = c1 XOR c2 by the prover?
+        #in the book there is c = c1 XOR c2 but why do that since c is computed as c = c1 XOR c2 by the prover?
         return self.or_verifier1.verify(
-            commitment1, challenge1, response1, public_info1
-        ) and self.or_verifier2.verify(commitment2, challenge2, response2, public_info2)
+            commitment1, challenge1,
+            response1, public_info1) and self.or_verifier2.verify(
+                commitment2, challenge2, response2, public_info2)
 
 
 class OrProver(Prover):

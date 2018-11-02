@@ -19,7 +19,8 @@ def findPrimeDecomposition(n):
     arrayOfFactors = []
     while n > 1:
         if n % k == 0:  # if k evenly divides into n
-            arrayOfFactors = addToFactors(k, arrayOfFactors)  # this is a factor
+            arrayOfFactors = addToFactors(k,
+                                          arrayOfFactors)  # this is a factor
             n = n / k  # divide n by k so that we have the rest of the number left.
         else:
             k = k + 1
@@ -28,8 +29,8 @@ def findPrimeDecomposition(n):
 
 def findGenerator(primeDecomposition, groupOrder, upperBound=0):
     bnGroupOrder = Bn(groupOrder + 1)
-    # 	if upperBound > 0:
-    # 		primeDecomposition = list(filter(lambda pair: pair[0] < upperBound, primeDecomposition))
+    #	if upperBound > 0:
+    #		primeDecomposition = list(filter(lambda pair: pair[0] < upperBound, primeDecomposition))
     randomNumbersUsed = set()
     while True:
         g = bnGroupOrder.random()
@@ -64,9 +65,11 @@ primeDecomposition = findPrimeDecomposition(order)
 print("Prime decomposition ", primeDecomposition)
 g = findGenerator(primeDecomposition, order)
 print("FOUND A GENERATOR ", g)
+
 # PEGGY: find a random k and sends r = g^k to victor
 # VICTOR SENDS PEGGY  e
 # PEGGY COMPUTES s = k + xe mod(q) and sends s to victor
 # VICTOR COMPUTES r = g^s y^-e from petlib.bn import Bn
 # proverInitial()
 # verifier
+

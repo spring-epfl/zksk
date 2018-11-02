@@ -47,7 +47,8 @@ class Verifier:
         (r1, r2) = self.commitment
         tmp1 = (response * g1) + (self.challenge * y1)
         tmp2 = (response * g2) + (self.challenge * y2)
-        print("(r1, r2) = ({0}, {1}) == ({2}, {3}) ?".format(r1, r2, tmp1, tmp2))
+        print("(r1, r2) = ({0}, {1}) == ({2}, {3}) ?".format(
+            r1, r2, tmp1, tmp2))
         if (r1, r2) == (tmp1, tmp2):
             print("Verified")
         else:

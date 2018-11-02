@@ -17,10 +17,16 @@ class PedersenProver(Prover):
         G = tab_g[0].group
         self.group_order = G.order()  # Will be useful for all the protocol
         self.ks = []
-        for i in range(len(tab_g)):  # we build a N-commitment
-            self.ks.append(
-                self.group_order.random()
-            )  # To be replaced by a call to randomizers() so shared secrets also share a randomizer
+
+        for i in range(len(tab_g)):  #we build a N-commitments
+            key = self.secrets[i]
+            if key in secret_to_random_value:
+                to_append = secret_to_random_value[key]
+            else:
+                to_append = self.group_order.random()
+                secret_to_random_value.update({key: to_append})
+            self.ks.append(to_append)
+
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
@@ -64,6 +70,23 @@ class PedersenProver(Prover):
 
         return commitment, challenge, response
 
+def randomword(length):
+    letters = string.ascii_lowercase
+    return "".join(random.choice(letters) for i in range(length))
+
+class PedersenProtocol(SigmaProtocol):
+    def __init__(self, verifierClass, proverClass, public_info, tab_g,
+                 secrets):
+        super().__init__(verifierClass, proverClass)
+        self.params = Params(public_info, tab_g, secrets)
+
+    def setup(self):  #for compatibility with the SigmaProtocol class
+        params_verif = Params(
+            self.params.public_info, self.params.tab_g,
+            None)  #we build a custom parameter object without the secrets
+        return self.params, params_verif
+
+
 
 class PedersenVerifier(Verifier):
     def sendChallenge(self, commitment):
@@ -103,45 +126,99 @@ class PedersenVerifier(Verifier):
         return rightside.pt_eq(leftside)  # If the result
 
 
+
+
 def randomword(length):
     letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for i in range(length))
+    return ''.join(random.choice(letters) for i in range(length))
 
 
-class PedersenProtocol(SigmaProtocol):
-    def __init__(self, verifierClass, proverClass, public_info, tab_g,
-                 secrets):
-        super().__init__(verifierClass, proverClass)
-        if len(tab_g) != len(secrets):
-            raise Exception(
-                'One secret = one generator, one voice one hope one real decision...'
-            )
-        self.params = Params(public_info, tab_g, secrets)
 
-        test_group = tab_g[0].group
-        for g in tab_g:
-            if g.group != test_group:
-                raise Exception(
-                    'All generators should come from the same group')
+class AndProofCommitment:
+    def __init__(self, commitment1, commitment2):
+        self.commitment1 = commitment1
+        self.commitment2 = commitment2
 
-    def setup(self):  #for compatibility with the SigmaProtocol class
-        params_verif = Params(
-            self.params.public_info, self.params.tab_g,
-            None)  #we build a custom parameter object without the secrets
-        return self.params, params_verif
+
+class AndProofChallenge:
+    def __init__(self, challenge1, challenge2):
+        self.challenge1 = challenge1
+        self.challenge2 = challenge2
+
+
+class AndProofResponse:
+    def __init__(self, response1, response2):
+        self.response1 = response1
+        self.response2 = response2
+
+
+class AndProofProver(Prover):
+    def __init__(self, prover1, prover2):
+        self.prover1 = prover1
+        self.prover2 = prover2
+
+    def commit(self) -> AndProofCommitment:
+        return AndProofCommitment(self.prover1.commit(), self.prover2.commit())
+
+    def computeResponse(self, challenges: AndProofChallenge
+                        ) -> AndProofResponse:  #r = secret*challenge + k
+        return AndProofResponse(
+            self.prover1.computeResponse(challenges.challenge1),
+            self.prover2.computeResponse(challenges.challenge2))
+
+    def sendResponse(self, challenges: AndProofChallenge) -> AndProofResponse:
+        return self.computeResponse(challenges)
+
+
+class AndProofVerifier:
+    def __init__(self, verifier1, verifier2):
+        self.verifier1 = verifier1
+        self.verifier2 = verifier2
+
+    def sendChallenge(self,
+                      commitment: AndProofCommitment) -> AndProofChallenge:
+        return AndProofChallenge(
+            self.verifier1.sendChallenge(commitment.commitment1),
+            self.verifier2.sendChallenge(commitment.commitment2))
+
+    def verify(self, responses: AndProofResponse):
+        return self.verifier1.verify(
+            responses.response1) and self.verifier2.verify(responses.response2)
+
+
+class AndProof:
+    def __init__(self, proof1, proof2):
+        self.proof1 = proof1
+        self.proof2 = proof2
+
+    def getProver(self, secrets_dict):
+        def sub_proof_prover(sub_proof):
+            keys = set(sub_proof.secrets_names)
+            secrets_for_prover = []
+            for s_name in secrets_dict:
+                if s_name in keys:
+                    secrets_for_prover.append((s_name, secrets_dict[s_name]))
+            return sub_proof.getProver(dict(secrets_for_prover))
+
+        prover1 = sub_proof_prover(self.proof1)
+        prover2 = sub_proof_prover(self.proof2)
+        return AndProofProver(prover1, prover2)
+
+    def getVerifier(self):
+        return AndProofVerifier(self.proof1.getVerifier(),
+                                self.proof2.getVerifier())
 
 
 class PedersenProof:
 
     #len of secretDict and generators param of __init__ must match exactly or secrets_names must be exactly of size 1 and and then every generator uses the same secret.
-    def __init__(self, generators, secrets_names):
-        if type(generators) != type(dict([])):  # we have a single generator
-            raise Exception(
-                "generators must be a map from generator name to its values")
+    def __init__(self, generators, secrets_names, public_info):
+        if type(generators) != type(list()):  # we have a single generator
+            raise Exception("generators must be a list of generators values")
 
-        if type(generators) == type(dict([])) and len(generators) == 0:
+        if type(generators) == type(list()) and len(generators) == 0:
             raise Exception(
-                "A dictionnary of generators must be of length at least one.")
+                "A list of generators must be of length at least one.")
 
         if type(secrets_names) != type(list()):
             raise Exception("secrets_names must be a list of secrets names")
@@ -157,7 +234,6 @@ class PedersenProof:
         if len(secrets_names) == 0:
             raise Exception(
                 "create some entries in this array of secrets' names. ")
-        pdb.set_trace()
         test_group = generators[0].group
         for g in generators:
             if g.group != test_group:
@@ -168,9 +244,14 @@ class PedersenProof:
         self.secrets_names = secrets_names
         self.public_info = public_info
 
+
+    def get_secrets_names():
+        return self.secrets_names
+
     def getProver(self, secrets_dict):
         if len(set(self.secrets_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
+
         if (type(secrets_dict) != type(dict([]))):
             raise Exception("secrets_dict should be a dictionnary")
 
@@ -187,8 +268,21 @@ class PedersenProof:
         for name in self.secrets_names:
             secrets_arr.append(secrets_dict[name])
 
-        gen_values = list(self.group_generators.values())
-        self.group_generators.values()
+        gen_values = self.group_generators
+        public_info = [a * g_val for a, g_val in zip(secrets_arr, gen_values)
+                       ]  #The Ys of which we will prove logarithm knowledge
+        for i in range(len(secrets_arr)):
+            if type(secrets_arr[i]) == int:
+                secrets_arr[i] = Bn.from_decimal(str(secrets_arr[i]))
+
+        test_group = gen_values[0].group
+        for g in gen_values:
+            if g.group != test_group:
+                raise Exception(
+                    'All generators should come from the same group')
+
+        assert len(gen_values) == len(secrets_arr)
+
         self.pedersen_protocol = PedersenProtocol(PedersenVerifier,
                                                   PedersenProver, public_info,
                                                   gen_values, secrets_arr)
@@ -201,7 +295,6 @@ class PedersenProof:
     def getVerifier(self):
         return PedersenVerifier(self.group_generators, self.secrets_names,
                                 self.public_info)
-
 
 if __name__ == "__main__":
     N = 5
