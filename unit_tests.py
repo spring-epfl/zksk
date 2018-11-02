@@ -41,13 +41,13 @@ def test_one_generator_one_secret():
 	
 	assert len(commitments) == 1
 
-def get_generators(nb_wanted):
+def get_generators(nb_wanted, start_index = 0):
 	G = EcGroup(713)
 	tab_g = []
-	tab_g.append(("g0", G.generator()))
+	tab_g.append(("g"+str(start_index), G.generator()))
 	for i in range (1,nb_wanted):
 		randWord = randomword(30).encode("UTF-8")
-		generator_name = "g" + str(i)
+		generator_name = "g" + str(i + start_index)
 		tab_g.append((generator_name, G.hash_to_point(randWord)))
 	return dict(tab_g)
 
@@ -71,3 +71,24 @@ def test_get_many_different_provers():
 	prover = pp.getProver(dict([(prefix + str(i), i) for i in range(N)]))
 	commitments = prover.commit()
 	assert len(commitments) == N
+
+def test_and_proofs():
+	n1 = 3
+	n2 = 4
+	generators_dict1 = get_generators(n1)
+	generators_dict2 = get_generators(n2, start_index = n1)
+	pp1 = PedersenProof(generators_dict1, ["x0", "x1", "x2"])
+	pp2 = PedersenProof(generators_dict2, ["x0", "x3", "x4", "x5"]) #one shared secret x0
+	and_proof = AndProof(pp1, pp2)
+	and_prover = and_proof.getProver({"x0": 1, "x1": 2, "x2": 5, "x3": 100, "x4": 43, "x5": 10})
+	and_verifier = and_proof.getVerifier()
+
+	commitment = and_prover.commit()
+	challenge = and_verifier.sendChallenge(commitment)
+	response = and_prover.computeResponse(challenge)
+	assert and_verifier.verify(response)
+
+
+
+	
+
