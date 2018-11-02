@@ -31,6 +31,7 @@ class PedersenProver(Prover):
 		return sum 
         
 	def computeResponse(self, challenge): #r = secret*challenge + k 
+		o = self.params.tab_g[0].group.order()
 		resps = [(self.params.secrets[i].mod_mul(challenge,o)).mod_add(self.ks[i],o) for i in range(len(self.ks))]
 		print('\n responses : ', resps)
 		return resps
@@ -39,17 +40,26 @@ class PedersenProver(Prover):
 		response = self.computeResponse(challenge) #could create a private non defined method called compute response in an interface Prover
 		return response
 
+	def simulate_proof(self, challenge, response):
+		G = self.params.tab_g[0].group
+		commmitment =  G.infinite() #We will choose all but 1 commitment elements at random 
+		for idx in len(self.params.tab_g): #We compute the commitment so it matches
+			commitment += response[i]*self.params.tab_g[idx]
+		commitment += (-challenge)*public_info
+
+		return commitment, challenge, response
+
 class PedersenVerifier(Verifier):
 
 	def sendChallenge(self, commitment):
 		tab_g = self.params.tab_g
 		self.o = tab_g[0].group.order()
 		self.commitment = commitment
-		self.challenge = self.o.random() #Replace by a hash of generators + public info
-		#self.challenge = sha256((public_info+tab_g[0]).export()).digest()
-		#self.challenge = binascii.hexlify(self.challenge)
+
+		myhash = sha256((self.params.public_info+tab_g[0]).export()).digest()
+		self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+
 		print('\nchallenge is ', self.challenge)
-		#raise Exception('stop hammertime')
 		return self.challenge
 					
 	def verify(self, response, commitment=None, challenge=None):
@@ -79,8 +89,10 @@ class PedersenVerifier(Verifier):
 
 		if rightside == leftside: 
 			print("Verified")
+			return True
 		else:
 			print("Not verified")
+			return False
 
 def randomword(length):
 	letters = string.ascii_lowercase
@@ -99,25 +111,6 @@ class PedersenProtocol(SigmaProtocol):
 				raise Exception('All generators should come from the same group')
 
 	def setup(self): #for compatibility with the SigmaProtocol class
-			params_verif = Params(public_info, tab_g, None) #we build a custom parameter object without the secrets 
+			params_verif = Params(self.params.public_info, self.params.tab_g, None) #we build a custom parameter object without the secrets 
 			return self.params, params_verif
 
-N = 5
-G = EcGroup(713)
-tab_g = []
-tab_g.append(G.generator())
-for i in range (1,N):
-	randWord = randomword(30).encode("UTF-8")
-	tab_g.append(G.hash_to_point(randWord)) 
-o = G.order()
-secrets = []
-for i in range(len(tab_g)): #we build N secrets
-	secrets.append(o.random())# peggy wishes to prove she knows the discrete logarithm equal to this value
-
-powers = [a*b for a,b in zip (secrets, tab_g)] #The Ys of which we will prove logarithm knowledge
-public_info = G.infinite()
-for y in powers:
-	public_info += y
-
-pedersenProtocol = PedersenProtocol(PedersenVerifier, PedersenProver, public_info, tab_g, secrets)
-pedersenProtocol.run()

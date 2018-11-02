@@ -1,6 +1,7 @@
 import random, string, attr
 from collections import namedtuple 
 from petlib.ec import EcGroup
+import pytest
 
 #SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
 Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
@@ -25,7 +26,7 @@ class SigmaProtocol:
 		commitment = peggy.commit()
 		challenge = victor.sendChallenge(commitment)	
 		response = peggy.computeResponse(challenge)
-		victor.verify(response)
+		return victor.verify(response)
 
 
 
@@ -37,7 +38,7 @@ class Prover: #The Prover class is built on an array of generators and an array 
 		pass
 	def computeResponse(self, challenge):
 		pass
-	def simulate(self, commitment, challenge, response):
+	def simulate(self, challenge, response):
 		pass
 
 class Verifier: #The Verifier class is built on an array of generators
