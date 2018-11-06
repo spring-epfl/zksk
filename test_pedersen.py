@@ -36,3 +36,7 @@ def test_pedersen_rand_secrets():#We use generators and public info from previou
     pedersen_wrong_secrets = PedersenProtocol(PedersenVerifier, PedersenProver, public_info, tab_g, rand_secrets)
     wrong_secrets = pedersen_wrong_secrets.run()
     assert wrong_secrets == False
+
+
+def test_pedersen_simulation():
+    pass

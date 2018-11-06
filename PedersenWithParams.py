@@ -40,10 +40,10 @@ class PedersenProver(Prover):
 		response = self.computeResponse(challenge) #could create a private non defined method called compute response in an interface Prover
 		return response
 
-	def simulate_proof(self, challenge, response):
+	def simulate_proof(self): #TODO : finish this, but after
 		G = self.params.tab_g[0].group
-		commmitment =  G.infinite() #We will choose all but 1 commitment elements at random 
-		for idx in len(self.params.tab_g): #We compute the commitment so it matches
+		commmitment =  G.infinite() #We choose the responses at random and compute the commitment so it matches
+		for idx in len(self.params.tab_g): 
 			commitment += response[i]*self.params.tab_g[idx]
 		commitment += (-challenge)*public_info
 
