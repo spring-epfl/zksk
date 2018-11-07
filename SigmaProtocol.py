@@ -1,6 +1,7 @@
 import random, string, attr
 from collections import namedtuple
 from petlib.ec import EcGroup
+import pytest
 
 # SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
 Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
@@ -18,21 +19,15 @@ class SigmaProtocol:
     def setup(self):
         pass
 
-    def verify(self) -> bool:  # a method used to chain SigmaProtocols verifications
+	def run(self):
         params, params_verif = self.setup()
         victor = self.verifierClass(params_verif)
         peggy = self.proverClass(params)
-
-        (commitment) = peggy.commit()
+		(commitment) = peggy.commit()
         challenge = victor.sendChallenge(commitment)
         response = peggy.computeResponse(challenge)
         return victor.verify(response)
 
-    def run(self):
-        if self.verify():
-            print("Verified for {0}".format(self.__class__.__name__))
-        else:
-            print("Not verified for {0}".format(self.__class__.__name__))
 
 
 class Prover:  # The Prover class is built on an array of generators and an array of secrets
@@ -41,6 +36,12 @@ class Prover:  # The Prover class is built on an array of generators and an arra
         self.secret_names = secret_names
         self.secret_values = secret_values
         self.public_info = public_info
+		
+	def run():
+		commitment = peggy.commit()
+		challenge = victor.sendChallenge(commitment)	
+		response = peggy.computeResponse(challenge)
+		return victor.verify(response)
 
     def commit(self):
         pass
@@ -75,7 +76,7 @@ class Verifier:
         self.generators = generators
         self.secret_names = secret_names
         self.public_info = public_info
-		
+
     def sendChallenge(self, commitment):
         pass
 

@@ -1,7 +1,7 @@
 # TODO : remove camelCase
 
 import random, string
-from collections import namedtuple
+from collections import namedtuple 
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from SigmaProtocol import *
@@ -46,6 +46,15 @@ class PedersenProver(Prover):
         )  # could create a private non defined method called compute response in an interface Prover
         return response
 
+
+	def simulate_proof(self, challenge, response):
+		G = self.params.tab_g[0].group
+		commmitment =  G.infinite() #We will choose all but 1 commitment elements at random 
+		for idx in len(self.params.tab_g): #We compute the commitment so it matches
+			commitment += response[i]*self.params.tab_g[idx]
+		commitment += (-challenge)*public_info
+
+		return commitment, challenge, response
 
 class PedersenVerifier(Verifier):
     def sendChallenge(self, commitment):
