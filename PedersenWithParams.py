@@ -1,7 +1,7 @@
 # TODO : remove camelCase
 
 import random, string
-from collections import namedtuple 
+from collections import namedtuple
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from SigmaProtocol import *
@@ -18,8 +18,6 @@ class PedersenProver(Prover):
         self.ks = []
         for i in range(len(tab_g)):  # we build a N-commitments
             self.ks.append(self.group_order.random())
-            # one could create an array ks and secrets to generalize this algorithm.
-            # with |array of ks| = 1 and |array of secrets| = 1 we would obtain the schnorr zkp
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
@@ -46,15 +44,17 @@ class PedersenProver(Prover):
         )  # could create a private non defined method called compute response in an interface Prover
         return response
 
+    def simulate_proof(self, challenge, response):  # TODO : correct this
+        G = self.params.tab_g[0].group
+        commmitment = (
+            G.infinite()
+        )  # We will choose all but 1 commitment elements at random
+        for idx in len(self.params.tab_g):  # We compute the commitment so it matches
+            commitment += response[i] * self.params.tab_g[idx]
+        commitment += (-challenge) * public_info
 
-	def simulate_proof(self, challenge, response):
-		G = self.params.tab_g[0].group
-		commmitment =  G.infinite() #We will choose all but 1 commitment elements at random 
-		for idx in len(self.params.tab_g): #We compute the commitment so it matches
-			commitment += response[i]*self.params.tab_g[idx]
-		commitment += (-challenge)*public_info
+        return commitment, challenge, response
 
-		return commitment, challenge, response
 
 class PedersenVerifier(Verifier):
     def sendChallenge(self, commitment):
@@ -62,8 +62,8 @@ class PedersenVerifier(Verifier):
         self.o = tab_g[0].group.order()
         self.commitment = commitment
 
-		myhash = sha256((self.params.public_info+tab_g[0]).export()).digest()
-		self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+        myhash = sha256((self.params.public_info + tab_g[0]).export()).digest()
+        self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
         print("\nchallenge is ", self.challenge)
         # raise Exception('stop hammertime')
         return self.challenge
@@ -207,14 +207,14 @@ class PedersenProof:
         if type(secrets_dict) != type(dict([])):
             raise Exception("secrets_dict should be a dictionary")
 
-        # We check that the aliases match with the keys of the dictionary
+            # We check that the aliases match with the keys of the dictionary
         secrets_names_set = set(self.secrets_names)
         secrets_keys = set(secrets_dict.keys())
         diff1 = secrets_keys.difference(secrets_names_set)
         diff2 = secrets_names_set.difference(secrets_keys)
         if len(diff1) > 0 or len(diff2) > 0:
             raise Exception(
-                "secrets do not match: those secrets should be checked {0} {1}".format(
+                "secrets do not match: these secrets should be checked {0} {1}".format(
                     diff1, diff2
                 )
             )

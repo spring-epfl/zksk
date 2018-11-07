@@ -19,29 +19,27 @@ class SigmaProtocol:
     def setup(self):
         pass
 
-	def run(self):
-        params, params_verif = self.setup()
-        victor = self.verifierClass(params_verif)
-        peggy = self.proverClass(params)
-		(commitment) = peggy.commit()
+    def run(self):
+        victor = self.verifierClass()
+        peggy = self.proverClass()
+        (commitment) = peggy.commit()
         challenge = victor.sendChallenge(commitment)
         response = peggy.computeResponse(challenge)
         return victor.verify(response)
 
 
-
-class Prover:  # The Prover class is built on an array of generators and an array of secrets
+class Prover:  # The Prover class is built on an array of generators, an array of secrets'IDs, a dict of these secrets, and public info
     def __init__(self, generators, secret_names, secret_values, public_info):
         self.generators = generators
         self.secret_names = secret_names
         self.secret_values = secret_values
         self.public_info = public_info
-		
-	def run():
-		commitment = peggy.commit()
-		challenge = victor.sendChallenge(commitment)	
-		response = peggy.computeResponse(challenge)
-		return victor.verify(response)
+
+    def run():
+        commitment = peggy.commit()
+        challenge = victor.sendChallenge(commitment)
+        response = peggy.computeResponse(challenge)
+        return victor.verify(response)
 
     def commit(self):
         pass
@@ -53,25 +51,7 @@ class Prover:  # The Prover class is built on an array of generators and an arra
         pass
 
 
-class SimulatableProver(Prover):
-    def simulate(self, challenge, response):
-        pass
-
-
-class RandomlySimulatableProver(SimulatableProver):
-    def generateRandomChallenge(self):
-        pass
-
-    def generateRandomResponse(self):
-        pass
-
-    def randomlySimulate(self):
-        c = self.generateRandomChallenge()
-        s = self.generateRandomResponse()
-        return self.simulate(c, s)
-
-
-class Verifier:
+class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
     def __init__(self, generators, secret_names, public_info):
         self.generators = generators
         self.secret_names = secret_names
@@ -81,7 +61,4 @@ class Verifier:
         pass
 
     def verify(self, response, commitment, challenge):
-        pass
-
-    def verify(self, commitment, challenge, response, public_info):
         pass
