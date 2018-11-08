@@ -11,13 +11,15 @@ import binascii
 
 class PedersenProver(Prover):
     def commit(self):
-        tab_g = self.params.tab_g
-        public_info = self.params.public_info
+        tab_g = self.generators
+        public_info = self.public_info
         G = tab_g[0].group
-        o = G.order()
+        self.group_order = G.order()  # Will be useful for all the protocol
         self.ks = []
-        for i in range(len(tab_g)):  # we build a N-commitments
-            self.ks.append(self.group_order.random())
+        for i in range(len(tab_g)):  # we build a N-commitment
+            self.ks.append(
+                self.group_order.random()
+            )  # To be replaced by a call to randomizers() so shared secrets also share a randomizer
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
@@ -28,10 +30,17 @@ class PedersenProver(Prover):
         print("\ncommitment = ", sum, "\npublic_info = ", public_info)
         return sum
 
-    def computeResponse(self, challenge):  # r = secret*challenge + k
-        resps = [
-            (self.params.secrets[i].mod_mul(challenge, self.group_order)).mod_add(
-                self.ks[i], self.group_order
+    def computeResponse(
+        self, challenge
+    ):  # r = secret*challenge + k. At this point the k[] array contains the correct randomizers for the matching secrets
+        resps = [  # (1) OR k is a dict with secret names as keys and randomizers as values ?
+            (
+                self.secrets_values[self.secrets_names[i]].mod_mul(
+                    challenge, self.group_order
+                )
+            ).mod_add(
+                self.ks[i],
+                self.group_order,  # If (1) replace by self.ks[self.secrets_names[i]]
             )
             for i in range(len(self.ks))
         ]
@@ -45,7 +54,7 @@ class PedersenProver(Prover):
         return response
 
     def simulate_proof(self, challenge, response):  # TODO : correct this
-        G = self.params.tab_g[0].group
+        G = self.generators[0].group
         commmitment = (
             G.infinite()
         )  # We will choose all but 1 commitment elements at random
@@ -58,11 +67,14 @@ class PedersenProver(Prover):
 
 class PedersenVerifier(Verifier):
     def sendChallenge(self, commitment):
-        tab_g = self.params.tab_g
-        self.o = tab_g[0].group.order()
+        tab_g = self.generators
         self.commitment = commitment
 
-        myhash = sha256((self.params.public_info + tab_g[0]).export()).digest()
+        # Computing the challenge
+        conc = self.public_info.export()
+        conc += (gen.export() for gen in tab_g)  # We concatenate all the public info
+
+        myhash = sha256(conc).digest()
         self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
         print("\nchallenge is ", self.challenge)
         # raise Exception('stop hammertime')
@@ -76,105 +88,26 @@ class PedersenVerifier(Verifier):
         if challenge == None:
             challenge = self.challenge
 
-        tab_g = self.params.tab_g
-        y = self.params.public_info
+        tab_g = self.generators
+        y = self.public_info
         r = self.commitment
-        G = tab_g[0].group
 
-        left_arr = [a * b for a, b in zip(response, tab_g)]
+        left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
 
-        leftside = G.infinite()
-        for el in left_arr:
+        leftside = tab_g[0].group.infinite()
+        for el in left_arr:  # We sum all these guys
             leftside += el
-            # left_arr= (response[0] * g1) + (response[1] * g2) ...
 
             # rightSide = y^c+r = y^c+g1^k1+g2^k2
             # (generalization of rightSide = challenge*y + r in Schnorr)
         rightside = challenge * y + commitment
 
-        return sumright == sumleft  # If the result
+        return rightside.pt_eq(leftside)  # If the result
 
 
 def randomword(length):
     letters = string.ascii_lowercase
     return "".join(random.choice(letters) for i in range(length))
-
-
-class AndProofCommitment:
-    def __init__(self, commitment1, commitment2):
-        self.commitment1 = commitment1
-        self.commitment2 = commitment2
-
-
-class AndProofChallenge:
-    def __init__(self, challenge1, challenge2):
-        self.challenge1 = challenge1
-        self.challenge2 = challenge2
-
-
-class AndProofResponse:
-    def __init__(self, response1, response2):
-        self.response1 = response1
-        self.response2 = response2
-
-
-class AndProofProver(Prover):
-    def __init__(self, prover1, prover2):
-        self.prover1 = prover1
-        self.prover2 = prover2
-
-    def commit(self) -> AndProofCommitment:
-        return AndProofCommitment(self.prover1.commit(), self.prover2.commit())
-
-    def computeResponse(
-        self, challenges: AndProofChallenge
-    ) -> AndProofResponse:  # r = secret*challenge + k
-        return AndProofResponse(
-            self.prover1.computeResponse(challenges.challenge1),
-            self.prover2.computeResponse(challenges.challenge2),
-        )
-
-    def sendResponse(self, challenges: AndProofChallenge) -> AndProofResponse:
-        return self.computeResponse(challenges)
-
-
-class AndProofVerifier:
-    def __init__(self, verifier1, verifier2):
-        self.verifier1 = verifier1
-        self.verifier2 = verifier2
-
-    def sendChallenge(self, commitment: AndProofCommitment) -> AndProofChallenge:
-        return AndProofChallenge(
-            self.verifier1.sendChallenge(commitment.commitment1),
-            self.verifier2.sendChallenge(commitment.commitment2),
-        )
-
-    def verify(self, responses: AndProofResponse):
-        return self.verifier1.verify(responses.response1) and self.verifier2.verify(
-            responses.response2
-        )
-
-
-class AndProof:
-    def __init__(self, proof1, proof2):
-        self.proof1 = proof1
-        self.proof2 = proof2
-
-    def getProver(self, secrets_dict):
-        def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secrets_names)
-            secrets_for_prover = []
-            for s_name in secrets_dict:
-                if s_name in keys:
-                    secrets_for_prover.append((s_name, secrets_dict[s_name]))
-            return sub_proof.getProver(dict(secrets_for_prover))
-
-        prover1 = sub_proof_prover(self.proof1)
-        prover2 = sub_proof_prover(self.proof2)
-        return AndProofProver(prover1, prover2)
-
-    def getVerifier(self):
-        return AndProofVerifier(self.proof1.getVerifier(), self.proof2.getVerifier())
 
 
 class PedersenProof:
