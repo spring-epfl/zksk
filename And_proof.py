@@ -1,4 +1,5 @@
 import SigmaProtocol
+from collections import Counter
 
 
 class AndProofCommitment:
@@ -24,7 +25,7 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
-    def commit(self) -> AndProofCommitment:
+    def commit(self) -> AndProofCommitment: #TODO : compute the randomizers for all unique secrets
         return AndProofCommitment(self.prover1.commit(), self.prover2.commit())
 
     def computeResponse(
@@ -76,3 +77,17 @@ class AndProof:
 
     def getVerifier(self):
         return AndProofVerifier(self.proof1.getVerifier(), self.proof2.getVerifier())
+
+def check_groups(list_of_secret_names, list_of_generators_list) #checks that if two secrets are the same, the generators they expand live in the same group
+                                        # takes a list of all secret_aliases lists (for each subproof) and looks for the matching secrets. Checks the corresponding generators groups.
+                                        #
+                                        # MERGE the two lists and then :
+                                        #Use a Counter 
+                                        # use a dict 'mydict' with same keys as Counter, but with list of indices as values. fill it in the counter loop with mydict[word].append(idx)
+                                        # and then for each key (unique secret name) check all its g[idx for idx in mydict[word]] are ==
+
+    cnt = Counter()
+    for word, idx in enumerate(['red', 'blue', 'red', 'green', 'blue', 'blue']):
+        cnt[word] += 1
+    cnt
+#Counter({'blue': 3, 'red': 2, 'green': 1})

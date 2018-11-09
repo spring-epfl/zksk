@@ -5,6 +5,7 @@ import pytest
 
 # SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
 Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
+
 # @attr.s
 # class Params:
 # 	g_tab = attr.ib(factory=list)

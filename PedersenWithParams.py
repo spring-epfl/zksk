@@ -31,18 +31,16 @@ class PedersenProver(Prover):
         return sum
 
     def computeResponse(
-        self, challenge
+            self, challenge
     ):  # r = secret*challenge + k. At this point the k[] array contains the correct randomizers for the matching secrets
         resps = [  # (1) OR k is a dict with secret names as keys and randomizers as values ?
-            (
-                self.secrets_values[self.secrets_names[i]].mod_mul(
-                    challenge, self.group_order
-                )
-            ).mod_add(
+            (self.secrets_values[self.secrets_names[i]].mod_mul(
+                challenge, self.group_order)).
+            mod_add(
                 self.ks[i],
-                self.group_order,  # If (1) replace by self.ks[self.secrets_names[i]]
-            )
-            for i in range(len(self.ks))
+                self.
+                group_order,  # If (1) replace by self.ks[self.secrets_names[i]]
+            ) for i in range(len(self.ks))
         ]
         print("\n responses : ", resps)
         return resps
@@ -58,7 +56,8 @@ class PedersenProver(Prover):
         commmitment = (
             G.infinite()
         )  # We will choose all but 1 commitment elements at random
-        for idx in len(self.params.tab_g):  # We compute the commitment so it matches
+        for idx in len(
+                self.params.tab_g):  # We compute the commitment so it matches
             commitment += response[i] * self.params.tab_g[idx]
         commitment += (-challenge) * public_info
 
@@ -72,7 +71,8 @@ class PedersenVerifier(Verifier):
 
         # Computing the challenge
         conc = self.public_info.export()
-        conc += (gen.export() for gen in tab_g)  # We concatenate all the public info
+        conc += (gen.export()
+                 for gen in tab_g)  # We concatenate all the public info
 
         myhash = sha256(conc).digest()
         self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
@@ -121,13 +121,15 @@ class PedersenProof:
             raise Exception("We need a non-empty list of secrets names")
 
         if len(secrets_names) != len(generators):
-            raise Exception("secrets_names and generators must be of the same length")
+            raise Exception(
+                "secrets_names and generators must be of the same length")
 
             # We check the consistency of the generators
         test_group = tab_g[0].group
         for g in tab_g:
             if g.group != test_group:
-                raise Exception("All generators should come from the same group")
+                raise Exception(
+                    "All generators should come from the same group")
 
         self.group_generators = generators
         self.secrets_names = secrets_names
@@ -147,19 +149,15 @@ class PedersenProof:
         diff2 = secrets_names_set.difference(secrets_keys)
         if len(diff1) > 0 or len(diff2) > 0:
             raise Exception(
-                "secrets do not match: these secrets should be checked {0} {1}".format(
-                    diff1, diff2
-                )
-            )
+                "secrets do not match: these secrets should be checked {0} {1}"
+                .format(diff1, diff2))
 
-        return PedersenProver(
-            self.generators, self.secret_names, secrets_dict, self.public_info
-        )
+        return PedersenProver(self.generators, self.secret_names, secrets_dict,
+                              self.public_info)
 
     def getVerifier(self):
-        return PedersenVerifier(
-            self.group_generators, self.secrets_names, self.public_info
-        )
+        return PedersenVerifier(self.group_generators, self.secrets_names,
+                                self.public_info)
 
 
 if __name__ == "__main__":
@@ -177,9 +175,8 @@ if __name__ == "__main__":
             o.random()
         )  # peggy wishes to prove she knows the discrete logarithm equal to this value
 
-    powers = [
-        a * b for a, b in zip(secrets, tab_g)
-    ]  # The Ys of which we will prove logarithm knowledge
+    powers = [a * b for a, b in zip(secrets, tab_g)
+              ]  # The Ys of which we will prove logarithm knowledge
     public_info = G.infinite()
     for y in powers:
         public_info += y
