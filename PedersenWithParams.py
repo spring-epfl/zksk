@@ -123,24 +123,19 @@ class PedersenProof:
         if not isinstance(generators, list):  # we have a single generator
             raise Exception("generators must be a list of generators values")
 
-        if type(generators) == type(list()) and len(generators) == 0:
+        if isinstance(generators, list) and len(generators) == 0:
             raise Exception(
                 "A list of generators must be of length at least one.")
 
-        if type(secret_names) != type(list()):
+        if not isinstance(secret_names, list):
             raise Exception("secret_names must be a list of secrets names")
 
-        if len(secret_names) != len(generators) and len(secret_names) != 1:
+        if len(secret_names) != len(generators):
             raise Exception(
-                "secret_names and generators must be of the same length if length of secret names is not one (secret shared by all generators)"
+                "secret_names and generators must be of the same length"
             )
-
-        if len(secret_names) != len(generators) and len(secret_names) == 1:
-            secret_names = [secret_names[0] for i in range(len(generators))]
-
-        if len(secret_names) == 0:
-            raise Exception(
-                "create some entries in this array of secrets' names. ")
+            
+        # Check all the generators live in the same group
         test_group = generators[0].group
         for g in generators:
             if g.group != test_group:
@@ -152,39 +147,27 @@ class PedersenProof:
         self.public_info = public_info
 
 
-    def get_secret_names():
-        return self.secret_names
-
     def getProver(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
 
         if not isinstance(secrets_dict, dict):
-            raise Exception("secrets_dict should be a dictionnary")
+            raise Exception("secrets_dict should be a dictionary")
 
         secret_names_set = set(self.secret_names)
         secrets_keys = set(secrets_dict.keys())
         diff1 = secrets_keys.difference(secret_names_set)
         diff2 = secret_names_set.difference(secrets_keys)
+
         if len(diff1) > 0 or len(diff2) > 0:
             raise Exception(
                 "secrets do not match: those secrets should be checked {0} {1}"
                 .format(diff1, diff2))
 
-        
         # We check everything is indeed a BigNumber, else we cast it
         for name,sec in secrets_dict.items():
             if not isinstance(sec, Bn):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
-
-        # Check all the generators live in the same group
-        gen_values = self.group_generators
-        test_group = gen_values[0].group
-        for g in gen_values:
-            if g.group != test_group:
-                raise Exception(
-                    'All generators should come from the same group')
-
 
         return PedersenProver(self.group_generators, self.secret_names, secrets_dict, self.public_info)
 
@@ -201,21 +184,22 @@ if __name__ == "__main__":
         randWord = randomword(30).encode("UTF-8")
         tab_g.append(G.hash_to_point(randWord))
     o = G.order()
-    secrets = []
-    for i in range(len(tab_g)):  # we build N secrets
-        secrets.append(
-            o.random()
-        )  # peggy wishes to prove she knows the discrete logarithm equal to this value
+    secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
+    secrets_values = dict()
+    secret_tab = []
+    for wurd in secrets_aliases:  # we build N secrets
+        secrets_values[wurd]= o.random()
+        secret_tab.append(secrets_values[wurd])
+      # peggy wishes to prove she knows the discrete logarithm equal to this value
 
-    powers = [a * b for a, b in zip(secrets, tab_g)
+    powers = [a * b for a, b in zip(secret_tab, tab_g)
               ]  # The Ys of which we will prove logarithm knowledge
     public_info = G.infinite()
     for y in powers:
         public_info += y
 
-    secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
     pedersen_proof = PedersenProof(tab_g, secrets_aliases, public_info)
-    Ped_prover = pedersen_proof.getProver(secrets)
+    Ped_prover = pedersen_proof.getProver(secrets_values)
     Ped_verifier = pedersen_proof.getVerifier()
 
     pedersen_protocol = SigmaProtocol(Ped_verifier, Ped_prover)

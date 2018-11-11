@@ -102,7 +102,7 @@ def test_generators_sharing_a_secret():
     generators = get_generators(N)
     unique_secret = 4
     public_info = create_public_info(generators, [4 for g in generators])
-    pp = PedersenProof(generators, ["x1"], public_info)
+    pp = PedersenProof(generators, ["x1", "x1", "x1", "x1","x1", "x1", "x1", "x1", "x1", "x1"], public_info)
     prover = pp.getProver({"x1": unique_secret})
     assert type(prover) == PedersenProver
     commitment = prover.commit()

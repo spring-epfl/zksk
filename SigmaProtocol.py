@@ -25,9 +25,8 @@ class SigmaProtocol:
     def verify(
             self
     ) -> bool:  # a method used to chain SigmaProtocols verifications
-        params, params_verif = self.setup()
-        victor = self.verifierClass(params_verif)
-        peggy = self.proverClass(params)
+        victor = self.verifierClass
+        peggy = self.proverClass
 
         (commitment) = peggy.commit()
         challenge = victor.sendChallenge(commitment)
@@ -54,23 +53,6 @@ class Prover:  # The Prover class is built on an array of generators, an array o
         pass
 
 
-class SimulatableProver(Prover):
-    def simulate(self, challenge, response):
-        pass
-
-
-class RandomlySimulatableProver(SimulatableProver):
-    def generateRandomChallenge(self):
-        pass
-
-    def generateRandomResponse(self):
-        pass
-
-    def randomlySimulate(self):
-        c = self.generateRandomChallenge()
-        s = self.generateRandomResponse()
-        return self.simulate(c, s)
-
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
     def __init__(self, generators, secret_names, public_info):
         self.generators = generators
@@ -80,5 +62,5 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
     def sendChallenge(self, commitment):
         pass
 
-    def verify(self, commitment, challenge, response, public_info):
+    def verify(self, response, commitment=None, challenge=None):
         pass
