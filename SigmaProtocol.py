@@ -13,7 +13,6 @@ Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
 # 	secrets = attr.ib(factory=list)
 
 
-
 class SigmaProtocol:
     def __init__(self, verifierClass, proverClass):
         self.verifierClass = verifierClass
@@ -36,8 +35,11 @@ class SigmaProtocol:
     def run(self):
         if self.verify():
             print("Verified for {0}".format(self.__class__.__name__))
+            return True
         else:
             print("Not verified for {0}".format(self.__class__.__name__))
+            return False
+
 
 class Prover:  # The Prover class is built on an array of generators, an array of secrets'IDs, a dict of these secrets, and public info
     def __init__(self, generators, secret_names, secret_values, public_info):

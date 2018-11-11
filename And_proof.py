@@ -25,12 +25,13 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
-    
     def commit(self) -> AndProofCommitment:
         r1 = self.prover1.get_randomizers()
         r2 = self.prover2.get_randomizers()
         r1.update(r2)
-        return AndProofCommitment(self.prover1.commit(randomizers_dict=r1), self.prover2.commit(randomizers_dict=r1))
+        return AndProofCommitment(
+            self.prover1.commit(randomizers_dict=r1),
+            self.prover2.commit(randomizers_dict=r1))
 
     def computeResponse(self, challenges: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k
@@ -79,7 +80,6 @@ class AndProof:
     def getVerifier(self):
         return AndProofVerifier(self.proof1.getVerifier(),
                                 self.proof2.getVerifier())
-
 
 
 def check_groups(

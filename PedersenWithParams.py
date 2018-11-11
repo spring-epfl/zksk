@@ -12,37 +12,29 @@ import binascii
 
 class PedersenProver(Prover):
     def get_randomizers(self):
-        G = self.generators[0].group
-        self.group_order = G.order()  # Will be useful for all the protocol
         output = {}
-        for sec in self.secret_names:  #we build a N-commitments
-            key = self.secret_values[sec]
-            to_append = self.group_order.random()
+        for sec in set(self.secret_names):
+            key = sec
+            to_append = self.generators[0].group.order().random()
             output.update({key: to_append})
         return output
 
-        
     def commit(self, randomizers_dict=None):
-        if randomizers_dict == None:    # If we are not provided a randomizer dict from above, we compute it
-            secret_to_random_value = dict()
-        else :
-            secret_to_random_value = randomizers_dict
-
         tab_g = self.generators
-        public_info = self.public_info
         G = tab_g[0].group
         self.group_order = G.order()  # Will be useful for all the protocol
 
-        self.ks = []
-        for sec in self.secret_names:  #we build a N-commitments
-            if sec in secret_to_random_value.keys():
-                to_append = secret_to_random_value[sec]
-            else:                           # There is no upper proof in this case
-                to_append = self.group_order.random()
-                secret_to_random_value.update({sec: to_append})
+        if randomizers_dict == None:  # If we are not provided a randomizer dict from above, we compute it
+            secret_to_random_value = self.get_randomizers()
+        else:
+            secret_to_random_value = randomizers_dict
 
-            self.ks.append(to_append)
-
+        self.ks = [
+        ]  #We are filling an ordered array of randomizers, matching the secret names
+        [
+            self.ks.append(secret_to_random_value[sec])
+            for sec in self.secret_names
+        ]
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
@@ -50,7 +42,7 @@ class PedersenProver(Prover):
         for com in commits:
             sum_ = sum_ + com
 
-        print("\ncommitment = ", sum_, "\npublic_info = ", public_info)
+        print("\ncommitment = ", sum_, "\npublic_info = ", self.public_info)
         return sum_
 
     def computeResponse(
@@ -68,7 +60,6 @@ class PedersenProver(Prover):
         print("\n responses : ", resps)
         return resps
 
-
     def simulate_proof(self, challenge, response):  # TODO : correct this
         G = self.generators[0].group
         commmitment = (
@@ -80,6 +71,7 @@ class PedersenProver(Prover):
         commitment += (-challenge) * public_info
 
         return commitment, challenge, response
+
 
 def randomword(length):
     letters = string.ascii_lowercase
@@ -127,7 +119,7 @@ class PedersenVerifier(Verifier):
 
 class PedersenProof:
 
-    #len of secretDict and generators param of __init__ must match exactly or secret_names must be exactly of size 1 and and then every generator uses the same secret.
+    #len of secretDict and generators param of __init__ must match exactly
     def __init__(self, generators, secret_names, public_info):
         if not isinstance(generators, list):  # we have a single generator
             raise Exception("generators must be a list of generators values")
@@ -141,9 +133,8 @@ class PedersenProof:
 
         if len(secret_names) != len(generators):
             raise Exception(
-                "secret_names and generators must be of the same length"
-            )
-            
+                "secret_names and generators must be of the same length")
+
         # Check all the generators live in the same group
         test_group = generators[0].group
         for g in generators:
@@ -155,7 +146,6 @@ class PedersenProof:
         self.secret_names = secret_names
         self.public_info = public_info
 
-
     def getProver(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
@@ -163,6 +153,7 @@ class PedersenProof:
         if not isinstance(secrets_dict, dict):
             raise Exception("secrets_dict should be a dictionary")
 
+        # Check that the secret names and the keys of the secret values actually match
         secret_names_set = set(self.secret_names)
         secrets_keys = set(secrets_dict.keys())
         diff1 = secrets_keys.difference(secret_names_set)
@@ -174,17 +165,19 @@ class PedersenProof:
                 .format(diff1, diff2))
 
         # We check everything is indeed a BigNumber, else we cast it
-        for name,sec in secrets_dict.items():
+        for name, sec in secrets_dict.items():
             if not isinstance(sec, Bn):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
 
-        return PedersenProver(self.group_generators, self.secret_names, secrets_dict, self.public_info)
+        return PedersenProver(self.group_generators, self.secret_names,
+                              secrets_dict, self.public_info)
 
     def getVerifier(self):
         return PedersenVerifier(self.group_generators, self.secret_names,
                                 self.public_info)
 
-if __name__ == "__main__":
+
+if __name__ == "__main__":  #A legit run in which we build the public info from random variables and pass everything to the process
     N = 5
     G = EcGroup(713)
     tab_g = []
@@ -195,11 +188,12 @@ if __name__ == "__main__":
     o = G.order()
     secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
     secrets_values = dict()
-    secret_tab = []
+    secret_tab = [
+    ]  #This array is only useful to compute the public info because zip doesn't take dicts. #spaghetti
     for wurd in secrets_aliases:  # we build N secrets
-        secrets_values[wurd]= o.random()
+        secrets_values[wurd] = o.random()
         secret_tab.append(secrets_values[wurd])
-      # peggy wishes to prove she knows the discrete logarithm equal to this value
+    # peggy wishes to prove she knows the discrete logarithm equal to this value
 
     powers = [a * b for a, b in zip(secret_tab, tab_g)
               ]  # The Ys of which we will prove logarithm knowledge
