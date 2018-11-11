@@ -25,8 +25,12 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
+    
     def commit(self) -> AndProofCommitment:
-        return AndProofCommitment(self.prover1.commit(), self.prover2.commit())
+        r1 = self.prover1.get_randomizers()
+        r2 = self.prover2.get_randomizers()
+        r1.update(r2)
+        return AndProofCommitment(self.prover1.commit(randomizers_dict=r1), self.prover2.commit(randomizers_dict=r1))
 
     def computeResponse(self, challenges: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k

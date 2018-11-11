@@ -11,6 +11,17 @@ import binascii
 
 
 class PedersenProver(Prover):
+    def get_randomizers(self):
+        G = self.generators[0].group
+        self.group_order = G.order()  # Will be useful for all the protocol
+        output = {}
+        for sec in self.secret_names:  #we build a N-commitments
+            key = self.secret_values[sec]
+            to_append = self.group_order.random()
+            output.update({key: to_append})
+        return output
+
+        
     def commit(self, randomizers_dict=None):
         if randomizers_dict == None:    # If we are not provided a randomizer dict from above, we compute it
             secret_to_random_value = dict()
@@ -21,16 +32,14 @@ class PedersenProver(Prover):
         public_info = self.public_info
         G = tab_g[0].group
         self.group_order = G.order()  # Will be useful for all the protocol
+
         self.ks = []
-
         for sec in self.secret_names:  #we build a N-commitments
-            key = self.secret_values[sec]
-
-            if key in secret_to_random_value.keys():
-                to_append = secret_to_random_value[key]
+            if sec in secret_to_random_value.keys():
+                to_append = secret_to_random_value[sec]
             else:                           # There is no upper proof in this case
                 to_append = self.group_order.random()
-                secret_to_random_value.update({key: to_append})
+                secret_to_random_value.update({sec: to_append})
 
             self.ks.append(to_append)
 
