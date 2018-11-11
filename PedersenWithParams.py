@@ -153,7 +153,7 @@ class PedersenProof:
         if not isinstance(secrets_dict, dict):
             raise Exception("secrets_dict should be a dictionary")
 
-        # Check that the secret names and the keys of the secret values actually match
+        # Check that the secret names and the keys of the secret values actually match. Could be simplified since it only matters that all names are in dict
         secret_names_set = set(self.secret_names)
         secrets_keys = set(secrets_dict.keys())
         diff1 = secrets_keys.difference(secret_names_set)
