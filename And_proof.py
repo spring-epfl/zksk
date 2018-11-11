@@ -1,5 +1,5 @@
-import SigmaProtocol
-from collections import Counter
+from SigmaProtocol import *
+from collections import defaultdict
 
 
 class AndProofCommitment:
@@ -25,16 +25,14 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
-    def commit(self) -> AndProofCommitment: #TODO : compute the randomizers for all unique secrets
+    def commit(self) -> AndProofCommitment:
         return AndProofCommitment(self.prover1.commit(), self.prover2.commit())
 
-    def computeResponse(
-        self, challenges: AndProofChallenge
-    ) -> AndProofResponse:  # r = secret*challenge + k
+    def computeResponse(self, challenges: AndProofChallenge
+                        ) -> AndProofResponse:  #r = secret*challenge + k
         return AndProofResponse(
             self.prover1.computeResponse(challenges.challenge1),
-            self.prover2.computeResponse(challenges.challenge2),
-        )
+            self.prover2.computeResponse(challenges.challenge2))
 
     def sendResponse(self, challenges: AndProofChallenge) -> AndProofResponse:
         return self.computeResponse(challenges)
@@ -45,16 +43,15 @@ class AndProofVerifier:
         self.verifier1 = verifier1
         self.verifier2 = verifier2
 
-    def sendChallenge(self, commitment: AndProofCommitment) -> AndProofChallenge:
+    def sendChallenge(self,
+                      commitment: AndProofCommitment) -> AndProofChallenge:
         return AndProofChallenge(
             self.verifier1.sendChallenge(commitment.commitment1),
-            self.verifier2.sendChallenge(commitment.commitment2),
-        )
+            self.verifier2.sendChallenge(commitment.commitment2))
 
     def verify(self, responses: AndProofResponse):
-        return self.verifier1.verify(responses.response1) and self.verifier2.verify(
-            responses.response2
-        )
+        return self.verifier1.verify(
+            responses.response1) and self.verifier2.verify(responses.response2)
 
 
 class AndProof:
@@ -64,7 +61,7 @@ class AndProof:
 
     def getProver(self, secrets_dict):
         def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secrets_names)
+            keys = set(sub_proof.secret_names)
             secrets_for_prover = []
             for s_name in secrets_dict:
                 if s_name in keys:
@@ -76,18 +73,41 @@ class AndProof:
         return AndProofProver(prover1, prover2)
 
     def getVerifier(self):
-        return AndProofVerifier(self.proof1.getVerifier(), self.proof2.getVerifier())
+        return AndProofVerifier(self.proof1.getVerifier(),
+                                self.proof2.getVerifier())
 
-def check_groups(list_of_secret_names, list_of_generators_list) #checks that if two secrets are the same, the generators they expand live in the same group
-                                        # takes a list of all secret_aliases lists (for each subproof) and looks for the matching secrets. Checks the corresponding generators groups.
-                                        #
-                                        # MERGE the two lists and then :
-                                        #Use a Counter 
-                                        # use a dict 'mydict' with same keys as Counter, but with list of indices as values. fill it in the counter loop with mydict[word].append(idx)
-                                        # and then for each key (unique secret name) check all its g[idx for idx in mydict[word]] are ==
 
-    cnt = Counter()
-    for word, idx in enumerate(['red', 'blue', 'red', 'green', 'blue', 'blue']):
-        cnt[word] += 1
-    cnt
-#Counter({'blue': 3, 'red': 2, 'green': 1})
+
+def check_groups(
+        list_of_list_of_secret_names, list_of_generators_list
+):  #checks that if two secrets are the same, the generators they expand live in the same group
+    # takes a list of all secret_aliases lists (one for each subproof), a list of all generators lists(one for each subproof),
+    # looks for the matching secrets. Checks the corresponding generators groups.
+    #
+    # MERGE the lists and then :
+    # use a dict 'mydict' with secret names as keys, and with list of indices as values.
+    # and then for each key (unique secret name) check all its g[idx for idx in mydict[word]] are ==
+
+    # First concatenate all the secret aliases lists in one and all the generators list in one. Notice they match exactly because they are ordered.
+    secret_names_list = [
+        item for sublist in list_of_list_of_secret_names for item in sublist
+    ]
+    generators_list = [
+        item for sublist in list_of_generators_list for item in sublist
+    ]
+
+    # Now we map the unique secrets to the indices where they appear
+    mydict = defaultdict(list)
+    for idx, word in enumerate(secret_names_list):
+        mydict(word).append(idx)
+
+    # Now we use this dictionary to check all the generators related to a particular secret live in the same group
+    for word, gen in mydict.items():
+        ref_group = gen[0].group
+        for generator in gen:
+            if generator.group != ref_group:
+                raise Exception(
+                    "A shared secret has generators from different groups : secret",
+                    word)
+
+    return True

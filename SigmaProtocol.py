@@ -47,7 +47,7 @@ class Prover:  # The Prover class is built on an array of generators, an array o
         self.secret_values = secret_values
         self.public_info = public_info
 
-    def commit(self):
+    def commit(self, randomizers_dict=None):
         pass
 
     def computeResponse(self, challenge):
