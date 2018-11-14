@@ -113,29 +113,37 @@ def test_same_random_in_commitment():
     prover = pp.getProver({"x1": 100})
     commitments = prover.commit()
 
-
-def test_and_proofs():
+def setup_and_proofs():
     n1 = 3
     n2 = 4
     generators1 = get_generators(n1)
     generators2 = get_generators(n2, start_index=n1)
 
-    secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
-                         ("x4", 43), ("x5", 10)])
+    secrets_dict = dict([
+        ("x0", 1),
+        ("x1", 2),
+        ("x2", 5),
+        ("x3", 100),
+        ("x4", 43),
+        ("x5", 10)
+    ])
 
-    sum_1 = create_public_info(
-        generators1,
-        [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
+    sum_1 = create_public_info(generators1, [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
 
     secrets_2 = [secrets_dict["x0"]]
     for i in range(3, 6):
-        secrets_2.append(secrets_dict["x" + str(i)])
+        secrets_2.append(secrets_dict["x"+str(i)])
 
     sum_2 = create_public_info(generators2, secrets_2)
     pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
 
-    pp2 = PedersenProof(generators2, ["x0", "x3", "x4", "x5"],
-                        sum_2)  #one shared secret x0
+    pp2 = PedersenProof(generators2,
+                        ["x0", "x3", "x4", "x5"], sum_2)  #one shared secret x0
+    return pp1, pp2, secrets_dict
+
+
+def test_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof(pp1, pp2)
     and_prover = and_proof.getProver(secrets_dict)
     and_verifier = and_proof.getVerifier()
@@ -144,3 +152,15 @@ def test_and_proofs():
     challenge = and_verifier.sendChallenge(commitment)
     response = and_prover.computeResponse(challenge)
     assert and_verifier.verify(response)
+
+def test_compose_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    pp3 = AndProof(pp1, pp2)
+    pp4 = AndProof(AndProof(pp1, pp2), pp1)
+    prover = pp4.getProver(secrets_dict)
+    verifier = pp4.getVerifier()
+    commitment = prover.commit()
+    challenge = verifier.sendChallenge(commitment)
+    response = prover.computeResponse(challenge)
+    assert verifier.verify(response)
+

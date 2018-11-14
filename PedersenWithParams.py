@@ -11,7 +11,7 @@ import binascii
 
 
 class PedersenProver(Prover):
-    def get_randomizers(self):
+    def get_randomizers(self) -> dict:
         output = {}
         for sec in set(self.secret_names):
             key = sec
@@ -30,9 +30,7 @@ class PedersenProver(Prover):
             secret_to_random_value = randomizers_dict
 
         self.ks = [
-        ]  #We are filling an ordered array of randomizers, matching the secret names
-        [
-            self.ks.append(secret_to_random_value[sec])
+            secret_to_random_value[sec]
             for sec in self.secret_names
         ]
         commits = [a * b for a, b in zip(self.ks, tab_g)]
@@ -145,6 +143,10 @@ class PedersenProof:
         self.group_generators = generators
         self.secret_names = secret_names
         self.public_info = public_info
+
+    def get_secret_names(self):
+        return self.secret_names.copy()
+
 
     def getProver(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):

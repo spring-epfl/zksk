@@ -25,13 +25,18 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
-    def commit(self) -> AndProofCommitment:
-        r1 = self.prover1.get_randomizers()
-        r2 = self.prover2.get_randomizers()
-        r1.update(r2)
+    def get_randomizers(self) -> dict:
+        random_vals = self.prover1.get_randomizers().copy()
+        random_vals.update(self.prover2.get_randomizers().copy())
+        return random_vals
+        
+
+    def commit(self, randomizers_dict=None) -> AndProofCommitment:
+        if randomizers_dict == None:
+            randomizers_dict = self.get_randomizers()
         return AndProofCommitment(
-            self.prover1.commit(randomizers_dict=r1),
-            self.prover2.commit(randomizers_dict=r1))
+            self.prover1.commit(randomizers_dict=randomizers_dict),
+            self.prover2.commit(randomizers_dict=randomizers_dict))
 
     def computeResponse(self, challenges: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k
@@ -64,9 +69,15 @@ class AndProof:
         self.proof1 = proof1
         self.proof2 = proof2
 
+    def get_secret_names(self):
+        secrets = self.proof1.get_secret_names().copy()
+        secrets.extend(self.proof2.get_secret_names().copy())
+        return secrets 
+        
+
     def getProver(self, secrets_dict):
         def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secret_names)
+            keys = set(sub_proof.get_secret_names())
             secrets_for_prover = []
             for s_name in secrets_dict:
                 if s_name in keys:
