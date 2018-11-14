@@ -141,17 +141,19 @@ def setup_and_proofs():
                         ["x0", "x3", "x4", "x5"], sum_2)  #one shared secret x0
     return pp1, pp2, secrets_dict
 
+def assert_verify_proof(verifier, prover):
+    commitment = prover.commit()
+    challenge = verifier.sendChallenge(commitment)
+    response = prover.computeResponse(challenge)
+    assert verifier.verify(response)
 
 def test_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof(pp1, pp2)
     and_prover = and_proof.getProver(secrets_dict)
     and_verifier = and_proof.getVerifier()
-
-    commitment = and_prover.commit()
-    challenge = and_verifier.sendChallenge(commitment)
-    response = and_prover.computeResponse(challenge)
-    assert and_verifier.verify(response)
+    
+    assert_verify_proof(and_verifier, and_prover) 
 
 def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
@@ -159,8 +161,13 @@ def test_compose_and_proofs():
     pp4 = AndProof(AndProof(pp1, pp2), pp1)
     prover = pp4.getProver(secrets_dict)
     verifier = pp4.getVerifier()
-    commitment = prover.commit()
-    challenge = verifier.sendChallenge(commitment)
-    response = prover.computeResponse(challenge)
-    assert verifier.verify(response)
 
+    assert_verify_proof(verifier, prover)
+
+def test_compose_and_proofs2():
+    pp1, pp2, secrets_dict = setup_and_proofs() 
+    pp3 = AndProof(pp1, pp2)
+    p = AndProof(AndProof(pp1, AndProof(pp3, AndProof(pp1, pp2))), pp2)
+    prover = p.getProver(secrets_dict)
+    verifier = p.getVerifier()
+    assert_verify_proof(verifier, prover)
