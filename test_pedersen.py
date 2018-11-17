@@ -164,7 +164,7 @@ def test_and_proofs():
     assert_verify_proof(and_verifier, and_prover)
 
 
-""" def test_compose_and_proofs():
+def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
     pp4 = AndProof(AndProof(pp1, pp2), pp1)
@@ -181,4 +181,3 @@ def test_and_proofs():
     prover = p.getProver(secrets_dict)
     verifier = p.getVerifier()
     assert_verify_proof(verifier, prover)
- """
