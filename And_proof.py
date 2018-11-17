@@ -103,16 +103,9 @@ class AndProof:
 def check_groups(
         list_of_secret_names, list_of_generators
 ):  #checks that if two secrets are the same, the generators they expand live in the same group
-    # takes a list of all secret_aliases lists (one for each subproof), a list of all generators lists(one for each subproof),
-    # looks for the matching secrets. Checks the corresponding generators groups.
-    #
-    # MERGE the lists and then :
-    # use a dict 'mydict' with secret names as keys, and with list of indices as values.
-    # and then for each key (unique secret name) check all its g[idx for idx in mydict[word]] are ==
+    # takes a merged list of secrets names and a merged list of generators.
 
-    # First concatenate all the secret aliases lists in one and all the generators list in one. Notice they match exactly because they are ordered.
-    
-    # Now we map the unique secrets to the indices where they appear
+    # We map the unique secrets to the indices where they appear
     mydict = defaultdict(list)
     for idx, word in enumerate(list_of_secret_names):
         mydict[word].append(idx)
