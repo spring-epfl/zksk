@@ -58,6 +58,19 @@ class PedersenProver(Prover):
         print("\n responses : ", resps)
         return resps
 
+    def get_NI_proof(message): # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
+        tab_g = self.generators
+        commitment = self.commit()
+
+        # Computing the challenge
+        conc = self.public_info.export()
+        conc += commitment.export()
+        conc += message
+        myhash = sha256(conc).digest()
+        challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+        responses = self.computeResponse(challenge)
+        return (challenge, responses)
+
     def simulate_proof(self, challenge, response):  # TODO : correct this
         G = self.generators[0].group
         commmitment = (
@@ -81,19 +94,12 @@ class PedersenVerifier(Verifier):
         tab_g = self.generators
         self.commitment = commitment
 
-        # Computing the challenge
-        conc = self.public_info.export()
-
-        for gen in tab_g:
-            conc += (gen.export())  # We concatenate all the public info
-
-        myhash = sha256(conc).digest()
-        self.challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+        self.challenge = tab_g[0].group.order().random()
         print("\nchallenge is ", self.challenge)
         # raise Exception('stop hammertime')
         return self.challenge
 
-    def verify(self, response, commitment=None, challenge=None):
+    def verify(self, response, commitment=None, challenge=None): #Can verify simulations with optional arguments
 
         if commitment == None:
             commitment = self.commitment
@@ -106,13 +112,28 @@ class PedersenVerifier(Verifier):
 
         left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
 
-        leftside = tab_g[0].group.infinite()
-        for el in left_arr:
-            leftside += el
+        leftside = self.raise_powers(response)
 
         rightside = challenge * y + commitment
 
         return rightside.pt_eq(leftside)  # If the result
+
+    def verify_NI(self, challenge, response):
+        tab_g = self.generators
+        y = self.public_info
+        r_guess = -challenge*y + self.raise_powers(response) #We retrieve the commitment
+
+        
+        
+
+    def raise_powers(self, response):
+        tab_g = self.generators
+        left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
+        leftside = tab_g[0].group.infinite()
+        for el in left_arr:
+            leftside += el
+        return leftside
+
 
 
 class PedersenProof:
