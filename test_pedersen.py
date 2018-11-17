@@ -44,6 +44,14 @@ def test_pedersen_wrong_public(
     assert wrongpub.run() == False
 
 
+def test_pedersen_NI():  #We request a non_interactive proof from the prover
+    niproof = PedersenProof(tab_g, secrets_aliases, public_info)
+    niprover = niproof.getProver(secrets_values)
+    niverif = niproof.getVerifier()
+    chal, resp = niprover.get_NI_proof("mymessage")
+    assert niverif.verify_NI(chal, resp, "mymessage") == True
+
+
 # can be used to create ec points from hexa
 def translate(hexa, group):
     return EcPt.from_binary(bytes(bytearray.fromhex(hexa)), G)
@@ -113,33 +121,31 @@ def test_same_random_in_commitment():
     prover = pp.getProver({"x1": 100})
     commitments = prover.commit()
 
+
 def setup_and_proofs():
     n1 = 3
     n2 = 4
     generators1 = get_generators(n1)
     generators2 = get_generators(n2, start_index=n1)
 
-    secrets_dict = dict([
-        ("x0", 1),
-        ("x1", 2),
-        ("x2", 5),
-        ("x3", 100),
-        ("x4", 43),
-        ("x5", 10)
-    ])
+    secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
+                         ("x4", 43), ("x5", 10)])
 
-    sum_1 = create_public_info(generators1, [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
+    sum_1 = create_public_info(
+        generators1,
+        [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
 
     secrets_2 = [secrets_dict["x0"]]
     for i in range(3, 6):
-        secrets_2.append(secrets_dict["x"+str(i)])
+        secrets_2.append(secrets_dict["x" + str(i)])
 
     sum_2 = create_public_info(generators2, secrets_2)
     pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
 
-    pp2 = PedersenProof(generators2,
-                        ["x0", "x3", "x4", "x5"], sum_2)  #one shared secret x0
+    pp2 = PedersenProof(generators2, ["x0", "x3", "x4", "x5"],
+                        sum_2)  #one shared secret x0
     return pp1, pp2, secrets_dict
+
 
 def assert_verify_proof(verifier, prover):
     commitment = prover.commit()
@@ -147,13 +153,15 @@ def assert_verify_proof(verifier, prover):
     response = prover.computeResponse(challenge)
     assert verifier.verify(response)
 
+
 def test_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof(pp1, pp2)
     and_prover = and_proof.getProver(secrets_dict)
     and_verifier = and_proof.getVerifier()
-    
-    assert_verify_proof(and_verifier, and_prover) 
+
+    assert_verify_proof(and_verifier, and_prover)
+
 
 def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
@@ -164,8 +172,9 @@ def test_compose_and_proofs():
 
     assert_verify_proof(verifier, prover)
 
+
 def test_compose_and_proofs2():
-    pp1, pp2, secrets_dict = setup_and_proofs() 
+    pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
     p = AndProof(AndProof(pp1, AndProof(pp3, AndProof(pp1, pp2))), pp2)
     prover = p.getProver(secrets_dict)

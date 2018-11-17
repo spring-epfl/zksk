@@ -47,15 +47,14 @@ class Prover:  # The Prover class is built on an array of generators, an array o
         self.secret_names = secret_names
         self.secret_values = secret_values
         self.public_info = public_info
-        
 
     def commit(self, randomizers_dict=None):
         pass
 
     def computeResponse(self, challenge):
         pass
-    
-    def get_NI_proof():
+
+    def get_NI_proof(message):
         pass
 
 
@@ -71,5 +70,5 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
     def verify(self, response, commitment=None, challenge=None):
         pass
 
-    def verify_NI(self, challenge, response):
+    def verify_NI(self, challenge, response, message):
         pass

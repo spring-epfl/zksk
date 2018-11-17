@@ -29,10 +29,7 @@ class PedersenProver(Prover):
         else:
             secret_to_random_value = randomizers_dict
 
-        self.ks = [
-            secret_to_random_value[sec]
-            for sec in self.secret_names
-        ]
+        self.ks = [secret_to_random_value[sec] for sec in self.secret_names]
         commits = [a * b for a, b in zip(self.ks, tab_g)]
 
         # We build the commitment doing the product g1^k1 g2^k2...
@@ -58,9 +55,12 @@ class PedersenProver(Prover):
         print("\n responses : ", resps)
         return resps
 
-    def get_NI_proof(message): # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
+    def get_NI_proof(
+            self, message=''
+    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
         tab_g = self.generators
         commitment = self.commit()
+        message = message.encode()
 
         # Computing the challenge
         conc = self.public_info.export()
@@ -99,7 +99,9 @@ class PedersenVerifier(Verifier):
         # raise Exception('stop hammertime')
         return self.challenge
 
-    def verify(self, response, commitment=None, challenge=None): #Can verify simulations with optional arguments
+    def verify(
+            self, response, commitment=None,
+            challenge=None):  #Can verify simulations with optional arguments
 
         if commitment == None:
             commitment = self.commitment
@@ -118,13 +120,19 @@ class PedersenVerifier(Verifier):
 
         return rightside.pt_eq(leftside)  # If the result
 
-    def verify_NI(self, challenge, response):
+    def verify_NI(self, challenge, response, message=''):
+        message = message.encode()
         tab_g = self.generators
         y = self.public_info
-        r_guess = -challenge*y + self.raise_powers(response) #We retrieve the commitment
+        r_guess = -challenge * y + self.raise_powers(
+            response
+        )  #We retrieve the commitment using the verification identity
 
-        
-        
+        conc = self.public_info.export()
+        conc += r_guess.export()
+        conc += message
+        myhash = sha256(conc).digest()
+        return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
     def raise_powers(self, response):
         tab_g = self.generators
@@ -133,7 +141,6 @@ class PedersenVerifier(Verifier):
         for el in left_arr:
             leftside += el
         return leftside
-
 
 
 class PedersenProof:
@@ -167,7 +174,6 @@ class PedersenProof:
 
     def get_secret_names(self):
         return self.secret_names.copy()
-
 
     def getProver(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):
