@@ -54,6 +54,9 @@ class Prover:  # The Prover class is built on an array of generators, an array o
 
     def computeResponse(self, challenge):
         pass
+    
+    def get_NI_proof():
+        pass
 
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
@@ -66,4 +69,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         pass
 
     def verify(self, response, commitment=None, challenge=None):
+        pass
+
+    def verify_NI(self, challenge, response):
         pass
