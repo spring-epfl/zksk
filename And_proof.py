@@ -69,10 +69,17 @@ class AndProof:
         self.proof1 = proof1
         self.proof2 = proof2
 
+        check_groups(self.get_secret_names(), self.get_generators())
+
     def get_secret_names(self):
         secrets = self.proof1.get_secret_names().copy()
         secrets.extend(self.proof2.get_secret_names().copy())
         return secrets 
+    
+    def get_generators(self):
+        generators = self.proof1.group_generators.copy()
+        generators.extend(self.proof2.group_generators.copy())
+        return generators
         
 
     def getProver(self, secrets_dict):
@@ -94,7 +101,7 @@ class AndProof:
 
 
 def check_groups(
-        list_of_list_of_secret_names, list_of_generators_list
+        list_of_secret_names, list_of_generators
 ):  #checks that if two secrets are the same, the generators they expand live in the same group
     # takes a list of all secret_aliases lists (one for each subproof), a list of all generators lists(one for each subproof),
     # looks for the matching secrets. Checks the corresponding generators groups.
@@ -104,23 +111,18 @@ def check_groups(
     # and then for each key (unique secret name) check all its g[idx for idx in mydict[word]] are ==
 
     # First concatenate all the secret aliases lists in one and all the generators list in one. Notice they match exactly because they are ordered.
-    secret_names_list = [
-        item for sublist in list_of_list_of_secret_names for item in sublist
-    ]
-    generators_list = [
-        item for sublist in list_of_generators_list for item in sublist
-    ]
-
+    
     # Now we map the unique secrets to the indices where they appear
     mydict = defaultdict(list)
-    for idx, word in enumerate(secret_names_list):
-        mydict(word).append(idx)
+    for idx, word in enumerate(list_of_secret_names):
+        mydict[word].append(idx)
 
     # Now we use this dictionary to check all the generators related to a particular secret live in the same group
-    for word, gen in mydict.items():
-        ref_group = gen[0].group
-        for generator in gen:
-            if generator.group != ref_group:
+    for word, gen_idx in mydict.items(): #word is the key, gen_idx is the value = a list of indices
+        ref_group = list_of_generators[gen_idx[0]].group
+        
+        for index in gen_idx:
+            if list_of_generators[index].group != ref_group:
                 raise Exception(
                     "A shared secret has generators from different groups : secret",
                     word)
