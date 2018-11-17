@@ -171,10 +171,10 @@ def test_compose_and_proofs():
     prover = pp4.getProver(secrets_dict)
     verifier = pp4.getVerifier()
 
-    assert_verify_proof(verifier, prover) """
+    assert_verify_proof(verifier, prover) 
 
 
-""" def test_compose_and_proofs2():
+def test_compose_and_proofs2():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
     p = AndProof(AndProof(pp1, AndProof(pp3, AndProof(pp1, pp2))), pp2)

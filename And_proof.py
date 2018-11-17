@@ -69,7 +69,9 @@ class AndProof:
         self.proof1 = proof1
         self.proof2 = proof2
 
-        check_groups(self.get_secret_names(), self.get_generators())
+        self.group_generators = self.get_generators() #For consistency
+        self.secret_names = self.get_secret_names()
+        check_groups(self.secret_names, self.group_generators)
 
     def get_secret_names(self):
         secrets = self.proof1.get_secret_names().copy()
