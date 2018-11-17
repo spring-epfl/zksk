@@ -29,7 +29,6 @@ class AndProofProver(Prover):
         random_vals = self.prover1.get_randomizers().copy()
         random_vals.update(self.prover2.get_randomizers().copy())
         return random_vals
-        
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         if randomizers_dict == None:
@@ -69,20 +68,19 @@ class AndProof:
         self.proof1 = proof1
         self.proof2 = proof2
 
-        self.group_generators = self.get_generators() #For consistency
+        self.group_generators = self.get_generators()  #For consistency
         self.secret_names = self.get_secret_names()
         check_groups(self.secret_names, self.group_generators)
 
     def get_secret_names(self):
         secrets = self.proof1.get_secret_names().copy()
         secrets.extend(self.proof2.get_secret_names().copy())
-        return secrets 
-    
+        return secrets
+
     def get_generators(self):
         generators = self.proof1.group_generators.copy()
         generators.extend(self.proof2.group_generators.copy())
         return generators
-        
 
     def getProver(self, secrets_dict):
         def sub_proof_prover(sub_proof):
@@ -113,9 +111,10 @@ def check_groups(
         mydict[word].append(idx)
 
     # Now we use this dictionary to check all the generators related to a particular secret live in the same group
-    for word, gen_idx in mydict.items(): #word is the key, gen_idx is the value = a list of indices
+    for word, gen_idx in mydict.items(
+    ):  #word is the key, gen_idx is the value = a list of indices
         ref_group = list_of_generators[gen_idx[0]].group
-        
+
         for index in gen_idx:
             if list_of_generators[index].group != ref_group:
                 raise Exception(

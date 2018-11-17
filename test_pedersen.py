@@ -52,6 +52,14 @@ def test_pedersen_NI():  #We request a non_interactive proof from the prover
     assert niverif.verify_NI(chal, resp, "mymessage") == True
 
 
+def test_diff_groups_pedersen():
+    tab_g[2] = EcGroup(706).generator()
+    with pytest.raises(
+            Exception
+    ):  # An exception should be raised due to different groups coexisting in a DLRepProof
+        niproof = PedersenProof(tab_g, secrets_aliases, public_info)
+
+
 # can be used to create ec points from hexa
 def translate(hexa, group):
     return EcPt.from_binary(bytes(bytearray.fromhex(hexa)), G)
@@ -65,7 +73,7 @@ def test_one_generator_one_secret():
     commitments = prover.commit()
 
 
-def get_generators(nb_wanted, start_index=0):
+def get_generators(nb_wanted, start_index=0):  #What is start_index?
     G = EcGroup(713)
     tab_g = []
     tab_g.append(G.generator())
@@ -128,7 +136,6 @@ def setup_and_proofs():
     generators1 = get_generators(n1)
     generators2 = get_generators(n2, start_index=n1)
 
-
     secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
                          ("x4", 43), ("x5", 10)])
 
@@ -147,31 +154,29 @@ def setup_and_proofs():
     return pp1, pp2, secrets_dict
 
 
-def setup_wrong_and_proofs(): # An alien EcPt is inserted in the generators
-    with self.assertRaises(Exception):
-        n1 = 3
-        n2 = 4
-        generators1 = get_generators(n1)
-        generators2 = get_generators(n2, start_index=n1)
+def test_wrong_and_proofs():  # An alien EcPt is inserted in the generators
+    n1 = 3
+    n2 = 1
+    generators1 = get_generators(n1)
+    generators2 = get_generators(n2)
+    generators2[0] = EcGroup(706).generator()
 
+    secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
+                         ("x4", 43), ("x5", 10)])
+    sum_1 = create_public_info(
+        generators1,
+        [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
 
-        secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
-                            ("x4", 43), ("x5", 10)])
+    secrets_2 = [secrets_dict["x0"]]
 
-        sum_1 = create_public_info(
-            generators1,
-            [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
-        generators1[0] = EcGroup(706).generator() 
-        secrets_2 = [secrets_dict["x0"]]
-        for i in range(3, 6):
-            secrets_2.append(secrets_dict["x" + str(i)])
+    sum_2 = create_public_info(generators2, secrets_2)
+    pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
+    pp2 = PedersenProof(generators2, ["x0"], sum_2)
+    with pytest.raises(
+            Exception
+    ):  #An exception should be raised because of a shared secrets linked to two different groups
+        and_proof = AndProof(pp1, pp2)
 
-        sum_2 = create_public_info(generators2, secrets_2)
-        pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
-
-        pp2 = PedersenProof(generators2, ["x0", "x3", "x4", "x5"],
-                            sum_2)  #one shared secret x0
-        return pp1, pp2, secrets_dict
 
 def assert_verify_proof(verifier, prover):
     commitment = prover.commit()
@@ -196,7 +201,7 @@ def test_compose_and_proofs():
     prover = pp4.getProver(secrets_dict)
     verifier = pp4.getVerifier()
 
-    assert_verify_proof(verifier, prover) 
+    assert_verify_proof(verifier, prover)
 
 
 def test_compose_and_proofs2():
