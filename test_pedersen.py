@@ -135,7 +135,6 @@ def setup_and_proofs():
     sum_1 = create_public_info(
         generators1,
         [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
-
     secrets_2 = [secrets_dict["x0"]]
     for i in range(3, 6):
         secrets_2.append(secrets_dict["x" + str(i)])
@@ -147,6 +146,32 @@ def setup_and_proofs():
                         sum_2)  #one shared secret x0
     return pp1, pp2, secrets_dict
 
+
+def setup_wrong_and_proofs(): # An alien EcPt is inserted in the generators
+    with self.assertRaises(Exception):
+        n1 = 3
+        n2 = 4
+        generators1 = get_generators(n1)
+        generators2 = get_generators(n2, start_index=n1)
+
+
+        secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
+                            ("x4", 43), ("x5", 10)])
+
+        sum_1 = create_public_info(
+            generators1,
+            [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
+        generators1[0] = EcGroup(706).generator() 
+        secrets_2 = [secrets_dict["x0"]]
+        for i in range(3, 6):
+            secrets_2.append(secrets_dict["x" + str(i)])
+
+        sum_2 = create_public_info(generators2, secrets_2)
+        pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
+
+        pp2 = PedersenProof(generators2, ["x0", "x3", "x4", "x5"],
+                            sum_2)  #one shared secret x0
+        return pp1, pp2, secrets_dict
 
 def assert_verify_proof(verifier, prover):
     commitment = prover.commit()
