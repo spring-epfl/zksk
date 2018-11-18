@@ -52,6 +52,15 @@ def test_pedersen_NI():  #We request a non_interactive proof from the prover
     assert niverif.verify_NI(chal, resp, "mymessage") == True
 
 
+def test_pedersen_wrongNI():  #We request a non_interactive proof from the prover
+    niproof = PedersenProof(tab_g, secrets_aliases, public_info)
+    niprover = niproof.getProver(secrets_values)
+    niverif = niproof.getVerifier()
+    chal, resp = niprover.get_NI_proof("mymessage")
+    resp[1] = tab_g[0].group.order().random()
+    assert niverif.verify_NI(chal, resp, "mymessage") == False
+
+
 def test_diff_groups_pedersen():
     tab_g[2] = EcGroup(706).generator()
     with pytest.raises(

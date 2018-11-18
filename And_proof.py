@@ -47,7 +47,7 @@ class AndProofVerifier:
     def sendChallenge(self,
                       commitment: AndProofCommitment) -> AndProofChallenge:
         self.commitment = commitment
-        self.and_challenge = self.verifier1.sendChallenge(commitment.commitment1)
+        self.and_challenge = self.verifier1.sendChallenge(commitment.commitment1) # Do we need a sanity check over the group orders ?
         return self.and_challenge
 
     def verify(self, responses: AndProofResponse, commitment: AndProofCommitment = None, challenge: AndProofChallenge = None):

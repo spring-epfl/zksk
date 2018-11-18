@@ -71,7 +71,7 @@ class PedersenProver(Prover):
         responses = self.computeResponse(challenge)
         return (challenge, responses)
 
-    def simulate_proof(self, challenge, response):  # TODO : correct this
+    def simulate_proof(self, challenge, response):  # TODO : correct this + use raise_powers
         G = self.generators[0].group
         commmitment = (
             G.infinite()
@@ -88,6 +88,12 @@ def randomword(length):
     letters = string.ascii_lowercase
     return "".join(random.choice(letters) for i in range(length))
 
+def raise_powers(tab_g, response):
+    left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
+    leftside = tab_g[0].group.infinite()
+    for el in left_arr:
+        leftside += el
+    return leftside
 
 class PedersenVerifier(Verifier):
     def sendChallenge(self, commitment):
@@ -113,7 +119,7 @@ class PedersenVerifier(Verifier):
 
         left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
 
-        leftside = self.raise_powers(response)
+        leftside = raise_powers(self.generators, response)
 
         rightside = challenge * y + commitment
 
@@ -123,7 +129,7 @@ class PedersenVerifier(Verifier):
         message = message.encode()
         tab_g = self.generators
         y = self.public_info
-        r_guess = -challenge * y + self.raise_powers(
+        r_guess = -challenge * y + raise_powers(self.generators, 
             response
         )  #We retrieve the commitment using the verification identity
 
@@ -132,14 +138,6 @@ class PedersenVerifier(Verifier):
         conc += message
         myhash = sha256(conc).digest()
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
-
-    def raise_powers(self, response):
-        tab_g = self.generators
-        left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
-        leftside = tab_g[0].group.infinite()
-        for el in left_arr:
-            leftside += el
-        return leftside
 
 
 class PedersenProof:
