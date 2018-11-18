@@ -70,8 +70,8 @@ class AndProof:
         check_groups(self.secret_names, self.group_generators)
 
     def get_secret_names(self):
-        secrets = self.proof1.get_secret_names().copy()
-        secrets.extend(self.proof2.get_secret_names().copy())
+        secrets = self.proof1.get_secret_names()
+        secrets.extend(self.proof2.get_secret_names())
         return secrets
 
     def get_generators(self):
