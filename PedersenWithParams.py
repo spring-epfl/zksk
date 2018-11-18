@@ -103,14 +103,13 @@ class PedersenVerifier(Verifier):
             self, response, commitment=None,
             challenge=None):  #Can verify simulations with optional arguments
 
-        if commitment == None:
+        if commitment is None:
             commitment = self.commitment
-        if challenge == None:
+        if challenge is None:
             challenge = self.challenge
 
         tab_g = self.generators
         y = self.public_info
-        r = self.commitment
 
         left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
 

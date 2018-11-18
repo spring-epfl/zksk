@@ -1,4 +1,5 @@
 from SigmaProtocol import *
+from petlib.bn import Bn
 from collections import defaultdict
 
 
@@ -7,12 +8,7 @@ class AndProofCommitment:
         self.commitment1 = commitment1
         self.commitment2 = commitment2
 
-
-class AndProofChallenge:
-    def __init__(self, challenge1, challenge2):
-        self.challenge1 = challenge1
-        self.challenge2 = challenge2
-
+AndProofChallenge = Bn
 
 class AndProofResponse:
     def __init__(self, response1, response2):
@@ -31,17 +27,17 @@ class AndProofProver(Prover):
         return random_vals
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
-        if randomizers_dict == None:
+        if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
         return AndProofCommitment(
             self.prover1.commit(randomizers_dict=randomizers_dict),
             self.prover2.commit(randomizers_dict=randomizers_dict))
 
-    def computeResponse(self, challenges: AndProofChallenge
+    def computeResponse(self, challenge: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k
         return AndProofResponse(
-            self.prover1.computeResponse(challenges.challenge1),
-            self.prover2.computeResponse(challenges.challenge2))
+            self.prover1.computeResponse(challenge),
+            self.prover2.computeResponse(challenge))
 
 class AndProofVerifier:
     def __init__(self, verifier1, verifier2):
@@ -50,13 +46,18 @@ class AndProofVerifier:
 
     def sendChallenge(self,
                       commitment: AndProofCommitment) -> AndProofChallenge:
-        return AndProofChallenge(
-            self.verifier1.sendChallenge(commitment.commitment1),
-            self.verifier2.sendChallenge(commitment.commitment2))
+        self.commitment = commitment
+        self.and_challenge = self.verifier1.sendChallenge(commitment.commitment1)
+        return self.and_challenge
 
-    def verify(self, responses: AndProofResponse):
+    def verify(self, responses: AndProofResponse, commitment: AndProofCommitment = None, challenge: AndProofChallenge = None):
+        if challenge is None:
+            challenge = self.and_challenge
+        if commitment is None:
+            commitment = self.commitment
+        
         return self.verifier1.verify(
-            responses.response1) and self.verifier2.verify(responses.response2)
+            responses.response1, commitment = commitment.commitment1, challenge = challenge ) and self.verifier2.verify(responses.response2, commitment=commitment.commitment2, challenge= challenge)
 
 
 class AndProof:
