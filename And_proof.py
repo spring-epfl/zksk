@@ -43,10 +43,6 @@ class AndProofProver(Prover):
             self.prover1.computeResponse(challenges.challenge1),
             self.prover2.computeResponse(challenges.challenge2))
 
-    def sendResponse(self, challenges: AndProofChallenge) -> AndProofResponse:
-        return self.computeResponse(challenges)
-
-
 class AndProofVerifier:
     def __init__(self, verifier1, verifier2):
         self.verifier1 = verifier1
