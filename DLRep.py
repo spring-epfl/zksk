@@ -2,7 +2,6 @@
 
 import pdb
 import random, string
-from collections import namedtuple
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from SigmaProtocol import *
@@ -103,6 +102,7 @@ class DLRepVerifier(Verifier):
 
         self.challenge = tab_g[0].group.order().random()
         print("\nchallenge is ", self.challenge)
+
         # raise Exception('stop hammertime')
         return self.challenge
 
