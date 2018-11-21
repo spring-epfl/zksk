@@ -1,4 +1,4 @@
-from PedersenWithParams import *
+from DLRep import *
 from And_proof import *
 
 N = 5
@@ -25,48 +25,55 @@ for y in powers:
     public_info += y
 
 
-def test_pedersen_true():  # Legit run
-    pedersen_true = PedersenProof(tab_g, secrets_aliases, public_info)
-    true_prover = pedersen_true.getProver(secrets_values)
-    true_verifier = pedersen_true.getVerifier()
+def test_dlrep_true():  # Legit run
+    pedersen_true = DLRepProof(tab_g, secrets_aliases, public_info)
+    true_prover = pedersen_true.get_prover(secrets_values)
+    true_verifier = pedersen_true.get_verifier()
     proof = SigmaProtocol(true_verifier, true_prover)
     assert proof.run() == True
 
 
-def test_pedersen_wrong_public(
+def test_dlrep_wrong_public(
 ):  # We use generators and secrets from previous run but random public info
     randWord = randomword(30).encode("UTF-8")
     public_wrong = G.hash_to_point(randWord)
-    pedersen_public_wrong = PedersenProof(tab_g, secrets_aliases, public_wrong)
-    wrongprover = pedersen_public_wrong.getProver(secrets_values)
-    wrongverifier = pedersen_public_wrong.getVerifier()
+    pedersen_public_wrong = DLRepProof(tab_g, secrets_aliases, public_wrong)
+    wrongprover = pedersen_public_wrong.get_prover(secrets_values)
+    wrongverifier = pedersen_public_wrong.get_verifier()
     wrongpub = SigmaProtocol(wrongverifier, wrongprover)
     assert wrongpub.run() == False
 
 
-def test_pedersen_NI():  #We request a non_interactive proof from the prover
-    niproof = PedersenProof(tab_g, secrets_aliases, public_info)
-    niprover = niproof.getProver(secrets_values)
-    niverif = niproof.getVerifier()
+def test_dlrep_NI():  #We request a non_inte_ractive proof from the prover
+    niproof = DLRepProof(tab_g, secrets_aliases, public_info)
+    niprover = niproof.get_prover(secrets_values)
+    niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
     assert niverif.verify_NI(chal, resp, "mymessage") == True
 
 
-def test_pedersen_wrongNI():  #We request a non_interactive proof from the prover
-    niproof = PedersenProof(tab_g, secrets_aliases, public_info)
-    niprover = niproof.getProver(secrets_values)
-    niverif = niproof.getVerifier()
+def test_dlrep_wrongNI():  #We request a non_inte_ractive proof from the prover
+    niproof = DLRepProof(tab_g, secrets_aliases, public_info)
+    niprover = niproof.get_prover(secrets_values)
+    niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
     resp[1] = tab_g[0].group.order().random()
     assert niverif.verify_NI(chal, resp, "mymessage") == False
 
+def test_dlrep_simulation():
+    ped_proof = DLRepProof(tab_g, secrets_aliases, public_info)
+    sim_prover = ped_proof.get_simulator()
+    sim_verif = ped_proof.get_verifier()
+    (com, chal, resp) = sim_prover.simulate_proof()
+    assert sim_verif.verify(resp, com, chal) == True
 
-def test_diff_groups_pedersen():
+
+def test_diff_groups_dlrep():
     tab_g[2] = EcGroup(706).generator()
     with pytest.raises(
             Exception
     ):  # An exception should be raised due to different groups coexisting in a DLRepProof
-        niproof = PedersenProof(tab_g, secrets_aliases, public_info)
+        niproof = DLRepProof(tab_g, secrets_aliases, public_info)
 
 
 # can be used to create ec points from hexa
@@ -77,8 +84,8 @@ def translate(hexa, group):
 def test_one_generator_one_secret():
     G = EcGroup(713)
     gen = G.generator()
-    pp = PedersenProof([gen], ["x1"], [gen])
-    prover = pp.getProver({"x1": 1})
+    pp = DLRepProof([gen], ["x1"], [gen])
+    prover = pp.get_prover({"x1": 1})
     commitments = prover.commit()
 
 
@@ -97,12 +104,12 @@ def test_generators_sharing_a_secret():
     generators = get_generators(N)
     unique_secret = 4
     public_info = create_public_info(generators, [4 for g in generators])
-    pp = PedersenProof(
+    pp = DLRepProof(
         generators,
         ["x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1"],
         public_info)
-    prover = pp.getProver({"x1": unique_secret})
-    assert type(prover) == PedersenProver
+    prover = pp.get_prover({"x1": unique_secret})
+    assert type(prover) == DLRepProver
     commitment = prover.commit()
     assert isinstance(commitment, EcPt)
 
@@ -121,9 +128,9 @@ def test_get_many_different_provers():
     secrets_names = [prefix + str(i) for i in range(N)]
     secrets_vals = range(N)
     secr_dict = dict(zip(secrets_names, secrets_vals))
-    pp = PedersenProof(generators, secrets_names,
+    pp = DLRepProof(generators, secrets_names,
                        create_public_info(generators, secrets_vals))
-    prover = pp.getProver(secr_dict)
+    prover = pp.get_prover(secr_dict)
     commitment = prover.commit()
     assert isinstance(commitment, EcPt)
 
@@ -134,8 +141,8 @@ def test_same_random_in_commitment():
 
     pub_info = create_public_info(gens, [100, 100, 100])
 
-    pp = PedersenProof(gens, ["x1", "x1", "x1"], pub_info)
-    prover = pp.getProver({"x1": 100})
+    pp = DLRepProof(gens, ["x1", "x1", "x1"], pub_info)
+    prover = pp.get_prover({"x1": 100})
     commitments = prover.commit()
 
 
@@ -156,9 +163,9 @@ def setup_and_proofs():
         secrets_2.append(secrets_dict["x" + str(i)])
 
     sum_2 = create_public_info(generators2, secrets_2)
-    pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
+    pp1 = DLRepProof(generators1, ["x0", "x1", "x2"], sum_1)
 
-    pp2 = PedersenProof(generators2, ["x0", "x3", "x4", "x5"],
+    pp2 = DLRepProof(generators2, ["x0", "x3", "x4", "x5"],
                         sum_2)  #one shared secret x0
     return pp1, pp2, secrets_dict
 
@@ -179,8 +186,8 @@ def test_wrong_and_proofs():  # An alien EcPt is inserted in the generators
     secrets_2 = [secrets_dict["x0"]]
 
     sum_2 = create_public_info(generators2, secrets_2)
-    pp1 = PedersenProof(generators1, ["x0", "x1", "x2"], sum_1)
-    pp2 = PedersenProof(generators2, ["x0"], sum_2)
+    pp1 = DLRepProof(generators1, ["x0", "x1", "x2"], sum_1)
+    pp2 = DLRepProof(generators2, ["x0"], sum_2)
     with pytest.raises(
             Exception
     ):  #An exception should be raised because of a shared secrets linked to two different groups
@@ -189,16 +196,16 @@ def test_wrong_and_proofs():  # An alien EcPt is inserted in the generators
 
 def assert_verify_proof(verifier, prover):
     commitment = prover.commit()
-    challenge = verifier.sendChallenge(commitment)
-    response = prover.computeResponse(challenge)
+    challenge = verifier.send_challenge(commitment)
+    response = prover.compute_response(challenge)
     assert verifier.verify(response)
 
 
 def test_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof(pp1, pp2)
-    and_prover = and_proof.getProver(secrets_dict)
-    and_verifier = and_proof.getVerifier()
+    and_prover = and_proof.get_prover(secrets_dict)
+    and_verifier = and_proof.get_verifier()
 
     assert_verify_proof(and_verifier, and_prover)
 
@@ -207,8 +214,8 @@ def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
     pp4 = AndProof(AndProof(pp1, pp2), pp1)
-    prover = pp4.getProver(secrets_dict)
-    verifier = pp4.getVerifier()
+    prover = pp4.get_prover(secrets_dict)
+    verifier = pp4.get_verifier()
 
     assert_verify_proof(verifier, prover)
 
@@ -217,6 +224,6 @@ def test_compose_and_proofs2():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
     p = AndProof(AndProof(pp1, AndProof(pp3, AndProof(pp1, pp2))), pp2)
-    prover = p.getProver(secrets_dict)
-    verifier = p.getVerifier()
+    prover = p.get_prover(secrets_dict)
+    verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)

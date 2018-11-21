@@ -1,5 +1,0 @@
-_ we did PK{(x1, x2): x1 * g1 + x2 * g2} generalize:
- PK{(x1, x2, ..., xn): h = x1 * g1 + x2 * g2 + ... + xn * gn}
-_ OR proof
-_ PK{(x1, x2): x * g1 and x * g1}
-

@@ -1,16 +1,8 @@
-import random, string, attr
+import random, string
 from collections import namedtuple
 from petlib.ec import EcGroup
 import pdb
 import pytest
-
-# SetupOutputParams = namedtuple("SetupOutputParams", "tab_g secrets")
-Params = attr.make_class("Params", ["public_info", "tab_g", "secrets"])
-
-# @attr.s
-# class Params:
-# 	g_tab = attr.ib(factory=list)
-# 	secrets = attr.ib(factory=list)
 
 
 class SigmaProtocol:
@@ -28,8 +20,8 @@ class SigmaProtocol:
         peggy = self.proverClass
 
         (commitment) = peggy.commit()
-        challenge = victor.sendChallenge(commitment)
-        response = peggy.computeResponse(challenge)
+        challenge = victor.send_challenge(commitment)
+        response = peggy.compute_response(challenge)
         return victor.verify(response)
 
     def run(self):
@@ -51,7 +43,7 @@ class Prover:  # The Prover class is built on an array of generators, an array o
     def commit(self, randomizers_dict=None):
         pass
 
-    def computeResponse(self, challenge):
+    def compute_response(self, challenge):
         pass
 
     def get_NI_proof(message):
@@ -64,7 +56,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.secret_names = secret_names
         self.public_info = public_info
 
-    def sendChallenge(self, commitment):
+    def send_challenge(self, commitment):
         pass
 
     def verify(self, response, commitment=None, challenge=None):

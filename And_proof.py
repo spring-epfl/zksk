@@ -33,21 +33,21 @@ class AndProofProver(Prover):
             self.prover1.commit(randomizers_dict=randomizers_dict),
             self.prover2.commit(randomizers_dict=randomizers_dict))
 
-    def computeResponse(self, challenge: AndProofChallenge
+    def compute_response(self, challenge: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k
         return AndProofResponse(
-            self.prover1.computeResponse(challenge),
-            self.prover2.computeResponse(challenge))
+            self.prover1.compute_response(challenge),
+            self.prover2.compute_response(challenge))
 
 class AndProofVerifier:
     def __init__(self, verifier1, verifier2):
         self.verifier1 = verifier1
         self.verifier2 = verifier2
 
-    def sendChallenge(self,
+    def send_challenge(self,
                       commitment: AndProofCommitment) -> AndProofChallenge:
         self.commitment = commitment
-        self.and_challenge = self.verifier1.sendChallenge(commitment.commitment1) # Do we need a sanity check over the group orders ?
+        self.and_challenge = self.verifier1.send_challenge(commitment.commitment1) # Do we need a sanity check over the group orders ?
         return self.and_challenge
 
     def verify(self, responses: AndProofResponse, commitment: AndProofCommitment = None, challenge: AndProofChallenge = None):
@@ -79,22 +79,22 @@ class AndProof:
         generators.extend(self.proof2.group_generators.copy())
         return generators
 
-    def getProver(self, secrets_dict):
+    def get_prover(self, secrets_dict):
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.get_secret_names())
             secrets_for_prover = []
             for s_name in secrets_dict:
                 if s_name in keys:
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
-            return sub_proof.getProver(dict(secrets_for_prover))
+            return sub_proof.get_prover(dict(secrets_for_prover))
 
         prover1 = sub_proof_prover(self.proof1)
         prover2 = sub_proof_prover(self.proof2)
         return AndProofProver(prover1, prover2)
 
-    def getVerifier(self):
-        return AndProofVerifier(self.proof1.getVerifier(),
-                                self.proof2.getVerifier())
+    def get_verifier(self):
+        return AndProofVerifier(self.proof1.get_verifier(),
+                                self.proof2.get_verifier())
 
 
 def check_groups(

@@ -10,7 +10,7 @@ from hashlib import sha256
 import binascii
 
 
-class PedersenProver(Prover):
+class DLRepProver(Prover):
     def get_randomizers(self) -> dict:
         output = {}
         for sec in set(self.secret_names):
@@ -40,7 +40,7 @@ class PedersenProver(Prover):
         print("\ncommitment = ", sum_, "\npublic_info = ", self.public_info)
         return sum_
 
-    def computeResponse(
+    def compute_response(
             self, challenge
     ):  # r = secret*challenge + k. At this point the k[] array contains the correct randomizers for the matching secrets
         resps = [  # (1) OR k is a dict with secret names as keys and randomizers as values ?
@@ -68,18 +68,19 @@ class PedersenProver(Prover):
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
-        responses = self.computeResponse(challenge)
+        responses = self.compute_response(challenge)
         return (challenge, responses)
 
-    def simulate_proof(self, challenge, response):  # TODO : correct this + use raise_powers
+    def simulate_proof(self): 
         G = self.generators[0].group
-        commmitment = (
+        challenge = G.order().random()
+        new_dict = self.get_randomizers() 
+        response = [new_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
+        commitment = (
             G.infinite()
-        )  # We will choose all but 1 commitment elements at random
-        for idx in len(
-                self.params.tab_g):  # We compute the commitment so it matches
-            commitment += response[i] * self.params.tab_g[idx]
-        commitment += (-challenge) * public_info
+        )  
+        commitment += raise_powers(self.generators, response)
+        commitment += (-challenge) * self.public_info
 
         return commitment, challenge, response
 
@@ -95,8 +96,8 @@ def raise_powers(tab_g, response):
         leftside += el
     return leftside
 
-class PedersenVerifier(Verifier):
-    def sendChallenge(self, commitment):
+class DLRepVerifier(Verifier):
+    def send_challenge(self, commitment):
         tab_g = self.generators
         self.commitment = commitment
 
@@ -118,9 +119,7 @@ class PedersenVerifier(Verifier):
         y = self.public_info
 
         left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
-
         leftside = raise_powers(self.generators, response)
-
         rightside = challenge * y + commitment
 
         return rightside.pt_eq(leftside)  # If the result
@@ -140,7 +139,7 @@ class PedersenVerifier(Verifier):
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
 
-class PedersenProof:
+class DLRepProof:
 
     #len of secretDict and generators param of __init__ must match exactly
     def __init__(self, generators, secret_names, public_info):
@@ -172,7 +171,7 @@ class PedersenProof:
     def get_secret_names(self):
         return self.secret_names.copy()
 
-    def getProver(self, secrets_dict):
+    def get_prover(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
 
@@ -195,11 +194,15 @@ class PedersenProof:
             if not isinstance(sec, Bn):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
 
-        return PedersenProver(self.group_generators, self.secret_names,
+        return DLRepProver(self.group_generators, self.secret_names,
                               secrets_dict, self.public_info)
+        
+    def get_simulator(self):
+        return DLRepProver(self.group_generators, self.secret_names, {}, self.public_info)
+        
 
-    def getVerifier(self):
-        return PedersenVerifier(self.group_generators, self.secret_names,
+    def get_verifier(self):
+        return DLRepVerifier(self.group_generators, self.secret_names,
                                 self.public_info)
 
 
@@ -227,9 +230,9 @@ if __name__ == "__main__":  #A legit run in which we build the public info from 
     for y in powers:
         public_info += y
 
-    pedersen_proof = PedersenProof(tab_g, secrets_aliases, public_info)
-    Ped_prover = pedersen_proof.getProver(secrets_values)
-    Ped_verifier = pedersen_proof.getVerifier()
+    dl_proof = DLRepProof(tab_g, secrets_aliases, public_info)
+    dl_prover = dl_proof.get_prover(secrets_values)
+    dl_verifier = dl_proof.get_verifier()
 
-    pedersen_protocol = SigmaProtocol(Ped_verifier, Ped_prover)
-    pedersen_protocol.run()
+    dl_protocol = SigmaProtocol(dl_verifier, dl_prover)
+    dl_protocol.run()
