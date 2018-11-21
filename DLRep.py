@@ -97,13 +97,12 @@ def raise_powers(tab_g, response):
 
 class DLRepVerifier(Verifier):
     def send_challenge(self, commitment):
-        tab_g = self.generators
         self.commitment = commitment
-
-        self.challenge = tab_g[0].group.order().random()
+        
+        twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
+        self.challenge = twoTo128.random()
         print("\nchallenge is ", self.challenge)
 
-        # raise Exception('stop hammertime')
         return self.challenge
 
     def verify(
