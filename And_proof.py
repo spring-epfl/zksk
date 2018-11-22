@@ -21,7 +21,7 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
-    def get_randomizers(self) -> dict:
+    def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         random_vals = self.prover1.get_randomizers().copy()
         random_vals.update(self.prover2.get_randomizers().copy())
         return random_vals
@@ -47,7 +47,7 @@ class AndProofVerifier:
     def send_challenge(self,
                       commitment: AndProofCommitment) -> AndProofChallenge:
         self.commitment = commitment
-        self.and_challenge = self.verifier1.send_challenge(commitment.commitment1) # Do we need a sanity check over the group orders ?
+        self.and_challenge = self.verifier1.send_challenge(commitment.commitment1) # random 128 bits
         return self.and_challenge
 
     def verify(self, responses: AndProofResponse, commitment: AndProofCommitment = None, challenge: AndProofChallenge = None):

@@ -12,9 +12,9 @@ import binascii
 class DLRepProver(Prover):
     def get_randomizers(self) -> dict:
         output = {}
-        for sec in set(self.secret_names):
+        for idx, sec in enumerate(self.secret_names): #This overwrites if shared secrets but allows to access the appropriate group order
             key = sec
-            to_append = self.generators[0].group.order().random()
+            to_append = self.generators[idx].group.order().random()
             output.update({key: to_append})
         return output
 
