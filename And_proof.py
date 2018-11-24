@@ -39,7 +39,7 @@ class AndProofProver(Prover):
             self.prover1.compute_response(challenge),
             self.prover2.compute_response(challenge))
 
-class AndProofVerifier:
+class AndProofVerifier(Verifier):
     def __init__(self, verifier1, verifier2):
         self.verifier1 = verifier1
         self.verifier2 = verifier2
@@ -59,8 +59,18 @@ class AndProofVerifier:
         return self.verifier1.verify(
             responses.response1, commitment = commitment.commitment1, challenge = challenge ) and self.verifier2.verify(responses.response2, commitment=commitment.commitment2, challenge= challenge)
 
+class Proof:
+    def __and__(self, other):
+        return AndProof(self, other)
 
-class AndProof:
+    def get_prover(self, secrets_dict):
+        pass
+
+    def get_verifier(self):
+        pass
+
+
+class AndProof(Proof):
     def __init__(self, proof1, proof2):
         self.proof1 = proof1
         self.proof2 = proof2

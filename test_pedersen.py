@@ -1,5 +1,6 @@
 from DLRep import *
-from And_proof import *
+from And_proof import AndProof
+from Subproof import PublicInfo, Sec
 
 N = 5
 G = EcGroup(713)
@@ -227,3 +228,72 @@ def test_compose_and_proofs2():
     prover = p.get_prover(secrets_dict)
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
+
+class Infix:
+    def __init__(self, function):
+        self.function = function
+    def __ror__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __or__(self, other):
+        return self.function(other)
+    def __rlshift__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __rshift__(self, other):
+        return self.function(other)
+    def __call__(self, value1, value2):
+        return self.function(value1, value2)
+
+
+def test_infix_and():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    _and_ = Infix(lambda proof1, proof2: AndProof(pp1, pp2))
+    and_proof = pp1      |_and_|     pp2       |_and_| pp1
+    prover = and_proof.get_prover(secrets_dict)
+    verifier = and_proof.get_verifier()
+    assert_verify_proof(verifier, prover)
+
+def test_and_operator():
+    pp1, pp2, secrets_dict = setup_and_proofs() 
+    and_proof = pp1 & pp2 & pp1
+    prover = and_proof.get_prover(secrets_dict)
+    verifier = and_proof.get_verifier()
+    assert_verify_proof(verifier, prover)
+
+
+def test_DLRep_parser_proof_fails():
+    g = EcGroup().generator()
+    g1 = 2 * g
+    g2 = 5 * g
+    x1 = 10
+    x2 = 15
+    proof = PublicInfo(g) == Sec("x1") * g1 + Sec("x2") * g2
+    prover = proof.get_prover({"x1": x1, "x2": x2})
+    verifier = proof.get_verifier()
+    with pytest.raises(
+            Exception
+    ):
+        assert_verify_proof(verifier, prover)
+
+def test_DLRep_parser_proof_succeeds():
+    g = EcGroup().generator()
+    g1 = 2 * g
+    g2 = 5 * g
+    x1 = 10
+    x2 = 15
+    proof = PublicInfo(x1 * g1 + x2 * g2) == Sec("x1") * g1 + Sec("x2") * g2
+    prover = proof.get_prover({"x1": x1, "x2": x2})
+    verifier = proof.get_verifier()
+    assert_verify_proof(verifier, prover)
+
+def test_DLRep_parser_with_and_proof():
+    g = EcGroup().generator()
+    g1 = 2 * g
+    g2 = 5 * g
+    g3 = 10 * g
+    x1 = 10
+    x2 = 15
+    x3 = 35
+    proof = (PublicInfo(x1 * g1 + x2 * g2) == Sec("x1") * g1 + Sec("x2") * g2) & (PublicInfo(x2 * g1 + x3 * g3) == Sec("x2") * g1 + Sec("x3") * g3)
+    
+
+    

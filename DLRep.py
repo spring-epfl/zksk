@@ -7,6 +7,7 @@ from petlib.bn import Bn
 from SigmaProtocol import *
 from hashlib import sha256
 import binascii
+from And_proof import Proof
 
 
 class DLRepProver(Prover):
@@ -138,7 +139,7 @@ class DLRepVerifier(Verifier):
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
 
-class DLRepProof:
+class DLRepProof(Proof):
 
     #len of secretDict and generators param of __init__ must match exactly
     def __init__(self, generators, secret_names, public_info):
