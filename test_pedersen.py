@@ -294,6 +294,6 @@ def test_DLRep_parser_with_and_proof():
     x2 = 15
     x3 = 35
     proof = (PublicInfo(x1 * g1 + x2 * g2) == Sec("x1") * g1 + Sec("x2") * g2) & (PublicInfo(x2 * g1 + x3 * g3) == Sec("x2") * g1 + Sec("x3") * g3)
-    
-
-    
+    prover = proof.get_prover({"x1": x1, "x2": x2, "x3": x3})
+    verifier = proof.get_verifier()
+    assert_verify_proof(verifier, prover)
