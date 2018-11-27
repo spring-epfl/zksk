@@ -20,6 +20,8 @@ class DLRepProver(Prover):
         return output
 
     def commit(self, randomizers_dict=None):
+        if self.secret_values == {} : #We check we are not a strawman prover
+            raise Exception("Trying to do a legit proof without the secrets. Can only simulate")
         tab_g = self.generators
         G = tab_g[0].group
         self.group_order = G.order()  # Will be useful for all the protocol
@@ -71,7 +73,7 @@ class DLRepProver(Prover):
         responses = self.compute_response(challenge)
         return (challenge, responses)
 
-    def simulate_proof(self): 
+    def simulate_proof(self): #Only function a prover built with empty secret_dict can use
         G = self.generators[0].group
         challenge = G.order().random()
         new_dict = self.get_randomizers() 

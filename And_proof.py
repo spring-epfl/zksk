@@ -1,6 +1,5 @@
 from SigmaProtocol import *
 from petlib.bn import Bn
-from collections import defaultdict
 
 
 class AndProofCommitment:
@@ -105,27 +104,3 @@ class AndProof(Proof):
     def get_verifier(self):
         return AndProofVerifier(self.proof1.get_verifier(),
                                 self.proof2.get_verifier())
-
-
-def check_groups(
-        list_of_secret_names, list_of_generators
-):  #checks that if two secrets are the same, the generators they expand live in the same group
-    # takes a merged list of secrets names and a merged list of generators.
-
-    # We map the unique secrets to the indices where they appear
-    mydict = defaultdict(list)
-    for idx, word in enumerate(list_of_secret_names):
-        mydict[word].append(idx)
-
-    # Now we use this dictionary to check all the generators related to a particular secret live in the same group
-    for word, gen_idx in mydict.items(
-    ):  #word is the key, gen_idx is the value = a list of indices
-        ref_group = list_of_generators[gen_idx[0]].group
-
-        for index in gen_idx:
-            if list_of_generators[index].group != ref_group:
-                raise Exception(
-                    "A shared secret has generators from different groups : secret",
-                    word)
-
-    return True
