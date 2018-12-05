@@ -70,11 +70,12 @@ def test_dlrep_simulation():
 
 
 def test_diff_groups_dlrep():
-    tab_g[2] = EcGroup(706).generator()
+    tab_g1 = tab_g.copy()
+    tab_g1[2] = EcGroup(706).generator()
     with pytest.raises(
             Exception
     ):  # An exception should be raised due to different groups coexisting in a DLRepProof
-        niproof = DLRepProof(tab_g, secrets_aliases, public_info)
+        niproof = DLRepProof(tab_g1, secrets_aliases, public_info)
 
 
 # can be used to create ec points from hexa
@@ -92,12 +93,12 @@ def test_one_generator_one_secret():
 
 def get_generators(nb_wanted, start_index=0):  #What is start_index?
     G = EcGroup(713)
-    tab_g = []
-    tab_g.append(G.generator())
+    tab_g1 = []
+    tab_g1.append(G.generator())
     for i in range(1, nb_wanted):
         randWord = randomword(30).encode("UTF-8")
-        tab_g.append(G.hash_to_point(randWord))
-    return tab_g
+        tab_g1.append(G.hash_to_point(randWord))
+    return tab_g1
 
 
 def test_generators_sharing_a_secret():
@@ -228,6 +229,15 @@ def test_compose_and_proofs2():
     prover = p.get_prover(secrets_dict)
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
+
+def test_simulate_andproof():
+    subproof1 = DLRepProof(tab_g, secrets_aliases, public_info)
+    subproof2 = DLRepProof(tab_g, secrets_aliases, public_info)
+    andp = AndProof(subproof1, subproof2)
+    andv = andp.get_verifier()
+    andsim = andp.get_simulator()
+    com, ch, resp = andsim.simulate_proof()
+    assert andv.verify(resp, com, ch) == True
 
 class Infix:
     def __init__(self, function):

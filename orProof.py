@@ -28,6 +28,9 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         self.prover2 = prover2
 
     def find_legit_prover(self):
+        try:
+            prover1.commit()
+        except :
 
 
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
@@ -44,7 +47,7 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         return (self.p1.computeResponse(challenge1), self.response2)
 
 
-class OrProof:
+class OrProof:  
         def __init__(self, proof1, proof2):
         self.proof1 = proof1
         self.proof2 = proof2
@@ -63,7 +66,8 @@ class OrProof:
         generators.extend(self.proof2.group_generators.copy())
         return generators
 
-    def get_prover(self, secrets_dict):
+    def get_prover(self, secrets_dict):#We try to build regular provers given some secrets. 
+                                    # If this fails for a prover, we build a simulator instead.
         indicator = 0
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.get_secret_names())

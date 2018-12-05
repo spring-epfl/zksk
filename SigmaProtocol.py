@@ -1,6 +1,7 @@
 import random, string
 from collections import namedtuple
 from petlib.ec import EcGroup
+from petlib.bn import Bn
 import pdb
 from collections import defaultdict
 import pytest
@@ -89,3 +90,7 @@ def check_groups(
                     word)
 
     return True
+
+def chal_128bits():
+    twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
+    return twoTo128.random()

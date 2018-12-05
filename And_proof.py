@@ -38,6 +38,20 @@ class AndProofProver(Prover):
             self.prover1.compute_response(challenge),
             self.prover2.compute_response(challenge))
 
+    def simulate_proof(self, responses_dict = None, challenge = None):
+        if responses_dict is None:
+            responses_dict = self.get_randomizers() 
+        if challenge is None:
+            challenge = chal_128bits()
+        com1, __, resp1 = self.prover1.simulate_proof(responses_dict, challenge)
+        com2, __, resp2 = self.prover2.simulate_proof(responses_dict, challenge)
+        commitment = AndProofCommitment(com1, com2)
+        resp = AndProofResponse(resp1, resp2)
+        return commitment, challenge, resp
+        
+        
+
+
 class AndProofVerifier(Verifier):
     def __init__(self, verifier1, verifier2):
         self.verifier1 = verifier1
@@ -104,3 +118,6 @@ class AndProof(Proof):
     def get_verifier(self):
         return AndProofVerifier(self.proof1.get_verifier(),
                                 self.proof2.get_verifier())
+
+    def get_simulator(self):
+        return AndProofProver(self.proof1.get_simulator(), self.proof2.get_simulator())

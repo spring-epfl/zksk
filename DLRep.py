@@ -73,13 +73,14 @@ class DLRepProver(Prover):
         responses = self.compute_response(challenge)
         return (challenge, responses)
 
-    def simulate_proof(self): #Only function a prover built with empty secret_dict can use
-        G = self.generators[0].group
-        challenge = G.order().random()
-        new_dict = self.get_randomizers() 
-        response = [new_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
+    def simulate_proof(self, responses_dict = None, challenge = None): #Only function a prover built with empty secret_dict can use
+        if responses_dict is None:
+            responses_dict = self.get_randomizers() 
+        if challenge is None:
+            challenge = chal_128bits()
+        response = [responses_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
         commitment = (
-            G.infinite()
+            self.generators[0].group.infinite()
         )  
         commitment += raise_powers(self.generators, response)
         commitment += (-challenge) * self.public_info
@@ -102,8 +103,8 @@ class DLRepVerifier(Verifier):
     def send_challenge(self, commitment):
         self.commitment = commitment
         
-        twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
-        self.challenge = twoTo128.random()
+        
+        self.challenge = chal_128bits()
         print("\nchallenge is ", self.challenge)
 
         return self.challenge
@@ -164,7 +165,7 @@ class DLRepProof(Proof):
         for g in generators:
             if g.group != test_group:
                 raise Exception(
-                    "All generators should come from the same group")
+                    "All generators should come from the same group", g.group)
 
         self.group_generators = generators
         self.secret_names = secret_names
