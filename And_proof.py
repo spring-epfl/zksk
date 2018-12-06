@@ -20,6 +20,8 @@ class AndProofProver(Prover):
         self.prover1 = prover1
         self.prover2 = prover2
 
+
+
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         random_vals = self.prover1.get_randomizers().copy()
         random_vals.update(self.prover2.get_randomizers().copy())
@@ -71,6 +73,9 @@ class AndProofVerifier(Verifier):
         
         return self.verifier1.verify(
             responses.response1, commitment = commitment.commitment1, challenge = challenge ) and self.verifier2.verify(responses.response2, commitment=commitment.commitment2, challenge= challenge)
+    
+
+
 
 class Proof:
     def __and__(self, other):
@@ -82,6 +87,9 @@ class Proof:
     def get_verifier(self):
         pass
 
+    def recompute_commitment(self):
+        pass
+
 
 class AndProof(Proof):
     def __init__(self, proof1, proof2):
@@ -91,16 +99,6 @@ class AndProof(Proof):
         self.group_generators = self.get_generators()  #For consistency
         self.secret_names = self.get_secret_names()
         check_groups(self.secret_names, self.group_generators)
-
-    def get_secret_names(self):
-        secrets = self.proof1.get_secret_names()
-        secrets.extend(self.proof2.get_secret_names())
-        return secrets
-
-    def get_generators(self):
-        generators = self.proof1.group_generators.copy()
-        generators.extend(self.proof2.group_generators.copy())
-        return generators
 
     def get_prover(self, secrets_dict):
         def sub_proof_prover(sub_proof):
@@ -115,9 +113,24 @@ class AndProof(Proof):
         prover2 = sub_proof_prover(self.proof2)
         return AndProofProver(prover1, prover2)
 
+    def get_secret_names(self):
+        secrets = self.proof1.get_secret_names()
+        secrets.extend(self.proof2.get_secret_names())
+        return secrets
+
+    def get_generators(self):
+        generators = self.proof1.group_generators.copy()
+        generators.extend(self.proof2.group_generators.copy())
+        return generators
+
     def get_verifier(self):
         return AndProofVerifier(self.proof1.get_verifier(),
                                 self.proof2.get_verifier())
 
     def get_simulator(self):
         return AndProofProver(self.proof1.get_simulator(), self.proof2.get_simulator())
+
+    def recompute_commitment(self):
+        pass
+
+

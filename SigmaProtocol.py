@@ -2,7 +2,9 @@ import random, string
 from collections import namedtuple
 from petlib.ec import EcGroup
 from petlib.bn import Bn
+import binascii
 import pdb
+from hashlib import sha256
 from collections import defaultdict
 import pytest
 
@@ -48,8 +50,21 @@ class Prover:  # The Prover class is built on an array of generators, an array o
     def compute_response(self, challenge):
         pass
 
-    def get_NI_proof(message):
-        pass
+    def get_NI_proof(
+            self, message=''
+    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
+        tab_g = self.generators
+        commitment = self.commit()
+        message = message.encode()
+
+        # Computing the challenge
+        conc = self.public_info.export()
+        conc += commitment.export()
+        conc += message
+        myhash = sha256(conc).digest()
+        challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+        responses = self.compute_response(challenge)
+        return (challenge, responses)
 
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
@@ -64,8 +79,17 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
     def verify(self, response, commitment=None, challenge=None):
         pass
 
-    def verify_NI(self, challenge, response, message):
-        pass
+    def verify_NI(self, challenge, response, message=''):
+        message = message.encode()
+        tab_g = self.generators
+        y = self.public_info
+        #r_guess = recompute_commitment  #We retrieve the commitment using the verification identity
+        r_guess = tab_g[0].group.order().random() #for compilation
+        conc = self.public_info.export()
+        conc += r_guess.export()
+        conc += message
+        myhash = sha256(conc).digest()
+        return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
 
 def check_groups(

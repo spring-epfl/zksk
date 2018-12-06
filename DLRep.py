@@ -57,22 +57,7 @@ class DLRepProver(Prover):
         print("\n responses : ", resps)
         return resps
 
-    def get_NI_proof(
-            self, message=''
-    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
-        tab_g = self.generators
-        commitment = self.commit()
-        message = message.encode()
-
-        # Computing the challenge
-        conc = self.public_info.export()
-        conc += commitment.export()
-        conc += message
-        myhash = sha256(conc).digest()
-        challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
-        responses = self.compute_response(challenge)
-        return (challenge, responses)
-
+    
     def simulate_proof(self, responses_dict = None, challenge = None): #Only function a prover built with empty secret_dict can use
         if responses_dict is None:
             responses_dict = self.get_randomizers() 

@@ -239,6 +239,17 @@ def test_simulate_andproof():
     com, ch, resp = andsim.simulate_proof()
     assert andv.verify(resp, com, ch) == True
 
+def test_and_NI():
+    p1, p2, secrets = setup_and_proofs()
+    niproof = AndProof(p1, p2)
+    andprov = niproof.get_prover(secrets)
+    and_verifier = niproof.get_verifier()
+
+    message = 'toto'
+    #chall, resp = andprov.get_NI_proof(message)
+    #assert and_verifier.verify_NI(chall, resp, message) == True
+    #inactive test for now PLEASE SIMON DON'T DELETE THIS 
+
 class Infix:
     def __init__(self, function):
         self.function = function
