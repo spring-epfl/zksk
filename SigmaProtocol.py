@@ -65,6 +65,7 @@ class Prover:  # The Prover class is built on an array of generators, an array o
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
         responses = self.compute_response(challenge)
         return (challenge, responses)
+        
 
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
@@ -72,12 +73,22 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.generators = generators
         self.secret_names = secret_names
         self.public_info = public_info
+        self.recompute_commitment = print
 
     def send_challenge(self, commitment):
         pass
 
-    def verify(self, response, commitment=None, challenge=None):
-        pass
+    
+    def verify(
+            self, response, commitment=None,
+            challenge=None):  #Can verify simulations with optional arguments
+
+        if commitment is None:
+            commitment = self.commitment
+        if challenge is None:
+            challenge = self.challenge
+
+        return commitment == self.recompute_commitment(self, challenge, response) 
 
     def verify_NI(self, challenge, response, message=''):
         message = message.encode()

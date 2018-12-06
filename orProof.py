@@ -52,9 +52,9 @@ class OrProof:
         self.proof1 = proof1
         self.proof2 = proof2
 
-        self.group_generators = self.get_generators()  #For consistency
+        self.generators = self.get_generators()  #For consistency
         self.secret_names = self.get_secret_names()
-        check_groups(self.secret_names, self.group_generators) # For now we consider the same constraints as in the And Proof
+        check_groups(self.secret_names, self.generators) # For now we consider the same constraints as in the And Proof
 
     def get_secret_names(self):
         secrets = self.proof1.get_secret_names()
@@ -62,8 +62,8 @@ class OrProof:
         return secrets
 
     def get_generators(self):
-        generators = self.proof1.group_generators.copy()
-        generators.extend(self.proof2.group_generators.copy())
+        generators = self.proof1.generators.copy()
+        generators.extend(self.proof2.generators.copy())
         return generators
 
     def get_prover(self, secrets_dict):#We try to build regular provers given some secrets. 

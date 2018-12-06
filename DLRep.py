@@ -20,6 +20,7 @@ class DLRepProver(Prover):
         return output
 
     def commit(self, randomizers_dict=None):
+
         if self.secret_values == {} : #We check we are not a strawman prover
             raise Exception("Trying to do a legit proof without the secrets. Can only simulate")
         tab_g = self.generators
@@ -63,12 +64,10 @@ class DLRepProver(Prover):
             responses_dict = self.get_randomizers() 
         if challenge is None:
             challenge = chal_128bits()
+        
+        self.recompute_commitment = DLRepProof.recompute_commitment   
         response = [responses_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
-        commitment = (
-            self.generators[0].group.infinite()
-        )  
-        commitment += raise_powers(self.generators, response)
-        commitment += (-challenge) * self.public_info
+        commitment = self.recompute_commitment(self, challenge, response)
 
         return commitment, challenge, response
 
@@ -86,33 +85,18 @@ def raise_powers(tab_g, response):
 
 class DLRepVerifier(Verifier):
     def send_challenge(self, commitment):
+
+        self.recompute_commitment = DLRepProof.recompute_commitment   
         self.commitment = commitment
-        
-        
         self.challenge = chal_128bits()
         print("\nchallenge is ", self.challenge)
 
         return self.challenge
 
-    def verify(
-            self, response, commitment=None,
-            challenge=None):  #Can verify simulations with optional arguments
-
-        if commitment is None:
-            commitment = self.commitment
-        if challenge is None:
-            challenge = self.challenge
-
-        tab_g = self.generators
-        y = self.public_info
-
-        left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
-        leftside = raise_powers(self.generators, response)
-        rightside = challenge * y + commitment
-
-        return rightside.pt_eq(leftside)  # If the result
 
     def verify_NI(self, challenge, response, message=''):
+
+        self.recompute_commitment = DLRepProof.recompute_commitment   
         message = message.encode()
         tab_g = self.generators
         y = self.public_info
@@ -152,12 +136,10 @@ class DLRepProof(Proof):
                 raise Exception(
                     "All generators should come from the same group", g.group)
 
-        self.group_generators = generators
+        self.generators = generators
         self.secret_names = secret_names
         self.public_info = public_info
 
-    def get_secret_names(self):
-        return self.secret_names.copy()
 
     def get_prover(self, secrets_dict):
         if len(set(self.secret_names)) != len(secrets_dict):
@@ -182,16 +164,24 @@ class DLRepProof(Proof):
             if not isinstance(sec, Bn):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
 
-        return DLRepProver(self.group_generators, self.secret_names,
+        return DLRepProver(self.generators, self.secret_names,
                               secrets_dict, self.public_info)
         
     def get_simulator(self):
-        return DLRepProver(self.group_generators, self.secret_names, {}, self.public_info)
+        return DLRepProver(self.generators, self.secret_names, {}, self.public_info)
         
 
     def get_verifier(self):
-        return DLRepVerifier(self.group_generators, self.secret_names,
+        return DLRepVerifier(self.generators, self.secret_names,
                                 self.public_info)
+
+    def recompute_commitment(self, challenge, responses):
+        tab_g = self.generators
+        y = self.public_info
+
+        leftside = raise_powers(self.generators, responses) + (-challenge) * y
+        return leftside
+
 
 
 if __name__ == "__main__":  #A legit run in which we build the public info from random variables and pass everything to the process
