@@ -318,3 +318,16 @@ def test_DLRep_parser_with_and_proof():
     prover = proof.get_prover({"x1": x1, "x2": x2, "x3": x3})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)
+
+def test_DLRep_right_hand_side_eval():
+    g = EcGroup().generator()
+    g1 = 2 * g
+    g2 = 5 * g
+    g3 = 10 * g
+    x1 = 10
+    x2 = 15
+    x3 = 35
+
+    rhs = Sec("x1", value = x1) * g1 + Sec("x2", value = x2) * g2
+    expected_public_info = x1 * g1 + x2 * g2
+    assert rhs.eval() == expected_public_info
