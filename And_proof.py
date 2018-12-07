@@ -19,23 +19,14 @@ class AndProofProver(Prover):
     def __init__(self, prover1, prover2):
         self.prover1 = prover1
         self.prover2 = prover2
-        self.generators = self.get_generators()
-        self.secret_names = self.get_secret_names()
 
         #A hack
         self.proof1 = prover1
         self.proof2 = prover2
 
-    
-    def get_secret_names(self):
-        secrets = self.prover1.secret_names.copy()
-        secrets.extend(self.prover2.secret_names.copy())
-        return secrets
 
-    def get_generators(self):
-        generators = self.prover1.generators.copy()
-        generators.extend(self.prover2.generators.copy())
-        return generators
+        self.generators = AndProof.get_generators(self)
+        self.secret_names = AndProof.get_secret_names(self)
 
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         random_vals = self.prover1.get_randomizers().copy()
@@ -45,10 +36,11 @@ class AndProofProver(Prover):
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
-        return AndProofCommitment(
+        self.commitment =  AndProofCommitment(
             self.prover1.commit(randomizers_dict=randomizers_dict),
             self.prover2.commit(randomizers_dict=randomizers_dict))
-
+        return self.commitment
+        
     def compute_response(self, challenge: AndProofChallenge
                         ) -> AndProofResponse:  #r = secret*challenge + k
         return AndProofResponse(
@@ -76,31 +68,16 @@ class AndProofVerifier(Verifier):
     def __init__(self, verifier1, verifier2):
         self.verifier1 = verifier1
         self.verifier2 = verifier2
-        self.generators = self.get_generators()
-        self.secret_names = self.get_secret_names()
-
-
+       
         #A hack
         self.proof1 = verifier1
         self.proof2 = verifier2
+        
+        self.generators = AndProof.get_generators(self)
+        self.secret_names = AndProof.get_secret_names(self)
+
         self.recompute_commitment = AndProof.recompute_commitment
         
-    def get_secret_names(self):
-        secrets = self.verifier1.secret_names.copy()
-        secrets.extend(self.verifier2.secret_names.copy())
-        return secrets
-
-    def get_generators(self):
-        generators = self.verifier1.generators.copy()
-        generators.extend(self.verifier2.generators.copy())
-        return generators
-
-    def send_challenge(self,
-                      commitment: AndProofCommitment) -> AndProofChallenge:
-        self.commitment = commitment
-        self.challenge = self.verifier1.send_challenge(commitment.commitment1) # random 128 bits
-        return self.challenge
-
 
 
 class Proof:
@@ -126,22 +103,19 @@ class AndProof(Proof):
         self.secret_names = self.get_secret_names()
         check_groups(self.secret_names, self.generators)
     
-    #@classmethod
     def get_secret_names(self):
         secrets = self.proof1.secret_names.copy()
         secrets.extend(self.proof2.secret_names.copy())
         return secrets
 
-    #@classmethod
     def get_generators(self):
         generators = self.proof1.generators.copy()
         generators.extend(self.proof2.generators.copy())
         return generators
 
-    #@classmethod
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
-        c1 = self.proof1.recompute_commitment(challenge, andresp.response1)
-        c2 = self.proof2.recompute_commitment(challenge, andresp.response2)
+        c1 = self.proof1.recompute_commitment(self.proof1, challenge, andresp.response1)
+        c2 = self.proof2.recompute_commitment(self.proof2, challenge, andresp.response2)
         return AndProofCommitment(c1, c2)
 
     def get_prover(self, secrets_dict):

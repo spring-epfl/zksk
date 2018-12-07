@@ -75,8 +75,11 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.public_info = public_info
 
     def send_challenge(self, commitment):
-        pass
+        self.commitment = commitment
+        self.challenge = chal_128bits()
+        print("\nchallenge is ", self.challenge)
 
+        return self.challenge
     
     def verify(
             self, response, commitment=None,
@@ -86,8 +89,8 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-
-        return commitment == self.recompute_commitment(self, challenge, response) 
+        
+        return (commitment == self.recompute_commitment(self, challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):
         message = message.encode()

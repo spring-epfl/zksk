@@ -44,10 +44,8 @@ class DLRepProver(Prover):
         print("\ncommitment = ", sum_, "\npublic_info = ", self.public_info)
         return sum_
 
-    def compute_response(
-            self, challenge
-    ):  # r = secret*challenge + k. At this point the k[] array contains the correct randomizers for the matching secrets
-        resps = [  # (1) OR k is a dict with secret names as keys and randomizers as values ?
+    def compute_response(self, challenge):      
+        resps = [  # k is a dict with secret names as keys and randomizers as values
             (self.secret_values[self.secret_names[i]].mod_mul(
                 challenge, self.group_order)).
             mod_add(
@@ -56,7 +54,7 @@ class DLRepProver(Prover):
                 group_order,  # If (1) replace by self.ks[self.secret_names[i]]
             ) for i in range(len(self.ks))
         ]
-        print("\n responses : ", resps)
+        print("\n DL responses : ", resps)
         return resps
 
     
@@ -91,12 +89,6 @@ class DLRepVerifier(Verifier):
         super().__init__(generators, secret_names, public_info)
         self.recompute_commitment = DLRepProof.recompute_commitment  
 
-    def send_challenge(self, commitment):
-        self.commitment = commitment
-        self.challenge = chal_128bits()
-        print("\nchallenge is ", self.challenge)
-
-        return self.challenge
 
 
     def verify_NI(self, challenge, response, message=''):
