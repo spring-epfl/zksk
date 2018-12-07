@@ -1,7 +1,7 @@
 from DLRep import *
 from functools import reduce
 from And_proof import AndProof
-from Subproof import Sec
+from Subproof import Secret
 
 N = 5
 G = EcGroup(713)
@@ -28,7 +28,7 @@ for y in powers:
 
 
 def create_rhs(secrets_names, generators):
-    return reduce(lambda x1, x2: x1 + x2, map(lambda t: Sec(t[0]) * t[1], zip(secrets_names, generators)))
+    return reduce(lambda x1, x2: x1 + x2, map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)))
 
 rhs1 = create_rhs(secrets_aliases, tab_g)
 
@@ -92,7 +92,7 @@ def translate(hexa, group):
 def test_one_generator_one_secret():
     G = EcGroup(713)
     gen = G.generator()
-    pp = DLRepProof([gen], Sec("x1") * gen)
+    pp = DLRepProof([gen], Secret("x1") * gen)
     prover = pp.get_prover({"x1": 1})
     commitments = prover.commit()
 
@@ -114,7 +114,7 @@ def test_generators_sharing_a_secret():
     public_info = create_public_info(generators, [4 for g in generators])
 
     def get_rhs(i):
-        return Sec("x1") * generators[i]
+        return Secret("x1") * generators[i]
 
     rhs = get_rhs(0)
     for i in range(1,N):
@@ -300,7 +300,7 @@ def test_DLRep_parser_proof_fails():
     g2 = 5 * g
     x1 = 10
     x2 = 15
-    proof = DLRepProof(g, Sec("x1") * g1 + Sec("x2") * g2)
+    proof = DLRepProof(g, Secret("x1") * g1 + Secret("x2") * g2)
     prover = proof.get_prover({"x1": x1, "x2": x2})
     verifier = proof.get_verifier()
     with pytest.raises(
@@ -314,7 +314,7 @@ def test_DLRep_parser_proof_succeeds():
     g2 = 5 * g
     x1 = 10
     x2 = 15
-    proof = DLRepProof(x1 * g1 + x2 * g2, Sec("x1") * g1 + Sec("x2") * g2)
+    proof = DLRepProof(x1 * g1 + x2 * g2, Secret("x1") * g1 + Secret("x2") * g2)
     prover = proof.get_prover({"x1": x1, "x2": x2})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)
@@ -327,7 +327,7 @@ def test_DLRep_parser_with_and_proof():
     x1 = 10
     x2 = 15
     x3 = 35
-    proof = DLRepProof(x1 * g1 + x2 * g2, Sec("x1") * g1 + Sec("x2") * g2) & DLRepProof(x2 * g1 + x3 * g3, Sec("x2") * g1 + Sec("x3") * g3)
+    proof = DLRepProof(x1 * g1 + x2 * g2, Secret("x1") * g1 + Secret("x2") * g2) & DLRepProof(x2 * g1 + x3 * g3, Secret("x2") * g1 + Secret("x3") * g3)
     prover = proof.get_prover({"x1": x1, "x2": x2, "x3": x3})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)
@@ -341,7 +341,7 @@ def test_DLRep_right_hand_side_eval():
     x2 = 15
     x3 = 35
 
-    rhs = Sec("x1", value = x1) * g1 + Sec("x2", value = x2) * g2
+    rhs = Secret("x1", value = x1) * g1 + Secret("x2", value = x2) * g2
     expected_public_info = x1 * g1 + x2 * g2
     assert rhs.eval() == expected_public_info
 
@@ -354,7 +354,7 @@ def test_DLRep_right_hand_side_eval():
     x2 = 15
     x3 = 35
 
-    rhs = Sec("x1") * g1 + Sec("x2", value = x2) * g2
+    rhs = Secret("x1") * g1 + Secret("x2", value = x2) * g2
     with pytest.raises(
             Exception
     ):  #An exception should be raised because of a shared secrets linked to two different groups

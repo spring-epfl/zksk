@@ -2,7 +2,7 @@ from petlib.ec import EcPt
 
 class RightSide:
     def __init__(self, secret, ecPt):
-        if not isinstance(secret, Sec) or not isinstance(ecPt, EcPt):
+        if not isinstance(secret, Secret) or not isinstance(ecPt, EcPt):
             raise Exception("in {0} * {1}, the first parameter should be a string (the secret name), and the second parameter should be an elliptic curve point".format(secret, ecPt))
         self.secrets = [secret]
         self.pts = [ecPt]
@@ -25,7 +25,7 @@ class RightSide:
             summation += ith_mul(i)
         return summation
 
-class Sec:
+class Secret:
     def __init__(self, name, value=None):
         self.name = name
         self.value = value
