@@ -22,6 +22,10 @@ class AndProofProver(Prover):
         self.generators = self.get_generators()
         self.secret_names = self.get_secret_names()
 
+        #A hack
+        self.proof1 = prover1
+        self.proof2 = prover2
+
     
     def get_secret_names(self):
         secrets = self.prover1.secret_names.copy()
@@ -56,6 +60,9 @@ class AndProofProver(Prover):
             responses_dict = self.get_randomizers() 
         if challenge is None:
             challenge = chal_128bits()
+        self.recompute_commitment = AndProof.recompute_commitment
+
+
         com1, __, resp1 = self.prover1.simulate_proof(responses_dict, challenge)
         com2, __, resp2 = self.prover2.simulate_proof(responses_dict, challenge)
         commitment = AndProofCommitment(com1, com2)
@@ -73,6 +80,11 @@ class AndProofVerifier(Verifier):
         self.secret_names = self.get_secret_names()
 
 
+        #A hack
+        self.proof1 = verifier1
+        self.proof2 = verifier2
+        self.recompute_commitment = AndProof.recompute_commitment
+        
     def get_secret_names(self):
         secrets = self.verifier1.secret_names.copy()
         secrets.extend(self.verifier2.secret_names.copy())
@@ -86,18 +98,8 @@ class AndProofVerifier(Verifier):
     def send_challenge(self,
                       commitment: AndProofCommitment) -> AndProofChallenge:
         self.commitment = commitment
-        self.and_challenge = self.verifier1.send_challenge(commitment.commitment1) # random 128 bits
-        return self.and_challenge
-
-    def verify(self, responses: AndProofResponse, commitment: AndProofCommitment = None, challenge: AndProofChallenge = None):
-        if challenge is None:
-            challenge = self.and_challenge
-        if commitment is None:
-            commitment = self.commitment
-        
-        return self.verifier1.verify(
-            responses.response1, commitment = commitment.commitment1, challenge = challenge ) and self.verifier2.verify(responses.response2, commitment=commitment.commitment2, challenge= challenge)
-    
+        self.challenge = self.verifier1.send_challenge(commitment.commitment1) # random 128 bits
+        return self.challenge
 
 
 
@@ -137,8 +139,10 @@ class AndProof(Proof):
         return generators
 
     #@classmethod
-    def recompute_commitment(self):
-        pass
+    def recompute_commitment(self, challenge, andresp : AndProofResponse):
+        c1 = self.proof1.recompute_commitment(challenge, andresp.response1)
+        c2 = self.proof2.recompute_commitment(challenge, andresp.response2)
+        return AndProofCommitment(c1, c2)
 
     def get_prover(self, secrets_dict):
         def sub_proof_prover(sub_proof):
