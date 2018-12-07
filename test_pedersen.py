@@ -331,3 +331,19 @@ def test_DLRep_right_hand_side_eval():
     rhs = Sec("x1", value = x1) * g1 + Sec("x2", value = x2) * g2
     expected_public_info = x1 * g1 + x2 * g2
     assert rhs.eval() == expected_public_info
+
+def test_DLRep_right_hand_side_eval():
+    g = EcGroup().generator()
+    g1 = 2 * g
+    g2 = 5 * g
+    g3 = 10 * g
+    x1 = 10
+    x2 = 15
+    x3 = 35
+
+    rhs = Sec("x1") * g1 + Sec("x2", value = x2) * g2
+    with pytest.raises(
+            Exception
+    ):  #An exception should be raised because of a shared secrets linked to two different groups
+        rhs.eval() 
+
