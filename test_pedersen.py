@@ -1,6 +1,7 @@
 from DLRep import *
+from functools import reduce
 from And_proof import AndProof
-from Subproof import PublicInfo, Sec
+from Subproof import Sec
 
 N = 5
 G = EcGroup(713)
@@ -26,8 +27,13 @@ for y in powers:
     public_info += y
 
 
+def create_rhs(secrets_names, generators):
+    return reduce(lambda x1, x2: x1 + x2, map(lambda t: Sec(t[0]) * t[1], zip(secrets_names, generators)))
+
+rhs1 = create_rhs(secrets_aliases, tab_g)
+
 def test_dlrep_true():  # Legit run
-    pedersen_true = DLRepProof(tab_g, secrets_aliases, public_info)
+    pedersen_true = DLRepProof(public_info, rhs1)
     true_prover = pedersen_true.get_prover(secrets_values)
     true_verifier = pedersen_true.get_verifier()
     proof = SigmaProtocol(true_verifier, true_prover)
@@ -38,7 +44,7 @@ def test_dlrep_wrong_public(
 ):  # We use generators and secrets from previous run but random public info
     randWord = randomword(30).encode("UTF-8")
     public_wrong = G.hash_to_point(randWord)
-    pedersen_public_wrong = DLRepProof(tab_g, secrets_aliases, public_wrong)
+    pedersen_public_wrong = DLRepProof(public_wrong, rhs1)
     wrongprover = pedersen_public_wrong.get_prover(secrets_values)
     wrongverifier = pedersen_public_wrong.get_verifier()
     wrongpub = SigmaProtocol(wrongverifier, wrongprover)
@@ -46,7 +52,7 @@ def test_dlrep_wrong_public(
 
 
 def test_dlrep_NI():  #We request a non_inte_ractive proof from the prover
-    niproof = DLRepProof(tab_g, secrets_aliases, public_info)
+    niproof = DLRepProof(public_info, rhs1)
     niprover = niproof.get_prover(secrets_values)
     niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
@@ -54,7 +60,7 @@ def test_dlrep_NI():  #We request a non_inte_ractive proof from the prover
 
 
 def test_dlrep_wrongNI():  #We request a non_inte_ractive proof from the prover
-    niproof = DLRepProof(tab_g, secrets_aliases, public_info)
+    niproof = DLRepProof(public_info, rhs1)
     niprover = niproof.get_prover(secrets_values)
     niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
@@ -62,7 +68,7 @@ def test_dlrep_wrongNI():  #We request a non_inte_ractive proof from the prover
     assert niverif.verify_NI(chal, resp, "mymessage") == False
 
 def test_dlrep_simulation():
-    ped_proof = DLRepProof(tab_g, secrets_aliases, public_info)
+    ped_proof = DLRepProof(public_info, rhs1)
     sim_prover = ped_proof.get_simulator()
     sim_verif = ped_proof.get_verifier()
     (com, chal, resp) = sim_prover.simulate_proof()
@@ -86,7 +92,7 @@ def translate(hexa, group):
 def test_one_generator_one_secret():
     G = EcGroup(713)
     gen = G.generator()
-    pp = DLRepProof([gen], ["x1"], [gen])
+    pp = DLRepProof([gen], Sec("x1") * gen)
     prover = pp.get_prover({"x1": 1})
     commitments = prover.commit()
 
@@ -106,10 +112,18 @@ def test_generators_sharing_a_secret():
     generators = get_generators(N)
     unique_secret = 4
     public_info = create_public_info(generators, [4 for g in generators])
+
+    def get_rhs(i):
+        return Sec("x1") * generators[i]
+
+    rhs = get_rhs(0)
+    for i in range(1,N):
+        rhs += get_rhs(i) 
+        
     pp = DLRepProof(
-        generators,
-        ["x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1", "x1"],
-        public_info)
+        public_info,
+        rhs
+        )
     prover = pp.get_prover({"x1": unique_secret})
     assert type(prover) == DLRepProver
     commitment = prover.commit()
@@ -130,8 +144,7 @@ def test_get_many_different_provers():
     secrets_names = [prefix + str(i) for i in range(N)]
     secrets_vals = range(N)
     secr_dict = dict(zip(secrets_names, secrets_vals))
-    pp = DLRepProof(generators, secrets_names,
-                       create_public_info(generators, secrets_vals))
+    pp = DLRepProof(create_public_info(generators, secrets_vals), create_rhs(secrets_names, generators))
     prover = pp.get_prover(secr_dict)
     commitment = prover.commit()
     assert isinstance(commitment, EcPt)
@@ -143,7 +156,7 @@ def test_same_random_in_commitment():
 
     pub_info = create_public_info(gens, [100, 100, 100])
 
-    pp = DLRepProof(gens, ["x1", "x1", "x1"], pub_info)
+    pp = DLRepProof(pub_info, create_rhs(["x1", "x1", "x1"], gens))
     prover = pp.get_prover({"x1": 100})
     commitments = prover.commit()
 
@@ -165,10 +178,10 @@ def setup_and_proofs():
         secrets_2.append(secrets_dict["x" + str(i)])
 
     sum_2 = create_public_info(generators2, secrets_2)
-    pp1 = DLRepProof(generators1, ["x0", "x1", "x2"], sum_1)
+    pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
 
-    pp2 = DLRepProof(generators2, ["x0", "x3", "x4", "x5"],
-                        sum_2)  #one shared secret x0
+    pp2 = DLRepProof(sum_2, create_rhs(["x0", "x3", "x4", "x5"], generators2)
+                        )  #one shared secret x0
     return pp1, pp2, secrets_dict
 
 
@@ -188,8 +201,8 @@ def test_wrong_and_proofs():  # An alien EcPt is inserted in the generators
     secrets_2 = [secrets_dict["x0"]]
 
     sum_2 = create_public_info(generators2, secrets_2)
-    pp1 = DLRepProof(generators1, ["x0", "x1", "x2"], sum_1)
-    pp2 = DLRepProof(generators2, ["x0"], sum_2)
+    pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
+    pp2 = DLRepProof(sum_2, create_rhs(["x0"], generators2))
     with pytest.raises(
             Exception
     ):  #An exception should be raised because of a shared secrets linked to two different groups
@@ -231,8 +244,8 @@ def test_compose_and_proofs2():
     assert_verify_proof(verifier, prover)
 
 def test_simulate_andproof():
-    subproof1 = DLRepProof(tab_g, secrets_aliases, public_info)
-    subproof2 = DLRepProof(tab_g, secrets_aliases, public_info)
+    subproof1 = DLRepProof(public_info, create_rhs(secrets_aliases, tab_g))
+    subproof2 = DLRepProof(public_info, create_rhs(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
@@ -287,7 +300,7 @@ def test_DLRep_parser_proof_fails():
     g2 = 5 * g
     x1 = 10
     x2 = 15
-    proof = PublicInfo(g) == Sec("x1") * g1 + Sec("x2") * g2
+    proof = DLRepProof(g, Sec("x1") * g1 + Sec("x2") * g2)
     prover = proof.get_prover({"x1": x1, "x2": x2})
     verifier = proof.get_verifier()
     with pytest.raises(
@@ -301,7 +314,7 @@ def test_DLRep_parser_proof_succeeds():
     g2 = 5 * g
     x1 = 10
     x2 = 15
-    proof = PublicInfo(x1 * g1 + x2 * g2) == Sec("x1") * g1 + Sec("x2") * g2
+    proof = DLRepProof(x1 * g1 + x2 * g2, Sec("x1") * g1 + Sec("x2") * g2)
     prover = proof.get_prover({"x1": x1, "x2": x2})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)
@@ -314,7 +327,7 @@ def test_DLRep_parser_with_and_proof():
     x1 = 10
     x2 = 15
     x3 = 35
-    proof = (PublicInfo(x1 * g1 + x2 * g2) == Sec("x1") * g1 + Sec("x2") * g2) & (PublicInfo(x2 * g1 + x3 * g3) == Sec("x2") * g1 + Sec("x3") * g3)
+    proof = DLRepProof(x1 * g1 + x2 * g2, Sec("x1") * g1 + Sec("x2") * g2) & DLRepProof(x2 * g1 + x3 * g3, Sec("x2") * g1 + Sec("x3") * g3)
     prover = proof.get_prover({"x1": x1, "x2": x2, "x3": x3})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)

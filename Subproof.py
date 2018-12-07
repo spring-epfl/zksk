@@ -1,17 +1,4 @@
-from DLRep import DLRepProof
 from petlib.ec import EcPt
-
-class PublicInfo:
-    def __init__(self, public_info):
-        self.public_info = public_info
-        self.secrets = []
-        self.generators = []
-
-    def __eq__(self, rightSide):
-        if isinstance(rightSide, RightSide):
-            return DLRepProof(rightSide.pts, [secret.name for secret in rightSide.secrets], self.public_info)
-        else: 
-            raise Exception("undefined behaviour for this input")
 
 class RightSide:
     def __init__(self, secret, ecPt):

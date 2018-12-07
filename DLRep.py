@@ -2,6 +2,7 @@
 
 import pdb
 import random, string
+from Subproof import RightSide
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from SigmaProtocol import *
@@ -129,8 +130,16 @@ class DLRepVerifier(Verifier):
 
 class DLRepProof(Proof):
 
+    def __init__(self, public_info, rightSide):
+        if isinstance(rightSide, RightSide):
+            self.initialize(rightSide.pts, [secret.name for secret in rightSide.secrets], public_info)
+        else:
+            raise Exception("undefined behaviour for this input")
+
+
+
     #len of secretDict and generators param of __init__ must match exactly
-    def __init__(self, generators, secret_names, public_info):
+    def initialize(self, generators, secret_names, public_info):
         if not isinstance(generators, list):  # we have a single generator
             raise Exception("generators must be a list of generators values")
 
