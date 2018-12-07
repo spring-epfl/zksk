@@ -61,12 +61,13 @@ class DLRepProver(Prover):
 
     
     def simulate_proof(self, responses_dict = None, challenge = None): #Only function a prover built with empty secret_dict can use
+        #Set the recompute_commitment
+        self.recompute_commitment = DLRepProof.recompute_commitment   
         if responses_dict is None:
             responses_dict = self.get_randomizers() 
         if challenge is None:
             challenge = chal_128bits()
         
-        self.recompute_commitment = DLRepProof.recompute_commitment   
         response = [responses_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
         commitment = self.recompute_commitment(self, challenge, response)
 
@@ -85,9 +86,12 @@ def raise_powers(tab_g, response):
     return leftside
 
 class DLRepVerifier(Verifier):
-    def send_challenge(self, commitment):
+    #Explicit init so we set the compute_commitment function
+    def __init__(self, generators, secret_names, public_info) :
+        super().__init__(generators, secret_names, public_info)
+        self.recompute_commitment = DLRepProof.recompute_commitment  
 
-        self.recompute_commitment = DLRepProof.recompute_commitment   
+    def send_challenge(self, commitment):
         self.commitment = commitment
         self.challenge = chal_128bits()
         print("\nchallenge is ", self.challenge)

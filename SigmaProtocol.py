@@ -73,7 +73,6 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.generators = generators
         self.secret_names = secret_names
         self.public_info = public_info
-        self.recompute_commitment = print
 
     def send_challenge(self, commitment):
         pass
