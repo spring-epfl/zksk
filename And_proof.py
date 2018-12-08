@@ -30,6 +30,8 @@ class AndProofProver(Prover):
         self.generators = AndProof.get_generators(self)
         self.secret_names = AndProof.get_secret_names(self)
 
+        self.set_simulate = False
+
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         random_vals = self.prover1.get_randomizers().copy()
         random_vals.update(self.prover2.get_randomizers().copy())
