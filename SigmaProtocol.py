@@ -89,9 +89,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-
-        print("com is", commitment)
-        print ("recom is", self.recompute_commitment(self, challenge, response))
+        
         return (commitment == self.recompute_commitment(self, challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):

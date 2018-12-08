@@ -182,8 +182,7 @@ class DLRepProof(Proof):
         tab_g = self.generators
         y = self.public_info
 
-        leftside = raise_powers(self.generators, responses) + ((-challenge) * y)
-  
+        leftside = raise_powers(self.generators, responses) + (-challenge) * y
         return leftside
 
 

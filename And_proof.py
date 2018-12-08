@@ -27,7 +27,6 @@ class AndProofProver(Prover):
         self.proof1 = prover1
         self.proof2 = prover2
 
-
         self.generators = AndProof.get_generators(self)
         self.secret_names = AndProof.get_secret_names(self)
 
@@ -117,7 +116,6 @@ class AndProof(Proof):
         return generators
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
-        print("proof1,2 are", self.proof1, self.proof2)
         c1 = self.proof1.recompute_commitment(self.proof1, challenge, andresp.response1)
         c2 = self.proof2.recompute_commitment(self.proof2, challenge, andresp.response2)
         return AndProofCommitment(c1, c2)
