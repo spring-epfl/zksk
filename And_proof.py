@@ -7,6 +7,9 @@ class AndProofCommitment:
         self.commitment1 = commitment1
         self.commitment2 = commitment2
 
+    def __eq__(self, other):
+        return (self.commitment1==other.commitment1) and (self.commitment2 == other.commitment2)
+
 AndProofChallenge = Bn
 
 class AndProofResponse:
@@ -114,6 +117,7 @@ class AndProof(Proof):
         return generators
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
+        print("proof1,2 are", self.proof1, self.proof2)
         c1 = self.proof1.recompute_commitment(self.proof1, challenge, andresp.response1)
         c2 = self.proof2.recompute_commitment(self.proof2, challenge, andresp.response2)
         return AndProofCommitment(c1, c2)

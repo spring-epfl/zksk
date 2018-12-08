@@ -213,7 +213,8 @@ def assert_verify_proof(verifier, prover):
     commitment = prover.commit()
     challenge = verifier.send_challenge(commitment)
     response = prover.compute_response(challenge)
-    assert verifier.verify(response)
+    v = verifier.verify(response)
+    assert (v == True)
 
 
 def test_and_proofs():

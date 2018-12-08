@@ -41,7 +41,6 @@ class DLRepProver(Prover):
         for com in commits:
             sum_ = sum_ + com
 
-        print("\ncommitment = ", sum_, "\npublic_info = ", self.public_info)
         return sum_
 
     def compute_response(self, challenge):      
@@ -54,7 +53,6 @@ class DLRepProver(Prover):
                 group_order,  # If (1) replace by self.ks[self.secret_names[i]]
             ) for i in range(len(self.ks))
         ]
-        print("\n DL responses : ", resps)
         return resps
 
     
@@ -184,7 +182,8 @@ class DLRepProof(Proof):
         tab_g = self.generators
         y = self.public_info
 
-        leftside = raise_powers(self.generators, responses) + (-challenge) * y
+        leftside = raise_powers(self.generators, responses) + ((-challenge) * y)
+  
         return leftside
 
 
