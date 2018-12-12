@@ -22,9 +22,9 @@ for wurd in secrets_aliases:  # we build N secrets
 
 powers = [a * b for a, b in zip(secret_tab, tab_g)
           ]  # The Ys of which we will prove logarithm knowledge
-public_info = G.infinite()
+lhs = G.infinite()
 for y in powers:
-    public_info += y
+    lhs += y
 
 
 def create_rhs(secrets_names, generators):
@@ -33,7 +33,7 @@ def create_rhs(secrets_names, generators):
 rhs1 = create_rhs(secrets_aliases, tab_g)
 
 def test_dlrep_true():  # Legit run
-    pedersen_true = DLRepProof(public_info, rhs1)
+    pedersen_true = DLRepProof(lhs, rhs1)
     true_prover = pedersen_true.get_prover(secrets_values)
     true_verifier = pedersen_true.get_verifier()
     proof = SigmaProtocol(true_verifier, true_prover)
@@ -52,7 +52,7 @@ def test_dlrep_wrong_public(
 
 
 def test_dlrep_NI():  #We request a non_inte_ractive proof from the prover
-    niproof = DLRepProof(public_info, rhs1)
+    niproof = DLRepProof(lhs, rhs1)
     niprover = niproof.get_prover(secrets_values)
     niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
@@ -60,7 +60,7 @@ def test_dlrep_NI():  #We request a non_inte_ractive proof from the prover
 
 
 def test_dlrep_wrongNI():  #We request a non_inte_ractive proof from the prover
-    niproof = DLRepProof(public_info, rhs1)
+    niproof = DLRepProof(lhs, rhs1)
     niprover = niproof.get_prover(secrets_values)
     niverif = niproof.get_verifier()
     chal, resp = niprover.get_NI_proof("mymessage")
@@ -68,7 +68,7 @@ def test_dlrep_wrongNI():  #We request a non_inte_ractive proof from the prover
     assert niverif.verify_NI(chal, resp, "mymessage") == False
 
 def test_dlrep_simulation():
-    ped_proof = DLRepProof(public_info, rhs1)
+    ped_proof = DLRepProof(lhs, rhs1)
     sim_prover = ped_proof.get_simulator()
     sim_verif = ped_proof.get_verifier()
     (com, chal, resp) = sim_prover.simulate_proof()
@@ -81,7 +81,7 @@ def test_diff_groups_dlrep():
     with pytest.raises(
             Exception
     ):  # An exception should be raised due to different groups coexisting in a DLRepProof
-        niproof = DLRepProof(tab_g1, secrets_aliases, public_info)
+        niproof = DLRepProof(tab_g1, secrets_aliases, lhs)
 
 
 # can be used to create ec points from hexa
@@ -111,7 +111,7 @@ def test_generators_sharing_a_secret():
     N = 10
     generators = get_generators(N)
     unique_secret = 4
-    public_info = create_public_info(generators, [4 for g in generators])
+    lhs = create_lhs(generators, [4 for g in generators])
 
     def get_rhs(i):
         return Secret("x1") * generators[i]
@@ -121,7 +121,7 @@ def test_generators_sharing_a_secret():
         rhs += get_rhs(i) 
         
     pp = DLRepProof(
-        public_info,
+        lhs,
         rhs
         )
     prover = pp.get_prover({"x1": unique_secret})
@@ -130,7 +130,7 @@ def test_generators_sharing_a_secret():
     assert isinstance(commitment, EcPt)
 
 
-def create_public_info(generators, secrets):
+def create_lhs(generators, secrets):
     sum_ = generators[0].group.infinite()
     for i in range(len(generators)):
         sum_ = sum_ + secrets[i] * generators[i]
@@ -144,7 +144,7 @@ def test_get_many_different_provers():
     secrets_names = [prefix + str(i) for i in range(N)]
     secrets_vals = range(N)
     secr_dict = dict(zip(secrets_names, secrets_vals))
-    pp = DLRepProof(create_public_info(generators, secrets_vals), create_rhs(secrets_names, generators))
+    pp = DLRepProof(create_lhs(generators, secrets_vals), create_rhs(secrets_names, generators))
     prover = pp.get_prover(secr_dict)
     commitment = prover.commit()
     assert isinstance(commitment, EcPt)
@@ -154,7 +154,7 @@ def test_same_random_in_commitment():
     g = get_generators(1)[0]
     gens = [g, g, g]
 
-    pub_info = create_public_info(gens, [100, 100, 100])
+    pub_info = create_lhs(gens, [100, 100, 100])
 
     pp = DLRepProof(pub_info, create_rhs(["x1", "x1", "x1"], gens))
     prover = pp.get_prover({"x1": 100})
@@ -170,14 +170,14 @@ def setup_and_proofs():
     secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
                          ("x4", 43), ("x5", 10)])
 
-    sum_1 = create_public_info(
+    sum_1 = create_lhs(
         generators1,
         [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
     secrets_2 = [secrets_dict["x0"]]
     for i in range(3, 6):
         secrets_2.append(secrets_dict["x" + str(i)])
 
-    sum_2 = create_public_info(generators2, secrets_2)
+    sum_2 = create_lhs(generators2, secrets_2)
     pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
 
     pp2 = DLRepProof(sum_2, create_rhs(["x0", "x3", "x4", "x5"], generators2)
@@ -194,13 +194,13 @@ def test_wrong_and_proofs():  # An alien EcPt is inserted in the generators
 
     secrets_dict = dict([("x0", 1), ("x1", 2), ("x2", 5), ("x3", 100),
                          ("x4", 43), ("x5", 10)])
-    sum_1 = create_public_info(
+    sum_1 = create_lhs(
         generators1,
         [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]])
 
     secrets_2 = [secrets_dict["x0"]]
 
-    sum_2 = create_public_info(generators2, secrets_2)
+    sum_2 = create_lhs(generators2, secrets_2)
     pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
     pp2 = DLRepProof(sum_2, create_rhs(["x0"], generators2))
     with pytest.raises(
@@ -245,8 +245,8 @@ def test_compose_and_proofs2():
     assert_verify_proof(verifier, prover)
 
 def test_simulate_andproof():
-    subproof1 = DLRepProof(public_info, create_rhs(secrets_aliases, tab_g))
-    subproof2 = DLRepProof(public_info, create_rhs(secrets_aliases, tab_g))
+    subproof1 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
+    subproof2 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
@@ -343,8 +343,8 @@ def test_DLRep_right_hand_side_eval():
     x3 = 35
 
     rhs = Secret("x1", value = x1) * g1 + Secret("x2", value = x2) * g2
-    expected_public_info = x1 * g1 + x2 * g2
-    assert rhs.eval() == expected_public_info
+    expected_lhs = x1 * g1 + x2 * g2
+    assert rhs.eval() == expected_lhs
 
 def test_DLRep_right_hand_side_eval():
     g = EcGroup().generator()

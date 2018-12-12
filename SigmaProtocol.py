@@ -7,7 +7,7 @@ import pdb
 from hashlib import sha256
 from collections import defaultdict
 import pytest
-
+import msgpack
 
 class SigmaProtocol:
     def __init__(self, verifierClass, proverClass):
@@ -38,13 +38,8 @@ class SigmaProtocol:
 
 
 class Prover:  # The Prover class is built on an array of generators, an array of secrets'IDs, a dict of these secrets, and public info
-    def __init__(self, generators, secret_names, secret_values, public_info):
-        self.generators = generators
-        self.secret_names = secret_names
-        self.secret_values = secret_values
-        self.public_info = public_info
-
-        self.set_simulate = False
+    def __init__(self, generators, secret_names, secret_values, lhs):
+        pass
 
     def commit(self, randomizers_dict=None):
         pass
@@ -54,27 +49,26 @@ class Prover:  # The Prover class is built on an array of generators, an array o
 
     def get_NI_proof(
             self, message=''
-    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (public_info, commitment, message)
-        tab_g = self.generators
+    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (lhs, commitment, message)
         commitment = self.commit()
         message = message.encode()
+        protocol = get_proof_id(self)
 
         # Computing the challenge
-        conc = self.public_info.export()
+        conc = protocol
         conc += commitment.export()
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
         responses = self.compute_response(challenge)
         return (challenge, responses)
-        
+
+
 
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
-    def __init__(self, generators, secret_names, public_info):
-        self.generators = generators
-        self.secret_names = secret_names
-        self.public_info = public_info
+    def __init__(self, generators, secret_names, lhs):
+        pass
 
     def send_challenge(self, commitment):
         self.commitment = commitment
@@ -82,7 +76,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         print("\nchallenge is ", self.challenge)
 
         return self.challenge
-    
+
     def verify(
             self, response, commitment=None,
             challenge=None):  #Can verify simulations with optional arguments
@@ -91,19 +85,19 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-        
+
         return (commitment == self.recompute_commitment(self, challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):
         message = message.encode()
-        tab_g = self.generators
-        y = self.public_info
-        #r_guess = recompute_commitment  #We retrieve the commitment using the verification identity
-        r_guess = tab_g[0].group.order().random() #for compilation
-        conc = self.public_info.export()
+        protocol = get_proof_id(self)
+        r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
+        conc = protocol
         conc += r_guess.export()
         conc += message
         myhash = sha256(conc).digest()
+        print(challenge)
+        print(Bn.from_hex(binascii.hexlify(myhash).decode()))
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
 
@@ -133,3 +127,26 @@ def check_groups(
 def chal_128bits():
     twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
     return twoTo128.random()
+
+def get_proof_id(obj):
+    cur_type = obj.__class__.__name__
+    if "DLRep" in cur_type:
+        protocol = ["DLRep"]
+        protocol.append(obj.lhs.export())
+
+        [protocol.append(g.export()) for g in obj.generators]
+    elif "AndProofProver" in cur_type:
+        protocol = ["And"]
+        [
+            protocol.append(subprover.get_proof_id(subprover))
+            for subprover in obj.subprovers
+        ]
+    elif "OrProver" in cur_type:
+        protocol = ["Or"]
+        [
+            protocol.append(subprover.get_proof_id(subprover))
+            for subprover in obj.subprovers
+        ]
+    else:
+        raise Exception('Generic Prover in the wild')
+    return msgpack.packb(protocol)

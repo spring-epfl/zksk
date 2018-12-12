@@ -11,7 +11,25 @@ import binascii
 from And_proof import Proof
 
 
+def randomword(length):
+    letters = string.ascii_lowercase
+    return "".join(random.choice(letters) for i in range(length))
+
+def raise_powers(tab_g, response):
+    left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
+    leftside = tab_g[0].group.infinite()
+    for el in left_arr:
+        leftside += el
+    return leftside
+    
 class DLRepProver(Prover):
+    def __init__(self, generators, secret_names, secret_values, lhs):
+        self.generators = generators
+        self.secret_names = secret_names
+        self.secret_values = secret_values
+        self.lhs = lhs
+
+        self.set_simulate = False
     def get_randomizers(self) -> dict:
         output = {}
         for idx, sec in enumerate(self.secret_names): #This overwrites if shared secrets but allows to access the appropriate group order
@@ -69,55 +87,27 @@ class DLRepProver(Prover):
 
         return commitment, challenge, response
 
-
-def randomword(length):
-    letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for i in range(length))
-
-def raise_powers(tab_g, response):
-    left_arr = [a * b for a, b in zip(response, tab_g)]  # g1^s1, g2^s2...
-    leftside = tab_g[0].group.infinite()
-    for el in left_arr:
-        leftside += el
-    return leftside
-
 class DLRepVerifier(Verifier):
-    #Explicit init so we set the compute_commitment function
-    def __init__(self, generators, secret_names, public_info) :
-        super().__init__(generators, secret_names, public_info)
+    def __init__(self, generators, secret_names, lhs) :
+        self.generators = generators
+        self.secret_names = secret_names
+        self.lhs = lhs
         self.recompute_commitment = DLRepProof.recompute_commitment  
 
 
 
-    def verify_NI(self, challenge, response, message=''):
-
-        self.recompute_commitment = DLRepProof.recompute_commitment   
-        message = message.encode()
-        tab_g = self.generators
-        y = self.public_info
-        r_guess = -challenge * y + raise_powers(self.generators, 
-            response
-        )  #We retrieve the commitment using the verification identity
-
-        conc = self.public_info.export()
-        conc += r_guess.export()
-        conc += message
-        myhash = sha256(conc).digest()
-        return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
-
-
 class DLRepProof(Proof):
 
-    def __init__(self, public_info, rightSide):
+    def __init__(self, lhs, rightSide):
         if isinstance(rightSide, RightSide):
-            self.initialize(rightSide.pts, [secret.name for secret in rightSide.secrets], public_info)
+            self.initialize(rightSide.pts, [secret.name for secret in rightSide.secrets], lhs)
         else:
             raise Exception("undefined behaviour for this input")
 
 
 
     #len of secretDict and generators param of __init__ must match exactly
-    def initialize(self, generators, secret_names, public_info):
+    def initialize(self, generators, secret_names, lhs):
         if not isinstance(generators, list):  # we have a single generator
             raise Exception("generators must be a list of generators values")
 
@@ -141,7 +131,7 @@ class DLRepProof(Proof):
 
         self.generators = generators
         self.secret_names = secret_names
-        self.public_info = public_info
+        self.lhs = lhs
 
 
     def get_prover(self, secrets_dict):
@@ -168,19 +158,19 @@ class DLRepProof(Proof):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
 
         return DLRepProver(self.generators, self.secret_names,
-                              secrets_dict, self.public_info)
+                              secrets_dict, self.lhs)
         
     def get_simulator(self):
-        return DLRepProver(self.generators, self.secret_names, {}, self.public_info)
+        return DLRepProver(self.generators, self.secret_names, {}, self.lhs)
         
 
     def get_verifier(self):
         return DLRepVerifier(self.generators, self.secret_names,
-                                self.public_info)
+                                self.lhs)
 
     def recompute_commitment(self, challenge, responses):
         tab_g = self.generators
-        y = self.public_info
+        y = self.lhs
 
         leftside = raise_powers(self.generators, responses) + (-challenge) * y
         return leftside
@@ -207,11 +197,11 @@ if __name__ == "__main__":  #A legit run in which we build the public info from 
 
     powers = [a * b for a, b in zip(secret_tab, tab_g)
               ]  # The Ys of which we will prove logarithm knowledge
-    public_info = G.infinite()
+    lhs = G.infinite()
     for y in powers:
-        public_info += y
+        lhs += y
 
-    dl_proof = DLRepProof(tab_g, secrets_aliases, public_info)
+    dl_proof = DLRepProof(tab_g, secrets_aliases, lhs)
     dl_prover = dl_proof.get_prover(secrets_values)
     dl_verifier = dl_proof.get_verifier()
 
