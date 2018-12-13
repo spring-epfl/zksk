@@ -226,6 +226,14 @@ def test_and_proofs():
     assert_verify_proof(and_verifier, and_prover)
 
 
+def test_3_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    and_proof = AndProof([pp1, pp2, pp2], pp1, pp1, [pp1, pp2])
+    and_prover = and_proof.get_prover(secrets_dict)
+    and_verifier = and_proof.get_verifier()
+
+    assert_verify_proof(and_verifier, and_prover)
+
 def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
@@ -243,7 +251,7 @@ def test_compose_and_proofs2():
     prover = p.get_prover(secrets_dict)
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
-
+""" 
 def test_simulate_andproof():
     subproof1 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     subproof2 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
@@ -251,7 +259,7 @@ def test_simulate_andproof():
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
     com, ch, resp = andsim.simulate_proof()
-    assert andv.verify(resp, com, ch) == True
+    assert andv.verify(resp, com, ch) == True """
 
 def test_and_NI():
     p1, p2, secrets = setup_and_proofs()

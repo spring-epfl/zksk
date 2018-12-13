@@ -139,13 +139,13 @@ def get_proof_id(obj):
         protocol = ["And"]
         [
             protocol.append(subprover.get_proof_id(subprover))
-            for subprover in obj.subprovers
+            for subprover in obj.subs
         ]
     elif "OrProver" in cur_type:
         protocol = ["Or"]
         [
             protocol.append(subprover.get_proof_id(subprover))
-            for subprover in obj.subprovers
+            for subprover in obj.subs
         ]
     else:
         raise Exception('Generic Prover in the wild')
