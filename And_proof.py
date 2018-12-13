@@ -8,6 +8,8 @@ AndProofChallenge = Bn
 
 
 class AndProofProver(Prover):
+    """
+    """
     def __init__(self, subprovers):
         self.subs = subprovers.copy()
 
@@ -94,6 +96,9 @@ class AndProof(Proof):
         check_groups(self.secret_names, self.generators)
     
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
+        """This function allows to retrieve the commitment generically. For this purpose 
+        the names of the sub-objects of AndVerifier and AndProver should be the same.
+        """
         comm = []
         for i in range(len(self.subs)):
             cur_proof = self.subs[i]
