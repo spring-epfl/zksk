@@ -94,7 +94,8 @@ class AndProof(Proof):
         self.secret_names = get_secret_names(self.subproofs)
         self.simulate = False
         check_groups(self.secret_names, self.generators)
-    
+        #check_or_flaw(self)
+
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
         """This function allows to retrieve the commitment generically. For this purpose 
         the names of the sub-objects of AndVerifier and AndProver should be the same.
