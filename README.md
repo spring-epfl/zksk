@@ -29,7 +29,9 @@ Initial state : the Prover and the Verifier share some "public information", nam
  - the left-hand-side value of the claim i.e the value for which we want to prove knowledge of certain properties/decomposition
  - the syntax of the claim including the pseudonyms of the secrets
  
-          -commitment-
+ Now the interaction :
+ 
+          `code`
 Prover ---------------> Verifier
 
           challenge
