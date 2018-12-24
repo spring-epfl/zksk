@@ -9,7 +9,7 @@ To use it, you should install :
   - pytest
   - hashlib
 
-##How to use :
+## How to use :
 
 You can implement (local) interactive proofs, and non-interactive proofs. These includes simulations of proofs.
 Proofs you can implement are conjunctions of Discrete Logarithm Representations, And blocks and Or blocks.
@@ -19,7 +19,7 @@ Find below examples of proof creation :
 
 
 
-##How it works : 
+## How it works : 
 
 ZKC will basically instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global challenge and global randomizers are shared (i.e the subproofs are not run independently from each other).
 The sigma protocol is the following : 
@@ -29,11 +29,13 @@ Initial state : the Prover and the Verifier share some "public information", nam
  - the left-hand-side value of the claim i.e the value for which we want to prove knowledge of certain properties/decomposition
  - the syntax of the claim including the pseudonyms of the secrets
 
-          commitment
+         commitment
 Prover ---------------> Verifier
+
           challenge
 Prover <--------------- Verifier
-          response
+
+           response
 Prover ---------------> Verifier
 
 After which the Verifier locally "verifies" i.e locally recomputes a pseudo-commitment from the challenge and the responses, and compares it to the actual commitment.
