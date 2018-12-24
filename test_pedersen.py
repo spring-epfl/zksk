@@ -226,20 +226,6 @@ def test_and_proofs():
     assert_verify_proof(and_verifier, and_prover)
 
 
-def test_wrong_and_proofs():
-    pp1, pp2, secrets_dict = setup_and_proofs()
-    and_proof = AndProof(pp1, pp2)
-    sec = secrets_dict.copy()
-    sec["x0"] = G.order().random()
-    and_prover = and_proof.get_prover(sec)
-    and_verifier = and_proof.get_verifier()
-
-    commitment = and_prover.commit()
-    challenge = and_verifier.send_challenge(commitment)
-    response = and_prover.compute_response(challenge)
-    v = and_verifier.verify(response)
-    assert (v == False)
-    
 def test_3_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof([pp1, pp2, pp2], pp1, pp1, [pp1, pp2])

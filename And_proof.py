@@ -125,4 +125,3 @@ class AndProof(Proof):
 
     def set_simulate(self):
         self.simulate = True
-
