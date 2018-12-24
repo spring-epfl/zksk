@@ -68,6 +68,7 @@ class OrProof:
         self.secret_names = get_secret_names(self.subproofs)
         self.simulate = False
         check_groups(self.secret_names, self.generators) # For now we consider the same constraints as in the And Proof
+        check_or_flaw(self)
 
     def get_secret_names(self):
         secrets = self.proof1.get_secret_names()
