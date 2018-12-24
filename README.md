@@ -28,8 +28,8 @@ Initial state : the Prover and the Verifier share some "public information", nam
  - an ECGroup (elliptic curve group, see petlib) along with a set of generators of this group
  - the left-hand-side value of the claim i.e the value for which we want to prove knowledge of certain properties/decomposition
  - the syntax of the claim including the pseudonyms of the secrets
-
-         commitment
+ 
+          -commitment-
 Prover ---------------> Verifier
 
           challenge
