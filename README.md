@@ -33,9 +33,9 @@ The sigma protocol (**interactiv**) is the following :
           
 Prover ---- commitment -----> Verifier
 
-Prover <---- challenge ---- Verifier
+Prover <----- challenge ------ Verifier
            
-Prover ----- response ----> Verifier
+Prover ------ response ------> Verifier
 
 After which the Verifier locally "verifies" i.e locally recomputes a pseudo-commitment from the challenge and the responses, and compares it to the actual commitment.
 
