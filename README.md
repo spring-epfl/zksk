@@ -31,9 +31,9 @@ The sigma protocol (**interactiv**) is the following :
  
  The interaction is :
           
-Prover ---- commitment ---> Verifier
+Prover ----- commitment ---> Verifier
 
-Prover <----- challenge -----> Verifier
+Prover <----- challenge ------ Verifier
            
 Prover ------ response -----> Verifier
 
