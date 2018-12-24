@@ -22,23 +22,20 @@ Find below examples of proof creation :
 ## How it works : 
 
 ZKC will basically instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global challenge and global randomizers are shared (i.e the subproofs are not run independently from each other).
-The sigma protocol is the following : 
+The sigma protocol (**interactiv**) is the following : 
 
-Initial state : the Prover and the Verifier share some "public information", namely
+**Initial state** : the Prover and the Verifier share some "public information", namely
  - an ECGroup (elliptic curve group, see petlib) along with a set of generators of this group
  - the left-hand-side value of the claim i.e the value for which we want to prove knowledge of certain properties/decomposition
  - the syntax of the claim including the pseudonyms of the secrets
  
- Now the interaction :
- 
-          `code`
-Prover ---------------> Verifier
+ The interaction is :
+          
+Prover ---- commitment -----> Verifier
 
-          challenge
-Prover <--------------- Verifier
-
-           response
-Prover ---------------> Verifier
+Prover <---- challenge ---- Verifier
+           
+Prover ----- response ----> Verifier
 
 After which the Verifier locally "verifies" i.e locally recomputes a pseudo-commitment from the challenge and the responses, and compares it to the actual commitment.
 
