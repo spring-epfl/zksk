@@ -22,7 +22,7 @@ Find below examples of proof creation :
 ## How it works : 
 
 ZKC will basically instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global challenge and global randomizers are shared (i.e the subproofs are not run independently from each other).
-The sigma protocol (**interactiv**) is the following : 
+The sigma protocol (**interactive**) is the following : 
 
 **Initial state** : the Prover and the Verifier share some "public information", namely
  - an ECGroup (elliptic curve group, see petlib) along with a set of generators of this group
