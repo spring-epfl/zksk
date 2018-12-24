@@ -16,7 +16,6 @@ class AndProofProver(Prover):
         self.generators = get_generators(subprovers)
         self.secret_names = get_secret_names(subprovers)
 
-        self.set_simulate = False
 
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         random_vals = {}
@@ -93,6 +92,7 @@ class AndProof(Proof):
 
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
+        self.simulate = False
         check_groups(self.secret_names, self.generators)
     
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
@@ -122,13 +122,6 @@ class AndProof(Proof):
     def get_simulator(self):
         return [subp.get_simulator() for subp in self.subproofs]
 
+    def set_simulate(self):
+        self.simulate = True
 
-def get_secret_names(sub_list):
-        secrets = []
-        [secrets.extend(elem.secret_names.copy()) for elem in sub_list]
-        return secrets
-
-def get_generators(sub_list):
-        generators = []
-        [generators.extend(elem.generators.copy()) for elem in sub_list]
-        return generators

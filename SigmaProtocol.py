@@ -124,9 +124,23 @@ def check_groups(
 
     return True
 
+#Useful for several proofs :
+
 def chal_128bits():
     twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
     return twoTo128.random()
+
+def get_secret_names(sub_list):
+        secrets = []
+        [secrets.extend(elem.secret_names.copy()) for elem in sub_list]
+        return secrets
+
+def get_generators(sub_list):
+        generators = []
+        [generators.extend(elem.generators.copy()) for elem in sub_list]
+        return generators
+
+# Useful for NI proofs :
 
 def get_proof_id(obj):
     cur_type = obj.__class__.__name__
