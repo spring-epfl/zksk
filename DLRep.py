@@ -132,6 +132,7 @@ class DLRepProof(Proof):
         self.generators = generators
         self.secret_names = secret_names
         self.lhs = lhs
+        self.simulate = False
 
 
     def get_prover(self, secrets_dict):
@@ -174,6 +175,9 @@ class DLRepProof(Proof):
 
         leftside = raise_powers(self.generators, responses) + (-challenge) * y
         return leftside
+
+    def set_simulate(self):
+        self.simulate = True
 
 
 
