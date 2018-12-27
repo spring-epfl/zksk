@@ -94,7 +94,7 @@ class AndProof(Proof):
         self.secret_names = get_secret_names(self.subproofs)
         self.simulate = False
         check_groups(self.secret_names, self.generators)
-        #check_or_flaw(self)
+        self.check_or_flaw()
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
         """This function allows to retrieve the commitment generically. For this purpose 
@@ -107,6 +107,9 @@ class AndProof(Proof):
         return comm
 
     def get_prover(self, secrets_dict):
+        if self.simulate == True or secrets_dict == {}:
+            print('Can only simulate')
+            return get_verifier()
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.secret_names.copy())
             secrets_for_prover = []
@@ -121,7 +124,20 @@ class AndProof(Proof):
         return AndProofVerifier([subp.get_verifier() for subp in self.subproofs])
 
     def get_simulator(self):
-        return [subp.get_simulator() for subp in self.subproofs]
+        """ Returns an empty prover which can only simulate (via simulate_proof)
+        """
+        arr = [subp.get_simulator() for subp in self.subproofs]
+        return AndProofProver(arr)
 
     def set_simulate(self):
         self.simulate = True
+        
+    def check_or_flaw(self): #TODO : test this when OrProof is finished
+        """ Checks for appearance of the following scheme : And(Or, x) where at least one secret is shared between x and Or.
+            Raises an error if finds any."""
+        for subp in self.subproofs:
+            if "Or" in subp.__class__.__name__ :
+                for other_sub in self.subproofs:
+                    if any(set(subp.secret_names)&set(other_sub.secret_names)):
+                        raise Exception("Or flaw detected. Aborting. Try to flatten the proof to  \
+                        avoid shared secrets inside and outside an Or")

@@ -148,7 +148,6 @@ def get_proof_id(obj):
         protocol = ["DLRep"]
         protocol.append(obj.lhs.export())
 
-        #[protocol.append(g[0]+g[1].export()) for g in zip(obj.secret_names, obj.generators)]
         [protocol.append(g.export()) for g in obj.generators]
     elif "AndProof" in cur_type:
         protocol = ["And"]
@@ -179,6 +178,3 @@ def flatten_commitment(comm):
     return res
 
 
-def check_or_flaw(obj):
-    """ Checks for appearance of a shared secret inside and outside an Or proof. Raises an error if finds any."""
-    protocol = get_proof_id(obj)

@@ -265,8 +265,8 @@ def test_compose_and_proofs2():
     prover = p.get_prover(secrets_dict)
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
-""" 
-def test_simulate_andproof():
+
+""" def test_simulate_andproof():
     subproof1 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     subproof2 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
