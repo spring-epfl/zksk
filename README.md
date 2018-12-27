@@ -13,6 +13,7 @@ To use it, you should install :
 
 You can implement (local) interactive proofs, and non-interactive proofs. These includes simulations of proofs.
 Proofs you can implement are conjunctions of Discrete Logarithm Representations, And blocks and Or blocks.
+Careful when using Or blocks inside And blocks : if a scheme such as And{ OrProof, Any_other_proof, ...} is found and at least one secret is used both outside and inside the Or (e.g, Any_other_proof and OrProof have one common secret), **an error will be raised**.
 Find below examples of proof creation :
 
 -
