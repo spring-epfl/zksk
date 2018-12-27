@@ -136,6 +136,9 @@ class DLRepProof(Proof):
 
 
     def get_prover(self, secrets_dict):
+        if self.simulate == True or secrets_dict == {}:
+            print('Can only simulate')
+            return get_verifier()
         if len(set(self.secret_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
 
@@ -162,9 +165,10 @@ class DLRepProof(Proof):
                               secrets_dict, self.lhs)
         
     def get_simulator(self):
+        """ Returns an empty prover which can only simulate (via simulate_proof)
+        """
         return DLRepProver(self.generators, self.secret_names, {}, self.lhs)
         
-
     def get_verifier(self):
         return DLRepVerifier(self.generators, self.secret_names,
                                 self.lhs)
