@@ -123,7 +123,7 @@ class AndProof(Proof):
     def get_prover(self, secrets_dict):
         if self.simulate == True or secrets_dict == {}:
             print('Can only simulate')
-            return get_verifier()
+            return get_simulator()
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.secret_names.copy())
             secrets_for_prover = []
