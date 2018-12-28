@@ -55,7 +55,7 @@ class AndProofVerifier(Verifier):
         self.subs = subverifiers.copy()
         
         self.generators = get_generators(subverifiers)
-        self.secret_names = get_generators(subverifiers)
+        self.secret_names = get_secret_names(subverifiers)
 
         self.recompute_commitment = AndProof.recompute_commitment
         
