@@ -16,9 +16,64 @@ Proofs you can implement are conjunctions of Discrete Logarithm Representations,
 Careful when using Or blocks inside And blocks : if a scheme such as And{ OrProof, Any_other_proof, ...} is found and at least one secret is used both outside and inside the Or (e.g, Any_other_proof and OrProof have one common secret), **an error will be raised**.
 Find below examples of proof creation :
 
--
 
+- Say we want to create the following and proof of two discrete logarithms proofs:  PK{(x1,x2,x3,x4): y1 = x1 * g1 + x2 * g2 AND y2 = x1 * g3 + x3 * g3 + x4 * g5}
 
+say we have the gi-s and xi-s as follows:
+
+	g = EcGroup().generator()
+	g1 = 2 * g
+	g2 = 5 * g
+	g3 = 10 * g
+
+	x1 = 10
+	x2 = 15
+	x3 = 35
+	x4 = 11
+
+then you create the proof using the following syntax:
+
+	from DLRep import *
+	from Subproof import Secret
+
+	y1 = x1 * g1 + x2 * g2
+	y2 = x1 * g3 + x3 * g4 + x4 * g5 
+	proof = DLRepProof(y1, Secret("x1") * g1 + Secret("x2") * g2) & DLRepProof(y2, Secret("x1") * g3 + Secret("x3") * g4 + Secret("x4") * g5)
+
+A remark about the infix operator &, it represents the conjunction between the two DLRepProof.
+
+All that is left to do fot the setup is to create a verifier and a prover from this proof.
+To do that we have to feed the secrets values to the prover that only knows their names:
+	prover = proof.get_prover({"x1": x1, "x2": x2, "x3": x3, "x4": x4})
+	verifier = proof.get_verifier()
+
+After that all that is left to do is to make the prover and verifier interact. verifiy() returns 
+a boolean telling whether the proof is verified or not.
+	commitment = prover.commit()
+	challenge = verifier.send_challenge(commitment)
+	response = prover.compute_response(challenge)
+	verifier.verify(response)
+
+- Say we want to create an or proof of two discrete logarithms proofs: PK{(x1,x2): y1 = x1 * g1 OR y2 = x2 * g2 }
+
+you would do the following to setup the proof (say xi-s and gi-s have been setup already similarly as above):
+
+	y1 = x1 * g1
+	y2 = x2 * g2
+	proof = DLRepProof(y1, Secret("x1") * g1) | DLRepProof(y2, Secret("x2") * g2)
+
+the rest is the same as above. That is you still have to create a prover and a verifier by calling the get_prover() and get_verifier() methods of the Proof object.
+
+- Of course you can also compose or proof and and proofs. Say you want to write the following proof: PK{(x1,x2,x3): y1 = x1 * g1 OR y2 = x2 * g2 AND y3 = x3 * g3}:
+
+ the initial setup of the proof would be:
+
+	y1 = x1 * g1
+	y2 = x2 * g2
+	y3 = x3 * g3
+	proof = DLRepProof(y1, Secret("x1") * g1) | DLRepProof(y2, Secret("x2") * g2) & DLRepProof(y3, Secret("x3") * g3)
+
+*&* and *|* have the same precedence as *and* and *or* in python. Therefore you can rely on your usual boolean logic to write your proofs.
 
 ## How it works : 
 
