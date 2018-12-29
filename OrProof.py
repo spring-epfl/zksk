@@ -33,15 +33,18 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
         """
+        # Is this useful in an Or Proof ? TODO : check
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
 
+        # Unify the possible responses to common secret names
         responses_dict = self.get_randomizers()
 
         commitment = []
         for index in range(len(self.subs)):
             if index == self.true_prover:
                 commitment.append(self.subs[index].commit())
+            else :
                 cur = self.subs[index].simulate_proof(responses_dict)
                 self.simulations.append(cur)
                 commitment.append(cur[0])
@@ -68,12 +71,6 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
 
         # We carry the or challenges in a tuple so everything works fine with the interface
         return (challenges, response)
-
-    def find_residual_chal(self, challenge):
-        chal = challenge.hex()
-        for sim in self.simulations:
-            chal = chal^sim[1].hex()
-        return Bn.from_hex(chal)
 
     def simulate_proof(self, responses_dict = None, challenge = None):
         if responses_dict is None:
