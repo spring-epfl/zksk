@@ -3,6 +3,7 @@ from petlib.bn import Bn
 
 
 class AndProofCommitment:
+    """a pair of commitments"""
     def __init__(self, commitment1, commitment2):
         self.commitment1 = commitment1
         self.commitment2 = commitment2
@@ -13,6 +14,7 @@ class AndProofCommitment:
 AndProofChallenge = Bn
 
 class AndProofResponse:
+    """a pair of responses"""
     def __init__(self, response1, response2):
         self.response1 = response1
         self.response2 = response2
@@ -20,6 +22,7 @@ class AndProofResponse:
 
 class AndProofProver(Prover):
     def __init__(self, prover1, prover2):
+        """:param prover1, prover2: instances of Prover"""
         self.prover1 = prover1
         self.prover2 = prover2
 
@@ -32,12 +35,14 @@ class AndProofProver(Prover):
 
         self.set_simulate = False
 
-    def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
+    def get_randomizers(self) -> dict: 
+        """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
         random_vals = self.prover1.get_randomizers().copy()
         random_vals.update(self.prover2.get_randomizers().copy())
         return random_vals
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
+        """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
         self.commitment =  AndProofCommitment(
@@ -46,7 +51,8 @@ class AndProofProver(Prover):
         return self.commitment
         
     def compute_response(self, challenge: AndProofChallenge
-                        ) -> AndProofResponse:  #r = secret*challenge + k
+                        ) -> AndProofResponse:  
+        """:return: the pair (of type AndProofResponse) containing the first proof response and the second proof response"""#r = secret*challenge + k
         return AndProofResponse(
             self.prover1.compute_response(challenge),
             self.prover2.compute_response(challenge))
@@ -70,6 +76,9 @@ class AndProofProver(Prover):
 
 class AndProofVerifier(Verifier):
     def __init__(self, verifier1, verifier2):
+        """
+        :param verifier1, verifier2: instances of subtypes of Verifier
+        """
         self.verifier1 = verifier1
         self.verifier2 = verifier2
        
@@ -85,21 +94,30 @@ class AndProofVerifier(Verifier):
 
 
 class Proof:
+    """an abstraction of a sigma protocol proof"""
     def __and__(self, other):
+        """
+        :return: an AndProof from this proof and the other proof using the infix '&' operator
+        """
         return AndProof(self, other)
 
     def get_prover(self, secrets_dict):
+        """
+        :param: secrets_dict: a mapping from secret names to secret values
+        :return: an instance of Prover"""
         pass
 
     def get_verifier(self):
+        """:return: an instance of Verifier"""
         pass
 
-    def recompute_commitment(self):
+    def recompute_commitment(self, challenge, response):
         pass
 
 
 class AndProof(Proof):
     def __init__(self, proof1, proof2):
+        """:param proof1, proof2: instances of Proof"""
         self.proof1 = proof1
         self.proof2 = proof2
 

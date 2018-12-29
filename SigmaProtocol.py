@@ -10,6 +10,9 @@ import pytest
 import msgpack
 
 class SigmaProtocol:
+    """
+    an interface for sigma protocols.
+    """
     def __init__(self, verifierClass, proverClass):
         self.verifierClass = verifierClass
         self.proverClass = proverClass
@@ -37,11 +40,18 @@ class SigmaProtocol:
             return False
 
 
-class Prover:  # The Prover class is built on an array of generators, an array of secrets'IDs, a dict of these secrets, and public info
+class Prover:  
+    """
+    An abstract interface representing Prover used in sigma protocols
+    """
     def __init__(self, generators, secret_names, secret_values, lhs):
         pass
 
     def commit(self, randomizers_dict=None):
+        """
+        :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
+        :return: a single commitment (of type petlib.bn.Bn) for the whole proof
+        """
         pass
 
     def compute_response(self, challenge):
@@ -49,7 +59,11 @@ class Prover:  # The Prover class is built on an array of generators, an array o
 
     def get_NI_proof(
             self, message=''
-    ):  # Non-interactive proof. Takes a string message. Challenge is hash of (lhs, commitment, message)
+    ):  
+        """ Non-interactive proof 
+        :param message: a string message.
+        :return: a challenge that is a hash of (lhs, commitment, message) and a list of responses. Each response has type petlib.bn.Bn 
+        """
         commitment = self.commit()
         message = message.encode()
         protocol = get_proof_id(self)
@@ -71,6 +85,10 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         pass
 
     def send_challenge(self, commitment):
+        """
+        :param commitment: a petlib.bn.Bn number
+        :return: a default challenge equal to 2**31
+        """
         self.commitment = commitment
         self.challenge = chal_128bits()
         print("\nchallenge is ", self.challenge)
@@ -80,6 +98,11 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
     def verify(
             self, response, commitment=None,
             challenge=None):  #Can verify simulations with optional arguments
+        """
+        verifies this proof
+        :param response: the response given by the prover
+        :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response
+        """
 
         if commitment is None:
             commitment = self.commitment
@@ -89,6 +112,12 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         return (commitment == self.recompute_commitment(self, challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):
+        """
+        verification for the non interactive proof
+        :param challenge: the challenge a petlib.bn.Bn instance computed from get_NI_proof method
+        :param response: computed from get_NI_proof
+        :return: a boolean telling if the proof is verified
+        """
         message = message.encode()
         protocol = get_proof_id(self)
         r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
@@ -103,9 +132,11 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
 
 def check_groups(
         list_of_secret_names, list_of_generators
-):  #checks that if two secrets are the same, the generators they expand live in the same group
-    # takes a merged list of secrets names and a merged list of generators.
-
+):  
+    """checks that if two secrets are the same, the generators they multiply live in the same group
+    :param list_of_secret_names: a list of secrets names of type string. 
+    :param list_of_generators: a list of generators of type petlib.ec.EcPt.
+    """
     # We map the unique secrets to the indices where they appear
     mydict = defaultdict(list)
     for idx, word in enumerate(list_of_secret_names):
