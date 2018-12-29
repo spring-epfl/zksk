@@ -226,6 +226,28 @@ def test_and_proofs():
     assert_verify_proof(and_verifier, and_prover)
 
 
+def test_wrong_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    and_proof = AndProof(pp1, pp2)
+    sec = secrets_dict.copy()
+    sec["x0"] = G.order().random()
+    and_prover = and_proof.get_prover(sec)
+    and_verifier = and_proof.get_verifier()
+
+    commitment = and_prover.commit()
+    challenge = and_verifier.send_challenge(commitment)
+    response = and_prover.compute_response(challenge)
+    v = and_verifier.verify(response)
+    assert (v == False)
+    
+def test_3_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    and_proof = AndProof([pp1, pp2, pp2], pp1, pp1, [pp1, pp2])
+    and_prover = and_proof.get_prover(secrets_dict)
+    and_verifier = and_proof.get_verifier()
+
+    assert_verify_proof(and_verifier, and_prover)
+
 def test_compose_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     pp3 = AndProof(pp1, pp2)
@@ -244,14 +266,14 @@ def test_compose_and_proofs2():
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
 
-def test_simulate_andproof():
+""" def test_simulate_andproof():
     subproof1 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     subproof2 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
     com, ch, resp = andsim.simulate_proof()
-    assert andv.verify(resp, com, ch) == True
+    assert andv.verify(resp, com, ch) == True """
 
 def test_and_NI():
     p1, p2, secrets = setup_and_proofs()
@@ -260,9 +282,21 @@ def test_and_NI():
     and_verifier = niproof.get_verifier()
 
     message = 'toto'
-    #chall, resp = andprov.get_NI_proof(message)
-    #assert and_verifier.verify_NI(chall, resp, message) == True
-    #inactive test for now PLEASE SIMON DON'T DELETE THIS 
+    chall, resp = andprov.get_NI_proof(message)
+    assert and_verifier.verify_NI(chall, resp, message) == True
+
+
+def test_wrong_and_NI():
+    p1, p2, secrets = setup_and_proofs()
+    niproof = AndProof(p1, p2)
+    wrongs = secrets.copy()
+    wrongs["x0"] = G.order().random()
+    andprov = niproof.get_prover(wrongs)
+    and_verifier = niproof.get_verifier()
+
+    message = 'toto'
+    chall, resp = andprov.get_NI_proof(message)
+    assert and_verifier.verify_NI(chall, resp, message) == False
 
 class Infix:
     def __init__(self, function):

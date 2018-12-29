@@ -2,92 +2,66 @@ from SigmaProtocol import *
 from petlib.bn import Bn
 
 
-class AndProofCommitment:
-    """a pair of commitments"""
-    def __init__(self, commitment1, commitment2):
-        self.commitment1 = commitment1
-        self.commitment2 = commitment2
-
-    def __eq__(self, other):
-        return (self.commitment1==other.commitment1) and (self.commitment2 == other.commitment2)
-
+AndProofCommitment = list
+AndProofResponse = list
 AndProofChallenge = Bn
-
-class AndProofResponse:
-    """a pair of responses"""
-    def __init__(self, response1, response2):
-        self.response1 = response1
-        self.response2 = response2
 
 
 class AndProofProver(Prover):
-    def __init__(self, prover1, prover2):
-        """:param prover1, prover2: instances of Prover"""
-        self.prover1 = prover1
-        self.prover2 = prover2
+    """:param subprovers: instances of Prover"""
+    def __init__(self, subprovers):
+        self.subs = subprovers.copy()
 
-        #A hack
-        self.proof1 = prover1
-        self.proof2 = prover2
+        self.generators = get_generators(subprovers)
+        self.secret_names = get_secret_names(subprovers)
 
-        self.generators = AndProof.get_generators(self)
-        self.secret_names = AndProof.get_secret_names(self)
-
-        self.set_simulate = False
 
     def get_randomizers(self) -> dict: 
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
-        random_vals = self.prover1.get_randomizers().copy()
-        random_vals.update(self.prover2.get_randomizers().copy())
+        random_vals = {}
+        {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
-        self.commitment =  AndProofCommitment(
-            self.prover1.commit(randomizers_dict=randomizers_dict),
-            self.prover2.commit(randomizers_dict=randomizers_dict))
+        self.commitment =  []
+        for subp in self.subs:
+            self.commitment.append(subp.commit(randomizers_dict = randomizers_dict))
         return self.commitment
         
     def compute_response(self, challenge: AndProofChallenge
                         ) -> AndProofResponse:  
-        """:return: the pair (of type AndProofResponse) containing the first proof response and the second proof response"""#r = secret*challenge + k
-        return AndProofResponse(
-            self.prover1.compute_response(challenge),
-            self.prover2.compute_response(challenge))
+        """:return: the list (of type AndProofResponse) containing the subproofs responses"""#r = secret*challenge + k
+        return [subp.compute_response(challenge) for subp in self.subs]
 
     def simulate_proof(self, responses_dict = None, challenge = None):
         if responses_dict is None:
             responses_dict = self.get_randomizers() 
         if challenge is None:
             challenge = chal_128bits()
-        self.recompute_commitment = AndProof.recompute_commitment
-
-
-        com1, __, resp1 = self.prover1.simulate_proof(responses_dict, challenge)
-        com2, __, resp2 = self.prover2.simulate_proof(responses_dict, challenge)
-        commitment = AndProofCommitment(com1, com2)
-        resp = AndProofResponse(resp1, resp2)
+        com = []
+        resp = []
+        for subp in self.subs:
+            com1, __, resp1 = subp.simulate_proof(responses_dict, challenge)
+            com.append(com1)
+            resp.append(resp1)
         return commitment, challenge, resp
         
         
 
 
 class AndProofVerifier(Verifier):
-    def __init__(self, verifier1, verifier2):
+    def __init__(self, subverifiers):
         """
-        :param verifier1, verifier2: instances of subtypes of Verifier
+        :param subverifiers: instances of subtypes of Verifier
         """
-        self.verifier1 = verifier1
-        self.verifier2 = verifier2
-       
-        #A hack
-        self.proof1 = verifier1
-        self.proof2 = verifier2
+
+        self.subs = subverifiers.copy()
         
-        self.generators = AndProof.get_generators(self)
-        self.secret_names = AndProof.get_secret_names(self)
+        self.generators = get_generators(subverifiers)
+        self.secret_names = get_secret_names(subverifiers)
 
         self.recompute_commitment = AndProof.recompute_commitment
         
@@ -116,31 +90,40 @@ class Proof:
 
 
 class AndProof(Proof):
-    def __init__(self, proof1, proof2):
-        """:param proof1, proof2: instances of Proof"""
-        self.proof1 = proof1
-        self.proof2 = proof2
+    def __init__(self, *subproofs):
+        """The AndProof(subproof_list = None, *subproofs = None) can take an arbitrary number of proofs. 
+        Arguments can also be lists of proofs, but not lists of lists."""
+        if not subproofs:
+            raise Exception('AndProof needs arguments !')
+        list_subproofs = []
+        for el in subproofs:
+            if isinstance(el, list):
+                list_subproofs.extend(el)
+            else:
+                list_subproofs.append(el)
 
-        self.generators = self.get_generators()
-        self.secret_names = self.get_secret_names()
+        self.subproofs = list_subproofs
+
+        self.generators = get_generators(self.subproofs)
+        self.secret_names = get_secret_names(self.subproofs)
+        self.simulate = False
         check_groups(self.secret_names, self.generators)
-    
-    def get_secret_names(self):
-        secrets = self.proof1.secret_names.copy()
-        secrets.extend(self.proof2.secret_names.copy())
-        return secrets
-
-    def get_generators(self):
-        generators = self.proof1.generators.copy()
-        generators.extend(self.proof2.generators.copy())
-        return generators
+        self.check_or_flaw()
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
-        c1 = self.proof1.recompute_commitment(self.proof1, challenge, andresp.response1)
-        c2 = self.proof2.recompute_commitment(self.proof2, challenge, andresp.response2)
-        return AndProofCommitment(c1, c2)
+        """This function allows to retrieve the commitment generically. For this purpose 
+        the names of the sub-objects of AndVerifier and AndProver should be the same.
+        """
+        comm = []
+        for i in range(len(self.subs)):
+            cur_proof = self.subs[i]
+            comm.append(cur_proof.recompute_commitment(cur_proof, challenge, andresp[i]))
+        return comm
 
     def get_prover(self, secrets_dict):
+        if self.simulate == True or secrets_dict == {}:
+            print('Can only simulate')
+            return get_verifier()
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.secret_names.copy())
             secrets_for_prover = []
@@ -149,15 +132,26 @@ class AndProof(Proof):
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
             return sub_proof.get_prover(dict(secrets_for_prover))
 
-        prover1 = sub_proof_prover(self.proof1)
-        prover2 = sub_proof_prover(self.proof2)
-        return AndProofProver(prover1, prover2)
+        return AndProofProver([sub_proof_prover(subproof) for subproof in self.subproofs])
 
     def get_verifier(self):
-        return AndProofVerifier(self.proof1.get_verifier(),
-                                self.proof2.get_verifier())
+        return AndProofVerifier([subp.get_verifier() for subp in self.subproofs])
 
     def get_simulator(self):
-        return AndProofProver(self.proof1.get_simulator(), self.proof2.get_simulator())
+        """ Returns an empty prover which can only simulate (via simulate_proof)
+        """
+        arr = [subp.get_simulator() for subp in self.subproofs]
+        return AndProofProver(arr)
 
-
+    def set_simulate(self):
+        self.simulate = True
+        
+    def check_or_flaw(self): #TODO : test this when OrProof is finished
+        """ Checks for appearance of the following scheme : And(Or, x) where at least one secret is shared between x and Or.
+            Raises an error if finds any."""
+        for subp in self.subproofs:
+            if "Or" in subp.__class__.__name__ :
+                for other_sub in self.subproofs:
+                    if any(set(subp.secret_names)&set(other_sub.secret_names)):
+                        raise Exception("Or flaw detected. Aborting. Try to flatten the proof to  \
+                        avoid shared secrets inside and outside an Or")

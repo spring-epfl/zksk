@@ -70,7 +70,7 @@ class Prover:
 
         # Computing the challenge
         conc = protocol
-        conc += commitment.export()
+        conc += flatten_commitment(commitment)
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
@@ -122,7 +122,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         protocol = get_proof_id(self)
         r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
         conc = protocol
-        conc += r_guess.export()
+        conc += flatten_commitment(r_guess)
         conc += message
         myhash = sha256(conc).digest()
         print(challenge)
@@ -155,29 +155,56 @@ def check_groups(
 
     return True
 
+#Useful for several proofs :
+
 def chal_128bits():
     twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
     return twoTo128.random()
 
+def get_secret_names(sub_list):
+    secrets = []
+    [secrets.extend(elem.secret_names.copy()) for elem in sub_list]
+    return secrets
+
+def get_generators(sub_list):
+    generators = []
+    [generators.extend(elem.generators.copy()) for elem in sub_list]
+    return generators
+
 def get_proof_id(obj):
+    """ Generates a deterministic string describer for a proof """
     cur_type = obj.__class__.__name__
     if "DLRep" in cur_type:
         protocol = ["DLRep"]
         protocol.append(obj.lhs.export())
 
         [protocol.append(g.export()) for g in obj.generators]
-    elif "AndProofProver" in cur_type:
+    elif "AndProof" in cur_type:
         protocol = ["And"]
         [
-            protocol.append(subprover.get_proof_id(subprover))
-            for subprover in obj.subprovers
+            protocol.append(get_proof_id(subprover))
+            for subprover in obj.subs
         ]
-    elif "OrProver" in cur_type:
+    elif "Or" in cur_type:
         protocol = ["Or"]
         [
-            protocol.append(subprover.get_proof_id(subprover))
-            for subprover in obj.subprovers
+            protocol.append(get_proof_id(subprover))
+            for subprover in obj.subs
         ]
     else:
         raise Exception('Generic Prover in the wild')
     return msgpack.packb(protocol)
+
+
+def flatten_commitment(comm):
+    if not isinstance(comm, list):
+        return comm.export() #TODO : check if concatenation of several export() is uniquely decodable
+    res = ''.encode()
+    for el in comm:
+        if isinstance(el, list):
+            res += flatten_commitment(el)
+        else:
+            res += el.export()
+    return res
+
+

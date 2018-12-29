@@ -57,8 +57,6 @@ class Secret:
         :param value: an optional petlib.bn.Bn number equal to the secret value. This can be left for later at the creation of the prover.
         """
         self.name = name
-        if value != None and not isinstance(value, Bn):
-            raise Exception("value has to be of type petlib.bn.Bn")
         self.value = value
 
     def __mul__(self, ecPt):
