@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 from SigmaProtocol import *
 from DLRep import *
-
 import secrets
-
+"""
+Question :
+    - shared secrets inside/outside an Or Proof should not appear
+"""
 
 class OrProver(Prover): # This prover is built on two subprovers, max one of them is a simulator
 
@@ -18,7 +20,7 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
 
     def find_legit_prover(self):
         for index in range(len(self.subs)):
-            if self.subs[index].secrets_dict ~= {}:
+            if self.subs[index].secret_values != {}:
                 return index
         raise Exception("Cannot find a legit prover")
 
@@ -32,9 +34,11 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
         """
+        # Is this useful in an Or Proof ? TODO : check
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
 
+        # Unify the possible responses to common secret names
         responses_dict = self.get_randomizers()
 
         commitment = []
@@ -42,32 +46,32 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
             if index == self.true_prover:
                 commitment.append(self.subs[index].commit())
             else :
-                cur = self.subs[index].simulate_proof(response_dict)
+                cur = self.subs[index].simulate_proof(responses_dict)
                 self.simulations.append(cur)
                 commitment.append(cur[0])
         return commitment
 
     def compute_response(self, challenge):
-        residual_chal = self.find_residual_chal(challenge)
-        self.response = []
-        self.challenges = []
+        chals = [el[1] for el in self.simulations]
+        residual_chal = find_residual_chal(chals, challenge)
+        response = []
+        challenges = []
         for index in range(len(self.subs)):
-            if index == self.true:
+            if index == self.true_prover:
                 challenges.append(residual_chal)
                 response.append(self.subs[index].compute_response(residual_chal))
             else :
-                cur_sim = self.simulations[index]
+                # Note len(simulations) = len(subproofs) - 1 !
+                if index > self.true_prover:
+                    index1 = index-1
+                else :
+                    index1 = index
+                cur_sim = self.simulations[index1]
                 challenges.append(cur_sim[1])
                 response.append(cur_sim[2])
 
         # We carry the or challenges in a tuple so everything works fine with the interface
         return (challenges, response)
-
-    def find_residual_chal(self, challenge):
-        chal = challenge.hex()
-        for sim in self.simulations:
-            chal = chal^sim[1].hex()
-        return Bn.from_hex(chal)
 
     def simulate_proof(self, responses_dict = None, challenge = None):
         if responses_dict is None:
@@ -77,14 +81,13 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         com = []
         resp = []
         or_chals = []
-        last_chal = 0
         for index in range(len(self.subs)-1):
             (com1, chal1, resp1) = self.subs[index].simulate_proof(responses_dict)
             com.append(com1)
             resp.append(resp1)
             or_chals.append(chal1)
-            last_chal = last_chal^chal1.hex()
-        final = Bn.from_hex(last_chal)
+    
+        final = find_residual_chal(or_chals, challenge)
         or_chals.append(final)
         com1, __, resp1 = self.subs[index+1].simulate_proof(responses_dict, final)
         com.append(com1)
@@ -93,7 +96,10 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         return com, challenge, (or_chals, resp)
         
             
-
+def find_residual_chal(arr, challenge = Bn(0)):
+    temp_arr = arr.copy()
+    temp_arr.append(challenge)
+    return xor_Bn_array(temp_arr)
 
 
 
@@ -136,34 +142,36 @@ class OrProof:
         self.or_challenges = responses[0]
         responses = responses[1]
         comm = []
-        test_cons = 0
-        for chal in self.or_challenges:
-            test_cons = test_cons^chal.hex()
-        if test_cons != challenge.hex():
+    
+        # We check for challenge consistency i.e the constraint was respected
+        if find_residual_chal(self.or_challenges) != challenge:
             raise Exception("Inconsistent challenge")
-
         for i in range(len(self.subs)):
             cur_proof = self.subs[i]
             comm.append(cur_proof.recompute_commitment(cur_proof, self.or_challenges[i], responses[i]))
         return comm
 
     def get_prover(self, secrets_dict):
-    """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
-    """ 
+        """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
+        """ 
         bigset = set(self.secret_names)
         
         # We sort them but we need to keep track of their initial index
-        ordered_proofs = dict(range(self.subproofs), self.subproofs)
+        ordered_proofs = dict(enumerate(self.subproofs))
         candidates = {}
         sims = {}
         for key, value in ordered_proofs.items():
-            {sims[key]= value if value.simulate else candidates[key] = value}
+            if value.simulate:
+                sims[key]= value
+            else:
+                candidates[key] = value
 
         # We need to choose one subproof to be actually computed among all which can be computed
         # If the available secrets do not match the ones required in the chosen subproof, choose an other
-        possible = candidates.keys()
+        possible = list(candidates.keys())
         chosen_idx = secrets.choice(possible)
-        while set(candidates[chosen_idx].secret_names) not in bigset:
+        while any(x not in bigset for x in (candidates[chosen_idx].secret_names)):
+            pdb.set_trace()
             chosen_idx = secrets.choice(possible)
         
         elem = candidates.pop(chosen_idx)
@@ -171,14 +179,14 @@ class OrProof:
         
         # Now we get the simulators
         sims.update(candidates)
-        for to_sim in sims.values():
-            to_sim = to_sim.get_simulator()
+        for to_sim in sims.keys():
+            sims[to_sim] = sims[to_sim].get_simulator()
 
         # We add the legit prover
-        to_sim[chosen_idx] = elem.get_prover(subdict)
+        sims[chosen_idx] = elem.get_prover(subdict)
 
-        # Return a list of prover in the correct order
-        return OrProver([to_sim[index] for index in sorted(to_sim)])
+        # Return a list of provers in the correct order
+        return OrProver([sims[index] for index in sorted(sims)])
 
     def get_simulator(self):
         """ Returns an empty prover which can only simulate (via simulate_proof)

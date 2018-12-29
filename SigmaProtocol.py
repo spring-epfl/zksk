@@ -208,3 +208,10 @@ def flatten_commitment(comm):
     return res
 
 
+def xor_Bn_array(arr):
+    """ Horrible tool to xor 128 bits Bn challenges.
+    """
+    res = 0
+    for elem in arr:
+        res = res^elem.int()
+    return Bn.from_hex(hex(res)[2:].upper())

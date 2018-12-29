@@ -47,7 +47,7 @@ class AndProofProver(Prover):
             com1, __, resp1 = subp.simulate_proof(responses_dict, challenge)
             com.append(com1)
             resp.append(resp1)
-        return commitment, challenge, resp
+        return com, challenge, resp
         
         
 
@@ -146,12 +146,19 @@ class AndProof(Proof):
     def set_simulate(self):
         self.simulate = True
         
-    def check_or_flaw(self): #TODO : test this when OrProof is finished
+    def check_or_flaw(self, forbidden_secrets= []): #TODO : test this when OrProof is finished
         """ Checks for appearance of the following scheme : And(Or, x) where at least one secret is shared between x and Or.
             Raises an error if finds any."""
         for subp in self.subproofs:
             if "Or" in subp.__class__.__name__ :
+                if any(x in subp.secret_names for x in forbidden_secrets):
+                    raise Exception("Or flaw detected. Aborting. Try to flatten the proof to  \
+                        avoid shared secrets inside and outside an Or")
                 for other_sub in self.subproofs:
                     if any(set(subp.secret_names)&set(other_sub.secret_names)):
                         raise Exception("Or flaw detected. Aborting. Try to flatten the proof to  \
                         avoid shared secrets inside and outside an Or")
+            elif "And" in subp.__class__.__name__ :
+                fb  = subp.secret_names.copy()
+                forbidden_secrets.extend(fb)
+                subp.check_or_flaw(forbidden_secrets)

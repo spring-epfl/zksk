@@ -2,6 +2,7 @@ from DLRep import *
 from functools import reduce
 from And_proof import AndProof
 from Subproof import Secret
+from OrProof import *
 
 N = 5
 G = EcGroup(713)
@@ -266,14 +267,14 @@ def test_compose_and_proofs2():
     verifier = p.get_verifier()
     assert_verify_proof(verifier, prover)
 
-""" def test_simulate_andproof():
+def test_simulate_andproof():
     subproof1 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     subproof2 = DLRepProof(lhs, create_rhs(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
     com, ch, resp = andsim.simulate_proof()
-    assert andv.verify(resp, com, ch) == True """
+    assert andv.verify(resp, com, ch) == True
 
 def test_and_NI():
     p1, p2, secrets = setup_and_proofs()
@@ -394,4 +395,14 @@ def test_DLRep_right_hand_side_eval():
             Exception
     ):  #An exception should be raised because of a shared secrets linked to two different groups
         rhs.eval() 
+
+def test_or_proof_simple():
+    pp1, pp2, secrets = setup_and_proofs()
+    orproof = OrProof(pp1, pp2)
+    prov = orproof.get_prover(secrets)
+    verif = orproof.get_verifier()
+    com = prov.commit()
+    chal =verif.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert verif.verify(resp)
 
