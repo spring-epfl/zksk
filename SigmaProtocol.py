@@ -21,6 +21,9 @@ import msgpack
             allow to guess which proof was truly computed and which were simulated:
             shared secrets yield identical responses through all the simulations,
             but not with the non-simulated one. Not solved for now.
+
+        - Bitwise xor of the challenges suck because Bn can only convert from 64 bit integers.
+            Had to use a hack through hexadecimal notation.
 """
 
 class SigmaProtocol:

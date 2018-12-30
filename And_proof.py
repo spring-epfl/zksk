@@ -138,7 +138,9 @@ class AndProof(Proof):
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
             return sub_proof.get_prover(dict(secrets_for_prover))
 
-        return AndProofProver([sub_proof_prover(subproof) for subproof in self.subproofs])
+        andp = AndProofProver([sub_proof_prover(subproof) for subproof in self.subproofs])
+        andp.secret_values = secrets_dict
+        return andp
 
     def get_verifier(self):
         return AndProofVerifier([subp.get_verifier() for subp in self.subproofs])
@@ -147,7 +149,9 @@ class AndProof(Proof):
         """ Returns an empty prover which can only simulate (via simulate_proof)
         """
         arr = [subp.get_simulator() for subp in self.subproofs]
-        return AndProofProver(arr)
+        andp =  AndProofProver(arr)
+        andp.secret_values = {}
+        return andp
 
     def set_simulate(self):
         self.simulate = True

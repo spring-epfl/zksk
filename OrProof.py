@@ -16,9 +16,11 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
 
     def find_legit_prover(self):
         for index in range(len(self.subs)):
+            # In order to test this we need the OrProver and AndProver to also have a secrets_dict
             if self.subs[index].secret_values != {}:
                 return index
-        raise Exception("Cannot find a legit prover")
+        print("No legit prover found, can only simulate the Or Proof")
+        return None
 
 
     def get_randomizers(self) -> dict:  #Creates a dictionary of randomizers by querying the subproofs dicts and merging them
@@ -30,6 +32,8 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
         """
+        if self.true_prover == None:
+            raise Exception("cannot commit in a simulator")
         # Is this useful in an Or Proof ? TODO : check
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
@@ -150,7 +154,7 @@ class OrProof:
     def get_prover(self, secrets_dict):
         """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
         """ 
-        bigset = set(self.secret_names)
+        bigset = set(secrets_dict.keys())
         
         # We sort them but we need to keep track of their initial index
         ordered_proofs = dict(enumerate(self.subproofs))
@@ -168,7 +172,6 @@ class OrProof:
         
         chosen_idx = random.SystemRandom().choice(possible)
         while any(x not in bigset for x in (candidates[chosen_idx].secret_names)):
-            pdb.set_trace()
             chosen_idx = secrets.choice(possible)
         
         elem = candidates.pop(chosen_idx)
@@ -183,13 +186,17 @@ class OrProof:
         sims[chosen_idx] = elem.get_prover(subdict)
 
         # Return a list of provers in the correct order
-        return OrProver([sims[index] for index in sorted(sims)])
+        orp = OrProver([sims[index] for index in sorted(sims)])
+        orp.secret_values = secrets_dict
+        return orp
 
     def get_simulator(self):
         """ Returns an empty prover which can only simulate (via simulate_proof)
         """
         arr = [subp.get_simulator() for subp in self.subproofs]
-        return OrProver(arr)
+        orp = OrProver(arr)
+        orp.secret_values = {}
+        return orp
 
     def get_verifier(self):
         return OrVerifier([subp.get_verifier() for subp in self.subproofs])
