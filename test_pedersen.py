@@ -299,28 +299,6 @@ def test_wrong_and_NI():
     chall, resp = andprov.get_NI_proof(message)
     assert and_verifier.verify_NI(chall, resp, message) == False
 
-class Infix:
-    def __init__(self, function):
-        self.function = function
-    def __ror__(self, other):
-        return Infix(lambda x, self=self, other=other: self.function(other, x))
-    def __or__(self, other):
-        return self.function(other)
-    def __rlshift__(self, other):
-        return Infix(lambda x, self=self, other=other: self.function(other, x))
-    def __rshift__(self, other):
-        return self.function(other)
-    def __call__(self, value1, value2):
-        return self.function(value1, value2)
-
-
-def test_infix_and():
-    pp1, pp2, secrets_dict = setup_and_proofs()
-    _and_ = Infix(lambda proof1, proof2: AndProof(pp1, pp2))
-    and_proof = pp1      |_and_|     pp2       |_and_| pp1
-    prover = and_proof.get_prover(secrets_dict)
-    verifier = and_proof.get_verifier()
-    assert_verify_proof(verifier, prover)
 
 def test_and_operator():
     pp1, pp2, secrets_dict = setup_and_proofs() 
