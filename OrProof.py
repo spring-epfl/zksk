@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 from SigmaProtocol import *
 from DLRep import *
-import secrets
 """
 Question :
     - shared secrets inside/outside an Or Proof should not appear
@@ -168,7 +167,8 @@ class OrProof:
         # We need to choose one subproof to be actually computed among all which can be computed
         # If the available secrets do not match the ones required in the chosen subproof, choose an other
         possible = list(candidates.keys())
-        chosen_idx = secrets.choice(possible)
+        
+        chosen_idx = random.SystemRandom().choice(possible)
         while any(x not in bigset for x in (candidates[chosen_idx].secret_names)):
             pdb.set_trace()
             chosen_idx = secrets.choice(possible)
