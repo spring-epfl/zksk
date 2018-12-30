@@ -75,6 +75,12 @@ class Proof:
         """
         return AndProof(self, other)
 
+    def __or__(self, other):
+        """
+        :return: an OrProof from this proof and the other proof using the infix '|' operator
+        """
+        return OrProof(self, other)
+
     def get_prover(self, secrets_dict):
         """
         :param: secrets_dict: a mapping from secret names to secret values
