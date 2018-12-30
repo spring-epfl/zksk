@@ -169,8 +169,7 @@ class OrProof:
         # We need to choose one subproof to be actually computed among all which can be computed
         # If the available secrets do not match the ones required in the chosen subproof, choose an other
         possible = list(candidates.keys())
-        
-        chosen_idx = random.SystemRandom().choice(possible)
+        chosen_idx = secrets.choice(possible)
         while any(x not in bigset for x in (candidates[chosen_idx].secret_names)):
             chosen_idx = secrets.choice(possible)
         
