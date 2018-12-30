@@ -1,10 +1,8 @@
 #!/usr/bin/python3
 from SigmaProtocol import *
 from DLRep import *
-"""
-Question :
-    - shared secrets inside/outside an Or Proof should not appear
-"""
+import secrets
+
 class OrProver(Prover): # This prover is built on two subprovers, max one of them is a simulator
 
     def __init__(self, subprovers):

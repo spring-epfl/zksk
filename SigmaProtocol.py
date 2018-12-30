@@ -9,6 +9,20 @@ from collections import defaultdict
 import pytest
 import msgpack
 
+""" Known flaws :
+        - Malicious prover can trick and proofs :
+            - claim knowledge of x1 g1, x1 g2
+            - by-hand craft a prover x1 g1, x2 g2 (without the get_prover being fed a dict)
+            - fix : the use of 1 randomizer per different secrets implies that if 
+                under a same challenge, two responses are different then the secrets were different.
+                Verifier should check this but GLOBALLY (i.e not just in leaves of the And tree)
+
+        - In case of reoccuring secrets in an Or Proof, a look at the responses
+            allow to guess which proof was truly computed and which were simulated:
+            shared secrets yield identical responses through all the simulations,
+            but not with the non-simulated one. Not solved for now.
+"""
+
 class SigmaProtocol:
     """
     an interface for sigma protocols.
