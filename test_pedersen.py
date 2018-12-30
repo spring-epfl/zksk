@@ -398,11 +398,34 @@ def test_DLRep_right_hand_side_eval():
 
 def test_or_proof_simple():
     pp1, pp2, secrets = setup_and_proofs()
-    orproof = OrProof(pp1, pp2)
+    orproof = OrProof(pp1, pp2, pp1, pp2, pp1, pp2)
     prov = orproof.get_prover(secrets)
     verif = orproof.get_verifier()
     com = prov.commit()
     chal =verif.send_challenge(com)
     resp = prov.compute_response(chal)
+    # Here we see that some responses have an identical first element
+    # The only one with a different first element is the non simulated one
     assert verif.verify(resp)
 
+def test_and_or_proof():
+    pp1, pp2, secrets = setup_and_proofs()
+    g1 = 7*pp1.generators[0]
+    g2 = 8*pp1.generators[0]
+    pp0 = DLRepProof(7 * g1 + 18 * g2, Secret("xb") * g1 + Secret("xa") * g2)
+    secrets["xb"]=7
+    secrets["xa"]=18
+    orproof= OrProof(pp1, pp2)
+    andp = AndProof(orproof, pp0)
+    prov = andp.get_prover(secrets)
+    ver = andp.get_verifier()
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp) == True
+
+def test_or_and_proof():
+    
+
+def test_or_or():
+    pass
