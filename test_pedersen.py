@@ -422,10 +422,45 @@ def test_and_or_proof():
     com = prov.commit()
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
-    assert ver.verify(resp) == True
+    assert ver.verify(resp)
 
 def test_or_and_proof():
-    
+    pp1, pp2, secrets = setup_and_proofs()
+    andp = AndProof(pp1, pp2)
+
+    g1 = 7*pp1.generators[0]
+    g2 = 8*pp1.generators[0]
+    pp0 = DLRepProof(7 * g1 + 18 * g2, Secret("xb") * g1 + Secret("xa") * g2)
+    secrets["xa"]=7
+    secrets["xc"]=18
+    orproof = OrProof(pp0, andp)
+    prov = orproof.get_prover(secrets)
+    ver = orproof.get_verifier()
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)
 
 def test_or_or():
-    pass
+    pp1, pp2, secrets = setup_and_proofs()
+    first_or = OrProof(pp1, pp2)
+    g1 = 7*pp1.generators[0]
+    g2 = 8*pp1.generators[0]
+    pp0 = DLRepProof(7 * g1 + 18 * g2, Secret("xb") * g1 + Secret("xa") * g2)
+    secrets["xa"]=7
+    secrets["xc"]=18
+    orproof = OrProof(pp0, first_or)
+    prov = orproof.get_prover(secrets)
+    ver = orproof.get_verifier()
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)
+    
+def test_or_sim():
+    pp1, pp2, secrets = setup_and_proofs()
+    first_or = OrProof(pp1, pp2)
+    sim = first_or.get_simulator()
+    ver = first_or.get_verifier()
+    com, chal, resp = sim.simulate_proof()
+    assert ver.verify(resp, com, chal)
