@@ -464,3 +464,29 @@ def test_or_sim():
     ver = first_or.get_verifier()
     com, chal, resp = sim.simulate_proof()
     assert ver.verify(resp, com, chal)
+
+def verify_proof(proof, secrets):
+    prov = proof.get_prover(secrets)
+    verif = proof.get_verifier()
+    com = prov.commit()
+    chal =verif.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert verif.verify(resp)
+
+def test_multiple_or_proof():
+    pp1, pp2, secrets = setup_and_proofs()
+    g = EcGroup().generator()
+    x10 = 13
+    secrets.update({"x10": x10})
+    orproof = OrProof(pp1, OrProof(pp2, DLRepProof(x10 * g, Secret("x10") * g)))
+    verify_proof(orproof, secrets)
+
+def test_multiple_or_proof_2():
+    pp1, pp2, secrets = setup_and_proofs()
+    g = EcGroup().generator()
+    x10 = 13
+    secrets.update({"x10": x10})
+    orp1 = OrProof(pp2, pp1)
+    orp2 = OrProof(pp1, DLRepProof(x10 * g, Secret("x10") * g))
+    orproof = OrProof(orp1, pp2, orp2)
+    verify_proof(orproof, secrets)
