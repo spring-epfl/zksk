@@ -70,7 +70,9 @@ class Prover:
         :return: a single commitment (of type petlib.bn.Bn) for the whole proof
         """
         pass
-
+    def get_secret_values(self):
+        pass
+        
     def compute_response(self, challenge):
         pass
 

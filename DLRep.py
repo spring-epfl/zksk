@@ -12,7 +12,7 @@ from petlib.bn import Bn
 from SigmaProtocol import *
 from hashlib import sha256
 import binascii
-from And_proof import Proof
+from CompositionProofs import Proof
 
 
 def randomword(length):
@@ -43,6 +43,11 @@ class DLRepProver(Prover):
         self.lhs = lhs
 
         self.set_simulate = False
+
+
+    def get_secret_values(self):
+        return self.secret_values
+        
     def get_randomizers(self) -> dict:
         """
         :return: random values to compute the response of the proof of knowledge for each of the secrets. 

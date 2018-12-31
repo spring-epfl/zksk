@@ -1,8 +1,7 @@
 from DLRep import *
 from functools import reduce
-from And_proof import AndProof
 from Subproof import Secret
-from OrProof import *
+from CompositionProofs import *
 
 N = 5
 G = EcGroup(713)
@@ -299,28 +298,6 @@ def test_wrong_and_NI():
     chall, resp = andprov.get_NI_proof(message)
     assert and_verifier.verify_NI(chall, resp, message) == False
 
-class Infix:
-    def __init__(self, function):
-        self.function = function
-    def __ror__(self, other):
-        return Infix(lambda x, self=self, other=other: self.function(other, x))
-    def __or__(self, other):
-        return self.function(other)
-    def __rlshift__(self, other):
-        return Infix(lambda x, self=self, other=other: self.function(other, x))
-    def __rshift__(self, other):
-        return self.function(other)
-    def __call__(self, value1, value2):
-        return self.function(value1, value2)
-
-
-def test_infix_and():
-    pp1, pp2, secrets_dict = setup_and_proofs()
-    _and_ = Infix(lambda proof1, proof2: AndProof(pp1, pp2))
-    and_proof = pp1      |_and_|     pp2       |_and_| pp1
-    prover = and_proof.get_prover(secrets_dict)
-    verifier = and_proof.get_verifier()
-    assert_verify_proof(verifier, prover)
 
 def test_and_operator():
     pp1, pp2, secrets_dict = setup_and_proofs() 
@@ -489,4 +466,18 @@ def test_multiple_or_proof_2():
     orp1 = OrProof(pp2, pp1)
     orp2 = OrProof(pp1, DLRepProof(x10 * g, Secret("x10") * g))
     orproof = OrProof(orp1, pp2, orp2)
+    verify_proof(orproof, secrets)
+
+def test_or_proof_syntax():
+    pp1, pp2, secrets = setup_and_proofs()
+    orproof = pp1 | pp2
+    verify_proof(orproof, secrets)
+ 
+
+def test_multiple_or_proof_syntax():
+    pp1, pp2, secrets = setup_and_proofs()
+    g = EcGroup().generator()
+    x10 = 13
+    secrets.update({"x10": x10})
+    orproof = pp1 | pp2 | DLRepProof(x10 * g, Secret("x10") * g)
     verify_proof(orproof, secrets)
