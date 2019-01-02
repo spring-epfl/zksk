@@ -127,7 +127,7 @@ class OrProof(Proof):
 
 
 """
-Question :
+Important :
     - shared secrets inside/outside an Or Proof should not appear
 """
 class OrProver(Prover): # This prover is built on two subprovers, max one of them is a simulator
@@ -166,14 +166,16 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
             randomizers_dict = self.get_randomizers()
 
         # Unify the possible responses to common secret names
-        responses_dict = self.get_randomizers()
+        # Jules : commented this to fix a flaw
+        
+        #responses_dict = self.get_randomizers()
 
         commitment = []
         for index in range(len(self.subs)):
             if index == self.true_prover:
                 commitment.append(self.subs[index].commit())
             else :
-                cur = self.subs[index].simulate_proof(responses_dict)
+                cur = self.subs[index].simulate_proof()# Jules : in previous version we would feed the responses_dict here
                 self.simulations.append(cur)
                 commitment.append(cur[0])
         return commitment
