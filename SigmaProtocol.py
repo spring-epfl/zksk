@@ -29,6 +29,10 @@ import msgpack
 
         - Bitwise xor of the challenges suck because Bn can only convert from 64 bit integers.
             Had to use a hack through hexadecimal notation.
+
+        - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
+            different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
+            distributivity and commutativity.
 """
 
 class SigmaProtocol:
