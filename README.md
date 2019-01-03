@@ -221,8 +221,10 @@ The setup would be
 
 2. You want to ensure some properties about identical secrets. It implies that when reusing a secret $x$ with two different group points `Ga`, `Gb`, the groups induced by `Ga` and `Gb`$ must have the same order. This could cause [this proof](#a-first-composed-proof) to fail !
 
-3. You never want to instantiate a flawed proof, and the current architecture is too naive to rewrite for you a bad statement. In particular, no secret should appear at the same time in and out of an Or Proof. This forbids, for example 
-### &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; &&&nbsp;&nbsp;( Y2 = x2 * G2 &nbsp;&nbsp; ||&nbsp;&nbsp; Y3 = x1 * G3 ) }
+3. You never want to instantiate a flawed proof, and the current architecture is too naive to rewrite for you a bad statement. In particular, no secret should appear at the same time in and out of an Or Proof. This forbids, for example   
+
+###
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; &&&nbsp;&nbsp;( Y2 = x2 * G2 &nbsp;&nbsp; ||&nbsp;&nbsp; Y3 = x1 * G3 ) }
 
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. This is a subtlety we'll go through in the next part.
 
