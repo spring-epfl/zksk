@@ -10,7 +10,7 @@ import msgpack
 
 """ Known flaws :
         - Malicious prover can trick proofs :
-            - claim knowledge of x1 g1, x1 g2 such that x1 = x2 when in fact this isn't true
+            - claim knowledge of x1 g1, x1 g2 when in fact we have two distinct secrets
             - by-hand craft a prover x1 g1, x2 g2 (without the get_prover being fed a dict)
             - fix : the use of 1 randomizer per different secrets implies that if 
                 under a same challenge, two responses are different then the secrets were different.
