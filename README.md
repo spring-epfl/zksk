@@ -9,7 +9,6 @@ To use it, you should install :
   - hashlib
   - python 3 or newer
 
-> This file contains $\LaTeX$. We invite you to open it in a fancy IDE.
 
 ## How to use :
 > This section is about code examples and practice.If you want to understand what is going on, you can read the [How it works](#how-it-works) section first.
@@ -43,10 +42,10 @@ We want to build a proof for the following statement (using [Camenisch-Stadler][
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = G1^x1 * G2^x2 }
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y = G1^x1 * G2^x2 }
 
 
-First, note that as $*$ denotes a group operation, it is just a matter of notation to replace it by $+$, and to replace the `^` by a $*$. The above expression becomes 
+First, note that as `*` denotes a group operation, it is just a matter of notation to replace it by `+`, and to replace the `^` by a `*`. The above expression becomes 
 
 ### 
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -54,7 +53,7 @@ First, note that as $*$ denotes a group operation, it is just a matter of notati
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 + x2 * G2}
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y = x1 * G1 + x2 * G2}
 
 
 This is the syntax we will use from now on, to ensure compatibility with the *petlib* library. 
@@ -62,7 +61,7 @@ This is the syntax we will use from now on, to ensure compatibility with the *pe
 
 
 
-Let's build the proof environment : we set the ECpts (elliptic curve points, the $g_i$) and the secrets $x_i$.
+Let's build the proof environment : we set the ECpts (elliptic curve points, the `Gi`) and the secrets `xi`.
 
 
 	g = EcGroup().generator()	# This sets up the group and a first generator
@@ -171,7 +170,7 @@ This time we want to create an Or Proof of two discrete logarithms proofs:
 &nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1 x2,): Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2 }
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2 }
 
 you would do the following to setup the proof (say the `xi` and `Gi` have been setup already similarly as above):
 
@@ -185,7 +184,7 @@ you would do the following to setup the proof (say the `xi` and `Gi` have been s
 	second_subproof = DLRepProof(g2, "x2", y2)		# Remember this other syntax ?
 	proof = first_subproof | second_subproof
 
-The rest is the same as above. That is you still have to create a Prover and a Verifier by calling the `get_prover()` and `get_verifier()` methods of the Proof object.
+The rest is the same as above, that is you still have to create a Prover and a Verifier by calling the `get_prover()` and `get_verifier()` methods of the Proof object.
 The Or Prover will in fact be composed of one legit subprovers and  the rest will be simulators.
 
 > Tip : You don't need to provide all the secrets for the Or Proof. The compiler will draw at random which subproof to compute, but first eliminates those you did not provide secrets for.
@@ -199,7 +198,12 @@ Which will give this subproof probability 0 to be picked for legit computation.
 #### Of course you can also compose Or and And !
 Say you want to write the following proof : 
 
-$$PK\{(x_1,x_2,x_3): y_1 = x_1 * g_1 \cup y_2 = x_2 * g_2 \cap y_3 = x_3 * g_3\}$$
+### 
+&nbsp;&nbsp; 
+&nbsp;&nbsp; &nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2, x3): Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2 &nbsp;&nbsp; &&&nbsp;&nbsp; Y3 = x3 * G3 }
 
 
 The setup would be 
@@ -215,12 +219,12 @@ The setup would be
 
 1. You want the group operation to have meaning, for that you are not allowed to operate between elements of different groups.
 
-2. You want to ensure some properties about identical secrets. It implies that when reusing a secret $x$ with two different group points $g_a, g_b$, the groups induced by $g_a$ and $g_b$ must have the same order. This could cause [this proof](#a-first-composed-proof) to fail !
+2. You want to ensure some properties about identical secrets. It implies that when reusing a secret $x$ with two different group points `Ga`, `Gb`, the groups induced by `Ga` and `Gb`$ must have the same order. This could cause [this proof](#a-first-composed-proof) to fail !
 
 3. You never want to instantiate a flawed proof, and the current architecture is too naive to rewrite for you a bad statement. In particular, no secret should appear at the same time in and out of an Or Proof. This forbids, for example 
-$$PK\{(x_1,x_2): y_1 = x_1 * g_1 \cap (y_2 = x_1 * g_3 \cup y_2 = x_2 * g_2) \}$$
+### &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; &&&nbsp;&nbsp;( Y2 = x2 * G2 &nbsp;&nbsp; ||&nbsp;&nbsp; Y3 = x1 * G3 ) }
 
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because $x_1$ appears in two incompatible places. This is a subtlety we'll go through in the next part.
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. This is a subtlety we'll go through in the next part.
 
 #### Using Non-interactive Proofs and Simulations
 ##### NI proofs :
@@ -232,7 +236,7 @@ Which returns a (challenge, response) tuple you can plug into
 		verifier.verify_NI(challenge, response)
 
 > Don't mess with the syntax !   
-> Proving non-interactively $\{y = x_1*g_1 + x_2*g_2\}$ and verifying $\{y =  x_2*g_2 + x_1*g_1\}$ will fail as the Non-Interactive proof generates a string identifier for the statement, and is not clever enough to understand commutativity.
+> Proving non-interactively { Y = x1 * G1 + x2 * G2 }  and verifying { Y = x2 * G2 + x1 * G1 } will fail as the non-interactive proof generates a string identifier for the statement, and is not clever enough to understand commutativity.  
 > Don't worry : using only the high-level functions we presented should never trigger this behaviour.
 ##### Simulations :
 When you have your proof, instead of calling `proof.get_prover( ... )`, just call
@@ -295,8 +299,8 @@ Note that this verification relies on cryptographic hash function properties : i
 #### A look at the variables
 - The `challenge` is common to a whole protocol. In the case of the Or Proof, subchallenges are drawn i.e each subproof runs (simulated or not) with its own challenge.
 > This explains the constraint about reoccuring secrets in and out of an Or statement : we know a malicious Verifier can retrieve a secret which appear under several challenges and a unique commitment. A solution is to change the statement syntax into a canonical form, where the Or are on top of the tree.
-- The `randomizers` are the random values used to produce commitments. They are paired with the secrets, to ensure that a reoccuring secret will produce identical responses. If there are $N$ secrets of $M$ distinct values, there are $M$ distinct randomizers.
-- The `responses` mimic the proof statement and are ordered as the secrets were ordered : If there are $N$ secrets, there are $N$ responses.
+- The `randomizers` are the random values used to produce commitments. They are paired with the secrets, to ensure that a reoccuring secret will produce identical responses. If there are N secrets of M distinct values, there are M distinct randomizers.
+- The `responses` mimic the proof statement and are ordered as the secrets were ordered : If there are N secrets, there are N responses.
 
 
 
