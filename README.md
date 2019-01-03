@@ -6,20 +6,29 @@ To use it, you should install :
   - petlib, see https://petlib.readthedocs.io/en/latest/ 
       Warning : petlib has not released a version compatible with OpenSSL 1.1 or newer yet. 
   - msgpack
-  - pytest
   - hashlib
 
 ## How to use :
 
-You can implement (local) interactive proofs, and non-interactive proofs. These includes simulations of proofs.
-Proofs you can implement are conjunctions of Discrete Logarithm Representations, And blocks and Or blocks.
-Careful when using Or blocks inside And blocks : if a scheme such as And{ OrProof, Any_other_proof, ...} is found and at least one secret is used both outside and inside the Or (e.g, Any_other_proof and OrProof have one common secret), **an error will be raised**.
+### Prepare your ingredients : 
+	Build an expression using the following blocks
+- Discrete Logarithm Representation
+- And conjunctions
+- Or conjunctions
+
+### Choose a dish :
+	The default commit, challenge, response, verify is the interactive version
+- Interactive proof (local)
+- Non-interactive proof
+- Simulation
+
+Be careful, if a secret (e.g "x^(0)") appears both inside an outside an OrProof **an error will be raised**.
+
+### Syntax and setup
 Find below examples of proof creation :
 
-
-- Say we want to create the following and proof of two discrete logarithms proofs:  PK{(x1,x2,x3,x4): y1 = x1 * g1 + x2 * g2 AND y2 = x1 * g3 + x3 * g3 + x4 * g5}
-
-say we have the gi-s and xi-s as follows:
+- Say we want to create the following And proof of two Discrete Logarithms proofs:  PK{(x^(_1),x^(_2),x^(_3),x^(_4)): y^(_1) = x^(_1) * g^(_1) + x^(_2) * g(_2) AND y(_2) = x(_1) * g(_3) + x(_3) * g(_3) + x(_4) * g(_5)}
+You want to set the ECpt (elliptic curve points, the g_i) and the secrets x_i.
 
 	g = EcGroup().generator()
 	g1 = 2 * g
