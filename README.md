@@ -9,10 +9,12 @@ To use it, you should install :
   - hashlib
   - python 3 or newer
 
+> This file contains $\LaTeX$. We invite you to open it in a fancy IDE.
+
 ## How to use :
 > This section is about code examples and practice.If you want to understand what is going on, you can read the [How it works](#how-it-works) section first.
 
-> Important : the computations are done within cyclic groups induced by elliptic curves.  
+> Important : the computations are done within cyclic groups induced by elliptic curves.  Points of those groups are written in uppercase, scalar number in lowercase.
 > What we refer as *secrets* are integers. We advise you to read [petlib's documentation page](https://petlib.readthedocs.io/en/latest/).
 
 #### What you want to do
@@ -35,12 +37,24 @@ Choose a proof mode among :
 
 We want to build a proof for the following statement (using [Camenisch-Stadler][1] notation) :
 
-$$PK\{(x_1,x_2): y_1 = g_1^{x_1}*g_2^{x_2}\}$$
+### 
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = G1^x1 * G2^x2 }
+
 
 First, note that as $*$ denotes a group operation, it is just a matter of notation to replace it by $+$, and to replace the `^` by a $*$. The above expression becomes 
 
-
-$$PK\{(x_1,x_2): y_1 = x_1*g_1 + x_2*g_2\}$$
+### 
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 + x2 * G2}
 
 
 This is the syntax we will use from now on, to ensure compatibility with the *petlib* library. 
@@ -99,11 +113,16 @@ Done !
 #### A first composed proof
  We want to build the "And" of two Discrete Logarithms proofs:  
 
-$$PK\{(x_1,x_2,x_3): y_1 = x_1*g_1 + x_2*g_2 \cap y_2 =  x_1*g_3 + x_3*g_4\}$$
+### 
+&nbsp;&nbsp; 
+&nbsp;&nbsp; &nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2, x3): Y1 = x1 * G1 + x2 * G2 &nbsp;&nbsp; &&&nbsp;&nbsp; Y2 = x1 * G3 + x3 * G4 }
 
 
 
-As before, we set the points $g_i$ and the secrets $x_i$.
+As before, we set the points `Gi` and the secrets `xi`.
 
 
 	g = EcGroup().generator()	# This sets up the group and a first generator
@@ -144,9 +163,17 @@ Our setup is done, the rest is the same protocol [as in the first proof](#and-no
 
 #### An other composed proof : Or block
 This time we want to create an Or Proof of two discrete logarithms proofs: 
-$$PK\{(x_1,x_2): y_1 = x_1 * g_1 \cup y_2 = x_2 * g_2 \}$$
 
-you would do the following to setup the proof (say the $\{x_i\}$ and $\{g_i\}$ have been setup already similarly as above):
+
+### 
+&nbsp;&nbsp; 
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1 x2,): Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2 }
+
+you would do the following to setup the proof (say the `xi` and `Gi` have been setup already similarly as above):
 
 	y1 = x1 * g1
 	y2 = x2 * g2
