@@ -6,7 +6,6 @@ import binascii
 import pdb
 from hashlib import sha256
 from collections import defaultdict
-import pytest
 import msgpack
 
 """ Known flaws :

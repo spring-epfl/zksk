@@ -3,6 +3,8 @@ from functools import reduce
 from Subproof import Secret
 from CompositionProofs import *
 
+import pytest
+
 N = 5
 G = EcGroup(713)
 tab_g = []
