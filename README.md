@@ -183,6 +183,9 @@ you would do the following to setup the proof (say the `xi` and `Gi` have been s
 	first_subproof = DLRepProof(y1, Secret("x1") * g1)
 	second_subproof = DLRepProof(g2, "x2", y2)		# Remember this other syntax ?
 	proof = first_subproof | second_subproof
+	
+	proof = OrProof(first_subproof, second_subproof)	# And these ones ?
+	proof = OrProof([first_subproof, second_subproof])
 
 The rest is the same as above, that is you still have to create a Prover and a Verifier by calling the `get_prover()` and `get_verifier()` methods of the Proof object.
 The Or Prover will in fact be composed of one legit subprovers and  the rest will be simulators.
