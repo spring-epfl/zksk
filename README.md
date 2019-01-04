@@ -269,6 +269,13 @@ We built the tests using pytest. To launch the tests you can simply run
 
 from the root directory of the project.
 
+##### Generating the documentation :
+
+		bash create_pydoc.bash
+
+Will create the directory ./documentation and generate all the documentation in html format of the source code in ./compiler
+
+
 
 ## How it works : 
 
