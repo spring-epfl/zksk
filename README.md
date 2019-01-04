@@ -262,6 +262,12 @@ which returns commitment, challenge, response you can feed to
 		verifier.verify(response, commitment, challenge)	
 		# The ordering is unpractical because the latter are optional arguments
 
+##### Launching the tests :
+We built the tests using pytest. To launch the tests you can simply run
+
+		python -m pytest
+
+from the root directory of the project.
 
 
 ## How it works : 
