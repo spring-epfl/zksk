@@ -1,5 +1,12 @@
-from DLRep import *
 from functools import reduce
+
+import os, sys
+
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_code_path = os.path.join(root_dir, "compiler")
+sys.path.append(src_code_path)
+
+from DLRep import *
 from Subproof import Secret
 from CompositionProofs import *
 
