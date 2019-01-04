@@ -36,7 +36,7 @@ class Proof:
         :param response: an list of responses, ordered as the list of secret names i.e with as many elements as secrets in the proof claim.
         Reoccuring secrets should yield identical responses.
         :return: a pseudo-commitment (literally, the commitment you should have received 
-        if the proof were correct. To compare to the actual commitment"""
+        if the proof was correct. To compare to the actual commitment"""
         pass
 
 
