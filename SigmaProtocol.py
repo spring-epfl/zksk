@@ -160,7 +160,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
 def check_groups(
         list_of_secret_names, list_of_generators
 ):  
-    """checks that if two secrets are the same, the generators they multiply live in the same group
+    """checks that if two secrets are the same, the generators they multiply induce groups of same order
     :param list_of_secret_names: a list of secrets names of type string. 
     :param list_of_generators: a list of generators of type petlib.ec.EcPt.
     """
@@ -172,12 +172,12 @@ def check_groups(
     # Now we use this dictionary to check all the generators related to a particular secret live in the same group
     for word, gen_idx in mydict.items(
     ):  #word is the key, gen_idx is the value = a list of indices
-        ref_group = list_of_generators[gen_idx[0]].group
+        ref_order = list_of_generators[gen_idx[0]].group.order()
 
         for index in gen_idx:
-            if list_of_generators[index].group != ref_group:
+            if list_of_generators[index].group.order() != ref_order:
                 raise Exception(
-                    "A shared secret has generators from different groups : secret",
+                    "A shared secret has generators which yield different group orders : secret",
                     word)
 
     return True
@@ -225,7 +225,7 @@ def get_proof_id(obj):
 
 def flatten_commitment(comm):
     if not isinstance(comm, list):
-        return comm.export() #TODO : check if concatenation of several export() is uniquely decodable
+        return comm.export() # TODO : check if concatenation of several export() is uniquely decodable
     res = ''.encode()
     for el in comm:
         if isinstance(el, list):

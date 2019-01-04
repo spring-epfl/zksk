@@ -1,4 +1,3 @@
-# TODO : remove camelCase
 """
 A module containing multiple classes used to create discrete logarithms proofs.
 An example of DL proof would be PK{(x1,x2): y1 = x1 * g1 + x2 * g2} where g1 and g2 are points on a same elliptic curve
@@ -34,8 +33,8 @@ class DLRepProver(Prover):
         """
         :param generators: a list of elliptic curve points of type petlib.ec.EcPt
         :param secret_names: a list of strings equal to the names of the secrets.
-        :param secret_values: the values of the secrets. If we pass ["x1", "x2"] to 'DLRepProof' and [1, 2], the prover will know x1 = 1, x2 = 2
-        :param lhs: the left hand side of the equation of the proof of knowledge. If the proof is PK{(x1,x2): y1 = x1 * g1 + x2 * g2}. lhs is y1. 
+        :param secret_values: the values of the secrets as a dict.
+        :param lhs: the left hand side of the equation of the proof of knowledge. If the proof is PK{(x1,x2): y = x1 * g1 + x2 * g2}, lhs is y. 
         """
         self.generators = generators
         self.secret_names = secret_names
@@ -64,7 +63,7 @@ class DLRepProver(Prover):
     def commit(self, randomizers_dict=None):
         """
         :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
-        :return: a single commitment (of type petlib.bn.Bn) for the whole proof
+        :return: a single commitment (of type petlib.ec.EcPt) for the whole proof
         """
 
         if self.secret_values == {} : #We check we are not a strawman prover

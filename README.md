@@ -18,7 +18,7 @@ To use it, you should install :
 
 #### What you want to do
 
-Build expressions using the following blocks :
+Build expressions using the following blocks (classes which all inherit from a `Proof` primitive and thus can be composed ) :
 
 	- Discrete Logarithm Representation
 	- And conjunctions
@@ -80,7 +80,7 @@ Then creating a proof requires the following syntax:
 
 	y = x1 * g1 + x2 * g2			# Building the left-hand-side of the claim
 	
-	my_proof = DLRepProof(y1, Secret("x1") * g1 + Secret("x2") * g2)
+	my_proof = DLRepProof(y, Secret("x1") * g1 + Secret("x2") * g2)
 
 		# Which mimics the proof mathematical expression
 
@@ -226,7 +226,19 @@ The setup would be
 ###
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; &&&nbsp;&nbsp;( Y2 = x2 * G2 &nbsp;&nbsp; ||&nbsp;&nbsp; Y3 = x1 * G3 ) }
 
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. This is a subtlety we'll go through in the next part.
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. This is a subtlety we'll go through in [the next part](#how-it-works).
+
+#### Two more nuggets
+
+- You can also create proofs this way with more concrete Secret objects, where `rhs` stands for "right-hand side":
+
+		rhs = Secret("x1", value = 3) * g1 + Secret("x2", value = 15) * g2
+		proof = DLRepProof(rhs.eval(), rhs)
+
+- If you want to automate the `commitment`, `challenge`, `response`, `verify` steps, you can do the following after building your `Prover` and `Verifier` objects :
+
+		protocool = SigmaProtocol(my_verifier, my_prover)
+		protocool.run()		# returns the verify() result
 
 #### Using Non-interactive Proofs and Simulations
 ##### NI proofs :
@@ -254,7 +266,7 @@ which returns commitment, challenge, response you can feed to
 
 ## How it works : 
 
-ZKC will basically help you instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global *challenge* and global *randomizers* are shared (i.e the subproofs are **not** run independently from each other).
+The ZKC will basically help you instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global *challenge* and global *randomizers* are shared (i.e the subproofs are **not** run independently from each other).
 The sigma protocol (interactive) is the following : 
 
 **Initial state** : the Prover and the Verifier share some "public information", namely

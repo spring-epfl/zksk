@@ -6,7 +6,7 @@ AndProofResponse = list
 AndProofChallenge = Bn
 
 class Proof:
-    """an abstraction of a sigma protocol proof"""
+    """An abstraction of a sigma protocol proof"""
     def __and__(self, other):
         """
         :return: an AndProof from this proof and the other proof using the infix '&' operator
@@ -30,11 +30,24 @@ class Proof:
         pass
 
     def recompute_commitment(self, challenge, response):
+
+        """
+        :param challenge: the 128 bits challenge used in the proof
+        :param response: an list of responses, ordered as the list of secret names i.e with as many elements as secrets in the proof claim.
+        Reoccuring secrets should yield identical responses.
+        :return: a pseudo-commitment (literally, the commitment you should have received 
+        if the proof were correct. To compare to the actual commitment"""
         pass
 
 
 class OrProof(Proof):  
     def __init__(self, *subproofs):
+        """
+        :param subproofs: an arbitrary number of proofs. 
+        Arguments can also be lists of proofs, but not lists of lists.
+        :return: A Proof being the And conjunction of the argument proofs.
+
+        """
         if not subproofs:
             raise Exception('OrProof needs arguments !')
         list_subproofs = []
@@ -305,8 +318,11 @@ class AndProofVerifier(Verifier):
 
 class AndProof(Proof):
     def __init__(self, *subproofs):
-        """The AndProof(subproof_list = None, *subproofs = None) can take an arbitrary number of proofs. 
-        Arguments can also be lists of proofs, but not lists of lists."""
+        """
+        :param subproofs: an arbitrary number of proofs. 
+        Arguments can also be lists of proofs, but not lists of lists.
+        :return: An other Proof object being the And conjunction of the argument proofs."""
+ 
         if not subproofs:
             raise Exception('AndProof needs arguments !')
         list_subproofs = []
@@ -325,8 +341,9 @@ class AndProof(Proof):
         self.check_or_flaw()
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
-        """This function allows to retrieve the commitment generically. For this purpose 
-        the names of the sub-objects of AndVerifier and AndProver should be the same.
+        """
+        This function allows to retrieve the commitment generically. For this purpose 
+        the names of the attributes of AndVerifier and AndProver should be the same.
         """
         comm = []
         for i in range(len(self.subs)):
