@@ -45,7 +45,7 @@ class OrProof(Proof):
         """
         :param subproofs: an arbitrary number of proofs. 
         Arguments can also be lists of proofs, but not lists of lists.
-        :return: A Proof being the And conjunction of the argument proofs.
+        :return: A Proof being the Or disjunction of the argument proofs.
 
         """
         if not subproofs:
