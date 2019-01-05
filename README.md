@@ -258,12 +258,24 @@ Which returns a (challenge, response) tuple you can plug into
 ##### Simulations :
 When you have your proof, instead of calling `proof.get_prover( ... )`, just call
 
-		proof.get_simulator()
+		sim = proof.get_simulator()
+
+		# Or (equivalent)
+
+		proof.set_simulate()
+		sim = proof.get_prover()
+
+which returns a dummy Prover object from which you can only run
+
+		sim.simulate_proof()
+
 
 which returns commitment, challenge, response you can feed to
 
 		verifier.verify(response, commitment, challenge)	
 		# The ordering is unpractical because the latter are optional arguments
+
+
 
 ##### Launching the tests :
 We built the tests using pytest. To launch the tests you can simply run
