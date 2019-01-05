@@ -269,7 +269,7 @@ which returns a dummy Prover object from which you can only run
 
 		sim.simulate_proof()
 
-
+(you can obviously also run this function from a correctly built Prover object)
 which returns commitment, challenge, response you can feed to
 
 		verifier.verify(response, commitment, challenge)	
