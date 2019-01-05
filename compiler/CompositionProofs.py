@@ -85,6 +85,9 @@ class OrProof(Proof):
     def get_prover(self, secrets_dict):
         """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
         """ 
+        if self.simulate == True or secrets_dict == {}:
+            print('Can only simulate')
+            return self.get_simulator()
         bigset = set(secrets_dict.keys())
         
         # We sort them but we need to keep track of their initial index

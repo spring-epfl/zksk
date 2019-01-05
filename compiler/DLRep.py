@@ -41,8 +41,6 @@ class DLRepProver(Prover):
         self.secret_values = secret_values
         self.lhs = lhs
 
-        self.set_simulate = False
-
 
     def get_secret_values(self):
         return self.secret_values
@@ -190,7 +188,7 @@ class DLRepProof(Proof):
         """
         if self.simulate == True or secrets_dict == {}:
             print('Can only simulate')
-            return get_verifier()
+            return self.get_simulator()
         if len(set(self.secret_names)) != len(secrets_dict):
             raise Exception("We expect as many secrets as different aliases")
 
