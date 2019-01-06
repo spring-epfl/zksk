@@ -97,7 +97,7 @@ To do that we feed the prover with the secret values, identified by their names 
 	prover = proof.get_prover({"x1": x1, "x2": x2}) # Python dictionary
 	verifier = proof.get_verifier()
 
-##### And now the fun begins : 
+##### And now the fun begins
 These two are going to interact along the **Sigma Protocol**, returning (with the *verify* method) a boolean telling whether the proof is verified or not.
 
 
@@ -244,7 +244,7 @@ The setup would be
 		protocool.run()		# returns the verify() result
 
 #### Using Non-interactive Proofs and Simulations
-##### NI proofs :
+##### NI proofs
 Once you have built your proof and your Prover and Verifier objects, just call
 
 		prover.get_NI_proof()
@@ -255,7 +255,7 @@ Which returns a (challenge, response) tuple you can plug into
 > Don't mess with the syntax !   
 > Proving non-interactively { Y = x1 * G1 + x2 * G2 }  and verifying { Y = x2 * G2 + x1 * G1 } will fail as the non-interactive proof generates a string identifier for the statement, and is not clever enough to understand commutativity.  
 > Don't worry : using only the high-level functions we presented should never trigger this behaviour.
-##### Simulations :
+##### Simulations
 When you have your proof, instead of calling `proof.get_prover( ... )`, just call
 
 		sim = proof.get_simulator()
@@ -277,20 +277,21 @@ which returns commitment, challenge, response you can feed to
 
 
 
-##### Launching the tests :
+##### Launching the tests
 We built the tests using pytest. To launch the tests you can simply run
 
 		python -m pytest
 
 from the root directory of the project.
 
-##### Generating the documentation :
+##### Generating the documentation
 
 		bash create_pydoc.bash
 
 Will create the directory ./documentation and generate all the documentation in html format of the source code in ./compiler
 
-
+#### Example of use : the AMAC scheme
+We provide a template for Algebraic MAC schemes, both GGM and DDH which are described in [this paper][2]. We encapsulate And blocks along with DLRep proofs to derive a fairly straigthforward implementation of a rather complicated expression. (See part 4.2 - 4.3 of the cited paper)
 
 ## How it works : 
 
@@ -349,3 +350,7 @@ Note that this verification relies on cryptographic hash function properties : i
 [1] :  J. Camenisch and M. Stadler, “Proof systems for general statements about discrete logarithms,”
 Tech. rep. 260
 , Mar. 1997
+[2] :  M. Chase, S. Meiklejohn, and G. Zaverucha, “Algebraic macs and keyed-verification anonymous credentials,” in
+Proceedings of the 2014
+ACM SIGSAC Conference on Computer and Communications Security
+.    ACM, 2014, pp. 1205–1216.
