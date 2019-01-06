@@ -32,6 +32,9 @@ import msgpack
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
             distributivity and commutativity.
+
+        - Sometimes, we get the group order by g.group.order() but is the returned value of hashtopoint
+        always a generator of the group itself, and not a subgroup ?
 """
 
 class SigmaProtocol:

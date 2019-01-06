@@ -135,11 +135,14 @@ class DLRepProof(Proof):
     for the sake of having an example say we want to create the proof PK{(x1, x2): y = x1 * g1 + x2 * g2}
     """
 
-    def __init__(self, lhs, rightSide):
+    def __init__(self, lhs, rightSide, additional=None):
         """
         :param rightSide: an instance of the 'RightSide' class. For the previous example 'rightSide' would be: Secret("x1") * g1 + Secret("x2") * g2. Here gi-s are instances of petlib.ec.EcPt
         :param lhs: an instance of petlib.ec.EcPt. The prover has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
         """
+        if isinstance(lhs, list) and isinstance(additional, EcPt):   # In case we want to access initialize directly
+            self.initialize(generators = lhs, secret_names = rightSide, lhs = additional)
+            return
         if isinstance(rightSide, RightSide):
             self.initialize(rightSide.pts, [secret.name for secret in rightSide.secrets], lhs)
         else:

@@ -49,6 +49,14 @@ def test_dlrep_true():  # Legit run
     assert proof.run() == True
 
 
+
+def test_2_dlrep_true():  # Legit run
+    pedersen_true = DLRepProof(tab_g, secrets_aliases, lhs)
+    true_prover = pedersen_true.get_prover(secrets_values)
+    true_verifier = pedersen_true.get_verifier()
+    proof = SigmaProtocol(true_verifier, true_prover)
+    assert proof.run() == True
+
 def test_dlrep_wrong_public(
 ):  # We use generators and secrets from previous run but random public info
     randWord = randomword(30).encode("UTF-8")
