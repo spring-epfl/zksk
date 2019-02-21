@@ -177,11 +177,12 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         """
         if self.true_prover == None:
             raise Exception("cannot commit in a simulator")
-        # Is this useful in an Or Proof ? TODO : check
+        # Is this useful in an Or Proof ? TODO : check. Edit : I don't think it is useful. Check harder and remove.
         if randomizers_dict is None:
-            randomizers_dict = self.get_randomizers()
+            pass
+           # randomizers_dict = self.get_randomizers() (never used)
 
-        # Unify the possible responses to common secret names
+        # Unify the possible responses to common secret names ?
         # Jules : commented this to fix a flaw
         
         #responses_dict = self.get_randomizers()

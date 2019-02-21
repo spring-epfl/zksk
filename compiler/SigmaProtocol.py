@@ -19,7 +19,7 @@ import msgpack
         - (fixed) In case of reoccuring secrets in an Or Proof, a look at the responses
             allow to guess which proof was truly computed and which were simulated:
             shared secrets yield identical responses through all the simulations,
-            but not with the non-simulated one. Not solved for now.
+            but not with the non-simulated one.
 
             EDIT : since the Or Proof of N subproofs uses N-1 simulations, it is possible to hand back identical responses
             with different secret since the prover chooses the responses. Thus identical responses give no information to the verifier
@@ -188,7 +188,7 @@ def check_groups(
 #Useful for several proofs :
 
 def chal_128bits():
-    twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))
+    twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))    #TODO : make clearer what is going on here
     return twoTo128.random()
 
 def get_secret_names(sub_list):
@@ -203,7 +203,7 @@ def get_generators(sub_list):
 
 def get_proof_id(obj):
     """ Generates a deterministic string describer for a proof """
-    cur_type = obj.__class__.__name__
+    cur_type = obj.__class__.__name__ #TODO : don't forget to add descriptors here if new primitives are added
     if "DLRep" in cur_type:
         protocol = ["DLRep"]
         protocol.append(obj.lhs.export())
@@ -239,7 +239,7 @@ def flatten_commitment(comm):
 
 
 def xor_Bn_array(arr):
-    """ Horrible tool to xor 128 bits Bn challenges.
+    """ Horrible tool to xor 128 bits Bn challenges. #TODO : fix this
     """
     res = 0
     for elem in arr:
