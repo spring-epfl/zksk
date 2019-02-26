@@ -498,3 +498,27 @@ def test_multiple_or_proof_syntax():
     secrets.update({"x10": x10})
     orproof = pp1 | pp2 | DLRepProof(x10 * g, Secret("x10") * g)
     verify_proof(orproof, secrets)
+
+
+def test_or_NI():
+    p1, p2, secrets = setup_and_proofs()
+    niproof = OrProof(p1, p2)
+    orprov = niproof.get_prover(secrets)
+    or_verifier = niproof.get_verifier()
+
+    message = 'toto'
+    chall, resp = orprov.get_NI_proof(message)
+    assert or_verifier.verify_NI(chall, resp, message) == True
+
+
+def test_wrong_or_NI():
+    p1, p2, secrets = setup_and_proofs()
+    niproof = OrProof(p1, p2)
+    wrongs = secrets.copy()
+    wrongs["x0"] = G.order().random()
+    orprov = niproof.get_prover(wrongs)
+    or_verifier = niproof.get_verifier()
+
+    message = 'toto'
+    chall, resp = orprov.get_NI_proof(message)
+    assert or_verifier.verify_NI(chall, resp, message) == False

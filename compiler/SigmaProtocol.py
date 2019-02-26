@@ -8,6 +8,8 @@ from hashlib import sha256
 from collections import defaultdict
 import msgpack
 
+CHAL_LENGTH = Bn(128)
+
 """ Known flaws :
         - Malicious prover can trick proofs :
             - claim knowledge of x1 g1, x1 g2 when in fact we have two distinct secrets
@@ -110,17 +112,19 @@ class Prover:
 
 
 
+
+
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
     def __init__(self, generators, secret_names, lhs):
         pass
 
-    def send_challenge(self, commitment):
+    def send_challenge(self, commitment, chal_size = 128):
         """
         :param commitment: a petlib.bn.Bn number
-        :return: a default challenge equal to 2**31
+        :return: a random challenge smaller than 2**128
         """
         self.commitment = commitment
-        self.challenge = chal_128bits()
+        self.challenge = chal_randbits(CHAL_LENGTH)
         print("\nchallenge is ", self.challenge)
 
         return self.challenge
@@ -187,9 +191,10 @@ def check_groups(
 
 #Useful for several proofs :
 
-def chal_128bits():
-    twoTo128 = Bn.from_binary(bytes.fromhex("1" + "0" * 31))    #TODO : make clearer what is going on here
-    return twoTo128.random()
+def chal_randbits(bitlength):
+    maxi = Bn(2).pow(bitlength)
+    return maxi.random()
+
 
 def get_secret_names(sub_list):
     secrets = []
@@ -201,7 +206,7 @@ def get_generators(sub_list):
     [generators.extend(elem.generators.copy()) for elem in sub_list]
     return generators
 
-def get_proof_id(obj):
+def get_proof_id(obj):# TODO : move to classes, include debug option also with challenge (or before hash in NI) to check P and V used exactly the same syntax
     """ Generates a deterministic string describer for a proof """
     cur_type = obj.__class__.__name__ #TODO : don't forget to add descriptors here if new primitives are added
     if "DLRep" in cur_type:
@@ -226,9 +231,15 @@ def get_proof_id(obj):
     return msgpack.packb(protocol)
 
 
-def flatten_commitment(comm):
+def flatten_commitment(comm): # TODO : use msgpack, -> won't pack list of EcPt
+    
     if not isinstance(comm, list):
         return comm.export() # TODO : check if concatenation of several export() is uniquely decodable
+
+    """ 
+    raise Exception("list of comms")
+    return msgpack.packb(comm) """
+
     res = ''.encode()
     for el in comm:
         if isinstance(el, list):
@@ -238,10 +249,14 @@ def flatten_commitment(comm):
     return res
 
 
-def xor_Bn_array(arr):
-    """ Horrible tool to xor 128 bits Bn challenges. #TODO : fix this
+def add_Bn_array(arr, modulus):
+    """ Tool to sum an array under a modulus 
     """
-    res = 0
+    if not isinstance(modulus, Bn):
+        modulus = Bn(modulus)
+    res = Bn(0)
     for elem in arr:
-        res = res^elem.int()
-    return Bn.from_hex(hex(res)[2:].upper())
+        if not isinstance(elem, Bn):
+            elem = Bn(elem)
+        res = res.mod_add(elem, modulus)
+    return res

@@ -112,9 +112,9 @@ class DLRepProver(Prover):
         #Set the recompute_commitment
         self.recompute_commitment = DLRepProof.recompute_commitment   
         if responses_dict is None:
-            responses_dict = self.get_randomizers() 
+            responses_dict = self.get_randomizers() #TODO : should we ensure consistency for two identical statements to simulate ?
         if challenge is None:
-            challenge = chal_128bits()
+            challenge = chal_randbits(CHAL_LENGTH)
         
         response = [responses_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
         commitment = self.recompute_commitment(self, challenge, response)

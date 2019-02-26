@@ -80,15 +80,11 @@ def amac_ddh(iparams, sk, sigma, messages):
 
     "Construct the proof. Obviously it can be done in less lines at the cost of readability"
     sigma_proof=[]  # A list of DLRep proofs
-    sigmas = prepare_messages(sigma[0], messages)
     sigma_proof.append(DLRepProof(sigma[0]*(n+1), x_names,  sigma[1]))
     sigma_proof.append(DLRepProof(sigma[0]*(n+1), y_names,  sigma[2]))
     sigma_proof.append(DLRepProof(sigma[0], ["z"],  sigma[3]))
 
-    c_proofs = [] # A list of DLRep proofs
-    c_proofs.append(DLRepProof(Cx, Secret("x0")*g + Secret("xb")*h))
-    c_proofs.append(DLRepProof(Cy, Secret("y0")*g + Secret("yb")*h))
-    c_proofs.append(DLRepProof(Cz, Secret("z0")*g + Secret("zb")*h))
+    c_proofs = [DLRepProof(lhs, Secret(name+'0')*g + Secret(name+'b')*h) for lhs, name in zip([Cx, Cy, Cz],["x","y","z"])]
 
     [x_proofs = DLRepProof([h], x_names[i+1], X[i+1]) for i in range(n)
     x_and = AndProof(x_proofs) #An And of DLRep
@@ -96,10 +92,11 @@ def amac_ddh(iparams, sk, sigma, messages):
     [y_proofs = DLRepProof([h], y_names[i+1], Y[i+1]) for i in range(n)
     y_and = AndProof(y_proofs)  #An And of DLRep
 
+
+    ddh_proof = AndProof(sigma_proof, c_proofs, y_and, x_and)
+
     "Build the secret dictionary"
-    secret_dict = dict(zip(x_names, x))
-    secret_dict.update(zip(y_names, y))
-    secret_dict.update(zip(["xb", "yb", "zb"], [xb, yb, zb]))
+    secret_dict = dict(zip(secret_names, secret_values))
 
     "Let's run it !"
     ddh_proof = AndProof(sigma_proof, c_proofs, y_and, x_and)

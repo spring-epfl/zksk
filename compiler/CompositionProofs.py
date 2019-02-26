@@ -75,7 +75,7 @@ class OrProof(Proof):
         comm = []
     
         # We check for challenge consistency i.e the constraint was respected
-        if find_residual_chal(self.or_challenges) != challenge:
+        if find_residual_chal(self.or_challenges, challenge, CHAL_LENGTH) != Bn(0):
             raise Exception("Inconsistent challenge")
         for i in range(len(self.subs)):
             cur_proof = self.subs[i]
@@ -177,16 +177,7 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         """
         if self.true_prover == None:
             raise Exception("cannot commit in a simulator")
-        # Is this useful in an Or Proof ? TODO : check. Edit : I don't think it is useful. Check harder and remove.
-        if randomizers_dict is None:
-            pass
-           # randomizers_dict = self.get_randomizers() (never used)
-
-        # Unify the possible responses to common secret names ?
-        # Jules : commented this to fix a flaw
-        
-        #responses_dict = self.get_randomizers()
-
+            
         commitment = []
         for index in range(len(self.subs)):
             if index == self.true_prover:
@@ -199,7 +190,7 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
 
     def compute_response(self, challenge):
         chals = [el[1] for el in self.simulations]
-        residual_chal = find_residual_chal(chals, challenge)
+        residual_chal = find_residual_chal(chals, challenge, CHAL_LENGTH)
         response = []
         challenges = []
         for index in range(len(self.subs)):
@@ -223,7 +214,7 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         if responses_dict is None:
             responses_dict = self.get_randomizers() 
         if challenge is None:
-            challenge = chal_128bits()
+            challenge = chal_randbits(CHAL_LENGTH)
         com = []
         resp = []
         or_chals = []
@@ -233,19 +224,23 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
             resp.append(resp1)
             or_chals.append(chal1)
     
-        final = find_residual_chal(or_chals, challenge)
-        or_chals.append(final)
-        com1, __, resp1 = self.subs[index+1].simulate_proof(responses_dict, final)
+        final_chal = find_residual_chal(or_chals, challenge, CHAL_LENGTH)
+        or_chals.append(final_chal)
+        com1, __, resp1 = self.subs[index+1].simulate_proof(responses_dict, final_chal)
         com.append(com1)
         resp.append(resp1)
 
         return com, challenge, (or_chals, resp)
         
             
-def find_residual_chal(arr, challenge = Bn(0)):
+def find_residual_chal(arr, challenge, chal_length):
+    """ To find c1 such that c = c1 + c2 +c3 mod k,
+    We compute c2 + c3 -c and take the opposite
+    """
+    modulus = Bn(2).pow(chal_length)
     temp_arr = arr.copy()
-    temp_arr.append(challenge)
-    return xor_Bn_array(temp_arr)
+    temp_arr.append(-challenge)
+    return - add_Bn_array(temp_arr, modulus)
 
 
 
@@ -294,7 +289,7 @@ class AndProofProver(Prover):
         if responses_dict is None:
             responses_dict = self.get_randomizers() 
         if challenge is None:
-            challenge = chal_128bits()
+            challenge = chal_randbits(CHAL_LENGTH)
         com = []
         resp = []
         for subp in self.subs:
