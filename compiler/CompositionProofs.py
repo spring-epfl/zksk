@@ -29,6 +29,7 @@ class Proof:
         """:return: an instance of Verifier"""
         pass
 
+
     def recompute_commitment(self, challenge, response):
 
         """
@@ -171,6 +172,11 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
 
+    
+    def get_proof_id(self):
+        list_ids = [sub.get_proof_id() for sub in self.subs]
+        return ["Or", list_ids]
+
     def commit(self, randomizers_dict = None):
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
@@ -252,6 +258,10 @@ class OrVerifier(Verifier):
         self.secret_names = get_secret_names(subverifiers)
 
         self.recompute_commitment = OrProof.recompute_commitment
+
+    def get_proof_id(self):
+        list_ids = [sub.get_proof_id() for sub in self.subs]
+        return ["Or", list_ids]
     
 
 
@@ -270,6 +280,10 @@ class AndProofProver(Prover):
         random_vals = {}
         {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
+
+    def get_proof_id(self):
+        list_ids = [sub.get_proof_id() for sub in self.subs]
+        return ["And", list_ids]
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
@@ -312,6 +326,10 @@ class AndProofVerifier(Verifier):
         self.secret_names = get_secret_names(subverifiers)
 
         self.recompute_commitment = AndProof.recompute_commitment
+
+    def get_proof_id(self):
+        list_ids = [sub.get_proof_id() for sub in self.subs]
+        return ["And", list_ids]
         
         
 

@@ -57,6 +57,10 @@ class DLRepProver(Prover):
             to_append = self.generators[idx].group.order().random()
             output.update({key: to_append})
         return output
+    
+
+    def get_proof_id(self):
+        return ["DLRep", self.lhs, self.generators]
 
     def commit(self, randomizers_dict=None):
         """
@@ -128,6 +132,9 @@ class DLRepVerifier(Verifier):
         self.lhs = lhs
         self.recompute_commitment = DLRepProof.recompute_commitment  
 
+    
+    def get_proof_id(self):
+        return ["DLRep", self.lhs, self.generators]
 
 
 class DLRepProof(Proof):
@@ -228,6 +235,7 @@ class DLRepProof(Proof):
         """
         return DLRepVerifier(self.generators, self.secret_names,
                                 self.lhs)
+
 
     def recompute_commitment(self, challenge, responses):
         """

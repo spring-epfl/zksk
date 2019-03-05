@@ -7,7 +7,6 @@ import binascii
 import pdb
 from hashlib import sha256
 from collections import defaultdict
-import msgpack
 
 CHAL_LENGTH = Bn(128)
 
@@ -19,18 +18,6 @@ CHAL_LENGTH = Bn(128)
                 under a same challenge, two responses are different then the secrets were different.
                 Verifier should check that indeed the responses are the same but GLOBALLY (i.e not just in leaves of the And tree)
 
-        - (fixed) In case of reoccuring secrets in an Or Proof, a look at the responses
-            allow to guess which proof was truly computed and which were simulated:
-            shared secrets yield identical responses through all the simulations,
-            but not with the non-simulated one.
-
-            EDIT : since the Or Proof of N subproofs uses N-1 simulations, it is possible to hand back identical responses
-            with different secret since the prover chooses the responses. Thus identical responses give no information to the verifier
-            about the correctness of the formula used by the prover. Then the prover doesn't have to care about uniyfing
-            the responses cross-subproofs, and the problem vanishes.
-
-        - Bitwise xor of the challenges suck because Bn can only convert from 64 bit integers.
-            Had to use a hack through hexadecimal notation.
 
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
@@ -86,6 +73,13 @@ class Prover:
         pass
     def get_secret_values(self):
         pass
+    
+
+    def get_proof_id(self):
+        """:return: a descriptor of the Proof with the protocol name and the public info. 
+        Does NOT contain the secrets' names.
+        """
+        pass
         
     def compute_response(self, challenge):
         pass
@@ -99,7 +93,7 @@ class Prover:
         """
         commitment = self.commit()
         message = message.encode()
-        protocol = get_proof_id(self)
+        protocol = encode(self.get_proof_id())
 
         # Computing the challenge
         conc = protocol
@@ -154,7 +148,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :return: a boolean telling if the proof is verified
         """
         message = message.encode()
-        protocol = get_proof_id(self)
+        protocol = encode(self.get_proof_id())
         r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
         conc = protocol
         conc += encode(r_guess)
@@ -163,6 +157,13 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         print(challenge)
         print(Bn.from_hex(binascii.hexlify(myhash).decode()))
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
+
+    
+    def get_proof_id(self):
+        """:return: a descriptor of the Proof with the protocol name and the public info. 
+        Does NOT contain the secrets' names.
+        """
+        pass
 
 
 def check_groups(
@@ -206,30 +207,6 @@ def get_generators(sub_list):
     generators = []
     [generators.extend(elem.generators.copy()) for elem in sub_list]
     return generators
-
-def get_proof_id(obj):# TODO : move to classes, include debug option also with challenge (or before hash in NI) to check P and V used exactly the same syntax
-    """ Generates a deterministic string describer for a proof """
-    cur_type = obj.__class__.__name__ #TODO : don't forget to add descriptors here if new primitives are added
-    if "DLRep" in cur_type:
-        protocol = ["DLRep"]
-        protocol.append(obj.lhs.export())
-
-        [protocol.append(g.export()) for g in obj.generators]
-    elif "AndProof" in cur_type:
-        protocol = ["And"]
-        [
-            protocol.append(get_proof_id(subprover))
-            for subprover in obj.subs
-        ]
-    elif "Or" in cur_type:
-        protocol = ["Or"]
-        [
-            protocol.append(get_proof_id(subprover))
-            for subprover in obj.subs
-        ]
-    else:
-        raise Exception('Generic Prover in the wild')
-    return msgpack.packb(protocol)
 
 
 def add_Bn_array(arr, modulus):
