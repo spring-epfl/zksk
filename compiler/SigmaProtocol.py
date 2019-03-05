@@ -2,6 +2,7 @@ import random, string
 from collections import namedtuple
 from petlib.ec import EcGroup
 from petlib.bn import Bn
+from petlib.pack import *
 import binascii
 import pdb
 from hashlib import sha256
@@ -102,7 +103,7 @@ class Prover:
 
         # Computing the challenge
         conc = protocol
-        conc += flatten_commitment(commitment)
+        conc += encode(commitment)
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
@@ -156,7 +157,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         protocol = get_proof_id(self)
         r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
         conc = protocol
-        conc += flatten_commitment(r_guess)
+        conc += encode(r_guess)
         conc += message
         myhash = sha256(conc).digest()
         print(challenge)
@@ -229,24 +230,6 @@ def get_proof_id(obj):# TODO : move to classes, include debug option also with c
     else:
         raise Exception('Generic Prover in the wild')
     return msgpack.packb(protocol)
-
-
-def flatten_commitment(comm): # TODO : use msgpack, -> won't pack list of EcPt
-    
-    if not isinstance(comm, list):
-        return comm.export() # TODO : check if concatenation of several export() is uniquely decodable
-
-    """ 
-    raise Exception("list of comms")
-    return msgpack.packb(comm) """
-
-    res = ''.encode()
-    for el in comm:
-        if isinstance(el, list):
-            res += flatten_commitment(el)
-        else:
-            res += el.export()
-    return res
 
 
 def add_Bn_array(arr, modulus):
