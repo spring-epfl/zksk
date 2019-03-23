@@ -53,7 +53,7 @@ class OrProof(Proof):
             raise Exception('OrProof needs arguments !')
         list_subproofs = []
         for el in subproofs:
-            if isinstance(el, list):
+            if isinstance(el, list): #TODO : fix this, even remove
                 list_subproofs.extend(el)
             else:
                 list_subproofs.append(el)
@@ -66,6 +66,8 @@ class OrProof(Proof):
         check_groups(self.secret_names, self.generators) # For now we consider the same constraints as in the And Proof
     
 
+    def get_proof_id(self):
+        return ["Or", [sub.get_proof_id() for sub in self.subproofs]]
 
     def recompute_commitment(self, challenge, responses):
         """ Recomputes the commitments, sets them to None if the challenge is inconsistent.
@@ -78,9 +80,9 @@ class OrProof(Proof):
         # We check for challenge consistency i.e the constraint was respected
         if find_residual_chal(self.or_challenges, challenge, CHAL_LENGTH) != Bn(0):
             raise Exception("Inconsistent challenge")
-        for i in range(len(self.subs)):
-            cur_proof = self.subs[i]
-            comm.append(cur_proof.recompute_commitment(cur_proof, self.or_challenges[i], responses[i]))
+        for i in range(len(self.subproofs)):
+            cur_proof = self.subproofs[i]
+            comm.append(cur_proof.recompute_commitment(self.or_challenges[i], responses[i]))
         return comm
 
     def get_prover(self, secrets_dict):
@@ -121,20 +123,16 @@ class OrProof(Proof):
         sims[chosen_idx] = elem.get_prover(subdict)
 
         # Return a list of provers in the correct order
-        orp = OrProver([sims[index] for index in sorted(sims)])
-        orp.secret_values = secrets_dict
-        return orp
+        return OrProver(self, [sims[index] for index in sorted(sims)], secrets_dict)
 
     def get_simulator(self):
         """ Returns an empty prover which can only simulate (via simulate_proof)
         """
         arr = [subp.get_simulator() for subp in self.subproofs]
-        orp = OrProver(arr)
-        orp.secret_values = {}
-        return orp
+        return OrProver(self, arr, {})
 
     def get_verifier(self):
-        return OrVerifier([subp.get_verifier() for subp in self.subproofs])
+        return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
     def set_simulate(self):
         self.simulate = True
@@ -149,11 +147,13 @@ Important :
 """
 class OrProver(Prover): # This prover is built on two subprovers, max one of them is a simulator
 
-    def __init__(self, subprovers):
+    def __init__(self, proof, subprovers, secret_values):
         self.subs = subprovers.copy()
+        self.proof = proof
 
         self.generators = get_generators(subprovers)
         self.secret_names = get_secret_names(subprovers)
+        self.secret_values = secret_values
 
         self.simulations = []
         self.true_prover = self.find_legit_prover()
@@ -172,10 +172,6 @@ class OrProver(Prover): # This prover is built on two subprovers, max one of the
         {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
 
-    
-    def get_proof_id(self):
-        list_ids = [sub.get_proof_id() for sub in self.subs]
-        return ["Or", list_ids]
 
     def commit(self, randomizers_dict = None):
         """ First operation of an Or Prover. 
@@ -251,39 +247,30 @@ def find_residual_chal(arr, challenge, chal_length):
 
 
 class OrVerifier(Verifier):
-    def __init__(self, subverifiers):
+    def __init__(self, proof, subverifiers):
         self.subs = subverifiers.copy()
+        self.proof = proof
         
-        self.generators = get_generators(subverifiers)
-        self.secret_names = get_secret_names(subverifiers)
-
-        self.recompute_commitment = OrProof.recompute_commitment
-
-    def get_proof_id(self):
-        list_ids = [sub.get_proof_id() for sub in self.subs]
-        return ["Or", list_ids]
+        self.generators = proof.generators
+        self.secret_names = proof.secret_names
     
 
 
 
 class AndProofProver(Prover):
     """:param subprovers: instances of Prover"""
-    def __init__(self, subprovers):
+    def __init__(self, proof, subprovers, secret_values):
         self.subs = subprovers.copy()
-
-        self.generators = get_generators(subprovers)
-        self.secret_names = get_secret_names(subprovers)
-
+        self.secret_values = secret_values
+        self.proof = proof
+        self.generators = self.proof.generators
+        self.secret_names = self.proof.secret_names
 
     def get_randomizers(self) -> dict: 
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
         random_vals = {}
         {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
-
-    def get_proof_id(self):
-        list_ids = [sub.get_proof_id() for sub in self.subs]
-        return ["And", list_ids]
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
@@ -315,21 +302,16 @@ class AndProofProver(Prover):
         
 
 class AndProofVerifier(Verifier):
-    def __init__(self, subverifiers):
+    def __init__(self, proof, subverifiers):
         """
         :param subverifiers: instances of subtypes of Verifier
         """
 
         self.subs = subverifiers.copy()
+        self.proof = proof
         
-        self.generators = get_generators(subverifiers)
-        self.secret_names = get_secret_names(subverifiers)
-
-        self.recompute_commitment = AndProof.recompute_commitment
-
-    def get_proof_id(self):
-        list_ids = [sub.get_proof_id() for sub in self.subs]
-        return ["And", list_ids]
+        self.generators = self.proof.generators
+        self.secret_names = self.proof.secret_names
         
         
 
@@ -344,7 +326,7 @@ class AndProof(Proof):
             raise Exception('AndProof needs arguments !')
         list_subproofs = []
         for el in subproofs:
-            if isinstance(el, list):
+            if isinstance(el, list):#TODO : remove
                 list_subproofs.extend(el)
             else:
                 list_subproofs.append(el)
@@ -363,12 +345,15 @@ class AndProof(Proof):
         the names of the attributes of AndVerifier and AndProver should be the same.
         """
         comm = []
-        for i in range(len(self.subs)):
-            cur_proof = self.subs[i]
-            comm.append(cur_proof.recompute_commitment(cur_proof, challenge, andresp[i]))
+        for i in range(len(self.subproofs)):
+            cur_proof = self.subproofs[i]
+            comm.append(cur_proof.recompute_commitment(challenge, andresp[i]))
         return comm
 
     def get_prover(self, secrets_dict):
+        """ Returns an AndProver, which contains the whole Proof information but also a list of instantiated subprovers, one for each term of the Proof.
+        Has access to the secret values.
+        """
         if self.simulate == True or secrets_dict == {}:
             print('Can only simulate')
             return get_simulator()
@@ -380,20 +365,19 @@ class AndProof(Proof):
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
             return sub_proof.get_prover(dict(secrets_for_prover))
 
-        andp = AndProofProver([sub_proof_prover(subproof) for subproof in self.subproofs])
-        andp.secret_values = secrets_dict
-        return andp
+        return AndProofProver(self, [sub_proof_prover(sub_proof) for sub_proof in self.subproofs], secrets_dict)
 
     def get_verifier(self):
-        return AndProofVerifier([subp.get_verifier() for subp in self.subproofs])
+        return AndProofVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
     def get_simulator(self):
         """ Returns an empty prover which can only simulate (via simulate_proof)
         """
         arr = [subp.get_simulator() for subp in self.subproofs]
-        andp =  AndProofProver(arr)
-        andp.secret_values = {}
-        return andp
+        return AndProofProver(self, arr, {})
+
+    def get_proof_id(self):
+        return ["And", [sub.get_proof_id() for sub in self.subproofs]]
 
     def set_simulate(self):
         self.simulate = True

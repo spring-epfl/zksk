@@ -29,17 +29,18 @@ class DLRepProver(Prover):
     """
     The prover in a discrete logarithm proof.
     """
-    def __init__(self, generators, secret_names, secret_values, lhs):
+    def __init__(self, proof, secret_values):
         """
         :param generators: a list of elliptic curve points of type petlib.ec.EcPt
         :param secret_names: a list of strings equal to the names of the secrets.
         :param secret_values: the values of the secrets as a dict.
         :param lhs: the left hand side of the equation of the proof of knowledge. If the proof is PK{(x1,x2): y = x1 * g1 + x2 * g2}, lhs is y. 
         """
-        self.generators = generators
-        self.secret_names = secret_names
+        self.generators = proof.generators
+        self.secret_names = proof.secret_names
         self.secret_values = secret_values
-        self.lhs = lhs
+        self.lhs = proof.lhs
+        self.proof = proof
 
 
     def get_secret_values(self):
@@ -57,10 +58,6 @@ class DLRepProver(Prover):
             to_append = self.generators[idx].group.order().random()
             output.update({key: to_append})
         return output
-    
-
-    def get_proof_id(self):
-        return ["DLRep", self.lhs, self.generators]
 
     def commit(self, randomizers_dict=None):
         """
@@ -95,16 +92,9 @@ class DLRepProver(Prover):
         :return: a list of responses: for each secret we have a response
         for a given secret x and a challenge c and a random value k (associated to x). We have the response equal to k + c * x
         """
-        resps = [  # k is a dict with secret names as keys and randomizers as values
-            (self.secret_values[self.secret_names[i]].mod_mul(
-                challenge, self.group_order)).
-            mod_add(
-                self.ks[i],
-                self.
-                group_order,  # If (1) replace by self.ks[self.secret_names[i]]
-            ) for i in range(len(self.ks))
-        ]
+        resps = [(self.secret_values[self.secret_names[i]]*challenge+self.ks[i]) % self.group_order  for i in range(len(self.ks))]
         return resps
+
 
     
     def simulate_proof(self, responses_dict = None, challenge = None): #Only function a prover built with empty secret_dict can use
@@ -113,28 +103,23 @@ class DLRepProver(Prover):
         :param challenge: a petlib.bn.Bn equal to the challenge
         :return: a list of valid commitments for each secret value given responses_dict and a challenge
         """
-        #Set the recompute_commitment
-        self.recompute_commitment = DLRepProof.recompute_commitment   
+        #Set the recompute_commitment 
         if responses_dict is None:
             responses_dict = self.get_randomizers() #TODO : should we ensure consistency for two identical statements to simulate ?
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         
         response = [responses_dict[m] for m in self.secret_names] #random responses, the same for shared secrets
-        commitment = self.recompute_commitment(self, challenge, response)
+        commitment = self.proof.recompute_commitment(challenge, response)
 
         return commitment, challenge, response
 
 class DLRepVerifier(Verifier):
-    def __init__(self, generators, secret_names, lhs) :
-        self.generators = generators
-        self.secret_names = secret_names
-        self.lhs = lhs
-        self.recompute_commitment = DLRepProof.recompute_commitment  
-
-    
-    def get_proof_id(self):
-        return ["DLRep", self.lhs, self.generators]
+    def __init__(self, proof) :
+        self.generators = proof.generators
+        self.secret_names = proof.secret_names
+        self.lhs = proof.lhs
+        self.proof = proof
 
 
 class DLRepProof(Proof):
@@ -143,6 +128,7 @@ class DLRepProof(Proof):
     """
 
     def __init__(self, lhs, rightSide, additional=None):
+        #TODO : this is so weird, to fix
         """
         :param rightSide: an instance of the 'RightSide' class. For the previous example 'rightSide' would be: Secret("x1") * g1 + Secret("x2") * g2. Here gi-s are instances of petlib.ec.EcPt
         :param lhs: an instance of petlib.ec.EcPt. The prover has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
@@ -221,21 +207,22 @@ class DLRepProof(Proof):
             if not isinstance(sec, Bn):
                 secrets_dict[name] = Bn.from_decimal(str(sec))
 
-        return DLRepProver(self.generators, self.secret_names,
-                              secrets_dict, self.lhs)
+        return DLRepProver(self, secrets_dict)
         
     def get_simulator(self):
         """ Returns an empty prover which can only simulate (via simulate_proof)
         """
-        return DLRepProver(self.generators, self.secret_names, {}, self.lhs)
+        return DLRepProver(self, {})
         
     def get_verifier(self):
         """
         :return: a DLRepVerifier for this proof
         """
-        return DLRepVerifier(self.generators, self.secret_names,
-                                self.lhs)
+        return DLRepVerifier(self)
 
+
+    def get_proof_id(self):
+        return ["DLRep", self.lhs, self.generators]
 
     def recompute_commitment(self, challenge, responses):
         """
@@ -243,44 +230,10 @@ class DLRepProof(Proof):
         :param responses: a list of petlib.bn.Bn
         :return: the commitment from the parameters
         """
-        tab_g = self.generators
-        y = self.lhs
 
-        leftside = raise_powers(self.generators, responses) + (-challenge) * y
+        leftside = raise_powers(self.generators, responses) + (-challenge) * self.lhs
         return leftside
 
     def set_simulate(self):
         self.simulate = True
 
-
-
-if __name__ == "__main__":  #A legit run in which we build the public info from random variables and pass everything to the process
-    N = 5
-    G = EcGroup(713)
-    tab_g = []
-    tab_g.append(G.generator())
-    for i in range(1, N):
-        randWord = randomword(30).encode("UTF-8")
-        tab_g.append(G.hash_to_point(randWord))
-    o = G.order()
-    secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
-    secrets_values = dict()
-    secret_tab = [
-    ]  #This array is only useful to compute the public info because zip doesn't take dicts. #spaghetti
-    for wurd in secrets_aliases:  # we build N secrets
-        secrets_values[wurd] = o.random()
-        secret_tab.append(secrets_values[wurd])
-    # peggy wishes to prove she knows the discrete logarithm equal to this value
-
-    powers = [a * b for a, b in zip(secret_tab, tab_g)
-              ]  # The Ys of which we will prove logarithm knowledge
-    lhs = G.infinite()
-    for y in powers:
-        lhs += y
-
-    dl_proof = DLRepProof(tab_g, secrets_aliases, lhs)
-    dl_prover = dl_proof.get_prover(secrets_values)
-    dl_verifier = dl_proof.get_verifier()
-
-    dl_protocol = SigmaProtocol(dl_verifier, dl_prover)
-    dl_protocol.run()

@@ -79,7 +79,7 @@ class Prover:
         """:return: a descriptor of the Proof with the protocol name and the public info. 
         Does NOT contain the secrets' names.
         """
-        pass
+        return self.proof.get_proof_id()
         
     def compute_response(self, challenge):
         pass
@@ -110,8 +110,6 @@ class Prover:
 
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
-    def __init__(self, generators, secret_names, lhs):
-        pass
 
     def send_challenge(self, commitment, chal_size = 128):
         """
@@ -138,7 +136,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         if challenge is None:
             challenge = self.challenge
 
-        return (commitment == self.recompute_commitment(self, challenge, response) )
+        return (commitment == self.proof.recompute_commitment(challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):
         """
@@ -149,7 +147,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         """
         message = message.encode()
         protocol = encode(self.get_proof_id())
-        r_guess = self.recompute_commitment(self, challenge, response)  #We retrieve the commitment using the verification identity
+        r_guess = self.proof.recompute_commitment(challenge, response)  #We retrieve the commitment using the verification identity
         conc = protocol
         conc += encode(r_guess)
         conc += message
@@ -163,7 +161,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         """:return: a descriptor of the Proof with the protocol name and the public info. 
         Does NOT contain the secrets' names.
         """
-        pass
+        return self.proof.get_proof_id()
 
 
 def check_groups(
