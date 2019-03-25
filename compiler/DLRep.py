@@ -121,6 +121,20 @@ class DLRepVerifier(Verifier):
         self.lhs = proof.lhs
         self.proof = proof
 
+    def check_responses_consistency(self, response, responses_dict={}):
+        """Goes through the secret names of the current DLRepProof and checks consistency with respect to a response dictionary.
+        Updates the dictionary if the entry doesn't exist yet.
+        """
+        for i in range(len(self.secret_names)):
+            s = self.secret_names[i]
+            if s in responses_dict.keys():
+                if response[i] != responses_dict[s] :
+                    return 1
+            else:
+                responses_dict.update({s:response[i]})
+        return 0
+
+
 
 class DLRepProof(Proof):
     """The class is used to model a discrete logarithm proof

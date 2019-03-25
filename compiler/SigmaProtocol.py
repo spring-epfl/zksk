@@ -118,7 +118,6 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         """
         self.commitment = commitment
         self.challenge = chal_randbits(CHAL_LENGTH)
-        print("\nchallenge is ", self.challenge)
 
         return self.challenge
 
@@ -130,12 +129,13 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :param response: the response given by the prover
         :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response
         """
-
+        self.response = response
         if commitment is None:
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-
+        if self.check_responses_consistency(response, {}):
+            raise Exception("Responses for a same secret name do not match!")
         return (commitment == self.proof.recompute_commitment(challenge, response) )
 
     def verify_NI(self, challenge, response, message=''):
@@ -145,6 +145,9 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :param response: computed from get_NI_proof
         :return: a boolean telling if the proof is verified
         """
+        self.response = response
+        if self.check_responses_consistency(response, {}):
+            raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
         protocol = encode(self.get_proof_id())
         r_guess = self.proof.recompute_commitment(challenge, response)  #We retrieve the commitment using the verification identity
@@ -152,8 +155,6 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         conc += encode(r_guess)
         conc += message
         myhash = sha256(conc).digest()
-        print(challenge)
-        print(Bn.from_hex(binascii.hexlify(myhash).decode()))
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
     
@@ -162,6 +163,11 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         Does NOT contain the secrets' names.
         """
         return self.proof.get_proof_id()
+
+    def check_responses_consistency(self, response, response_dict):
+        print("GAGA",response)
+        print(self.secret_names)
+        return 1
 
 
 def check_groups(

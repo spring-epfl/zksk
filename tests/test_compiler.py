@@ -114,7 +114,7 @@ def test_one_generator_one_secret():
     commitments = prover.commit()
 
 
-def get_generators(nb_wanted, start_index=0):  #What is start_index?
+def get_generators(nb_wanted, start_index =0):  #What is start_index?
     G = EcGroup(713)
     tab_g1 = []
     tab_g1.append(G.generator())
@@ -522,3 +522,32 @@ def test_wrong_or_NI():
     message = 'toto'
     chall, resp = orprov.get_NI_proof(message)
     assert or_verifier.verify_NI(chall, resp, message) == False
+
+
+def test_malicious_and_proofs():
+    x0=3
+    x2=50
+    x1 = 12
+    xm = 51
+    tab_g = get_generators(3)
+    g1 = tab_g[0]
+    g2 = tab_g[1]
+    g3 = tab_g[2]
+    secret_dict = {'x0':3, 'x2':50, 'x1':12}
+    mal_secret_dict = {'x0':3, 'x2':51}
+    andp = AndProof(DLRepProof(x1*g1 + x2*g2, Secret("x1")*g1+Secret("x2")*g2), DLRepProof(x0*g3+ xm*g2, Secret("x0")*g1+Secret("x2")*g2)) 
+
+
+    prov = andp.get_prover(secret_dict)
+    prov.subs[1].secret_values = mal_secret_dict
+    verif = andp.get_verifier()
+
+    com = prov.commit()
+    chal =verif.send_challenge(com)
+    resp = prov.compute_response(chal)
+    with pytest.raises(
+            Exception
+    ):
+        v = verif.verify(resp)
+
+    

@@ -254,6 +254,11 @@ class OrVerifier(Verifier):
         self.generators = proof.generators
         self.secret_names = proof.secret_names
     
+    def check_responses_consistency(self, responses, responses_dict={}):
+        """ In an Or Proof, we don't require responses consistency.
+        """
+        return 0
+    
 
 
 
@@ -312,6 +317,18 @@ class AndProofVerifier(Verifier):
         
         self.generators = self.proof.generators
         self.secret_names = self.proof.secret_names
+
+    def check_responses_consistency(self, responses, responses_dict={}):
+        """Checks the responses are consistent for reoccurring secret names. 
+        Iterates through the subverifiers, gives them the responses related to them and constructs a response dictionary (with respect to secret names).
+        If an inconsistency if found during this build, an error code is returned.
+        """
+        for i in range(len(self.subs)):
+            if self.subs[i].check_responses_consistency(responses[i], responses_dict):
+                return 1
+            
+
+
         
         
 
@@ -341,8 +358,7 @@ class AndProof(Proof):
 
     def recompute_commitment(self, challenge, andresp : AndProofResponse):
         """
-        This function allows to retrieve the commitment generically. For this purpose 
-        the names of the attributes of AndVerifier and AndProver should be the same.
+        This function allows to retrieve the commitment generically. 
         """
         comm = []
         for i in range(len(self.subproofs)):
