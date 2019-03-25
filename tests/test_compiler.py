@@ -135,8 +135,8 @@ def test_generators_sharing_a_secret():
 
     rhs = get_rhs(0)
     for i in range(1,N):
-        rhs += get_rhs(i) 
-        
+        rhs += get_rhs(i)
+
     pp = DLRepProof(
         lhs,
         rhs
@@ -256,7 +256,7 @@ def test_wrong_and_proofs():
     response = and_prover.compute_response(challenge)
     v = and_verifier.verify(response)
     assert (v == False)
-    
+
 def test_3_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof([pp1, pp2, pp2], pp1, pp1, [pp1, pp2])
@@ -317,7 +317,7 @@ def test_wrong_and_NI():
 
 
 def test_and_operator():
-    pp1, pp2, secrets_dict = setup_and_proofs() 
+    pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = pp1 & pp2 & pp1
     prover = and_proof.get_prover(secrets_dict)
     verifier = and_proof.get_verifier()
@@ -388,7 +388,7 @@ def test_DLRep_right_hand_side_eval():
     with pytest.raises(
             Exception
     ):  #An exception should be raised because of a shared secrets linked to two different groups
-        rhs.eval() 
+        rhs.eval()
 
 def test_or_proof_simple():
     pp1, pp2, secrets = setup_and_proofs()
@@ -450,7 +450,7 @@ def test_or_or():
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
-    
+
 def test_or_sim():
     pp1, pp2, secrets = setup_and_proofs()
     first_or = OrProof(pp1, pp2)
@@ -489,7 +489,7 @@ def test_or_proof_syntax():
     pp1, pp2, secrets = setup_and_proofs()
     orproof = pp1 | pp2
     verify_proof(orproof, secrets)
- 
+
 
 def test_multiple_or_proof_syntax():
     pp1, pp2, secrets = setup_and_proofs()
@@ -533,21 +533,20 @@ def test_malicious_and_proofs():
     g1 = tab_g[0]
     g2 = tab_g[1]
     g3 = tab_g[2]
-    secret_dict = {'x0':3, 'x2':50, 'x1':12}
-    mal_secret_dict = {'x0':3, 'x2':51}
-    andp = AndProof(DLRepProof(x1*g1 + x2*g2, Secret("x1")*g1+Secret("x2")*g2), DLRepProof(x0*g3+ xm*g2, Secret("x0")*g1+Secret("x2")*g2)) 
-
+    secret_dict = {'x0': 3, 'x2': 50, 'x1': 12}
+    mal_secret_dict = {'x0': 3, 'x2': 51}
+    andp = AndProof(
+        DLRepProof(x1 * g1 + x2 * g2,
+                   Secret("x1") * g1 + Secret("x2") * g2),
+        DLRepProof(x0 * g3 + xm * g2,
+                   Secret("x0") * g1 + Secret("x2") * g2))
 
     prov = andp.get_prover(secret_dict)
     prov.subs[1].secret_values = mal_secret_dict
     verif = andp.get_verifier()
 
     com = prov.commit()
-    chal =verif.send_challenge(com)
+    chal = verif.send_challenge(com)
     resp = prov.compute_response(chal)
-    with pytest.raises(
-            Exception
-    ):
+    with pytest.raises(Exception):
         v = verif.verify(resp)
-
-    
