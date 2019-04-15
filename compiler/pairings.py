@@ -29,13 +29,16 @@ Zp = G.order()
 Ga = Zp.random() * G.gen1()
 Ha = Zp.random() * G.gen2()
 k = G.pair(Ga, Ha)
-print(k.group)
-print(k**2)
+print(k.group.order())
 y = k+k # same object! ???
-print(y, k*k)
+u = k**Zp.random()
+print("\nk:", k, "\nk+k:", k+k, "\nk*k", k*k, "\nk**2", k**2)
+print("Set u = k**Zp.random()")
+print("\nu:",u,"\nu+u:", u+u, "\nu*u:",u*u, "\nu**2:",u**2)
 
 
-
+print(u+u == u*u)
+print(u*u == u**2)
 
 
 def groups(GTgroup):

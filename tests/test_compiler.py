@@ -7,7 +7,7 @@ src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
 from DLRep import *
-from Subproof import Secret
+from Subproof import *
 from CompositionProofs import *
 
 import pytest
@@ -146,12 +146,6 @@ def test_generators_sharing_a_secret():
     commitment = prover.commit()
     assert isinstance(commitment, EcPt)
 
-
-def create_lhs(generators, secrets):
-    sum_ = generators[0].group.infinite()
-    for i in range(len(generators)):
-        sum_ = sum_ + secrets[i] * generators[i]
-    return sum_
 
 
 def test_get_many_different_provers():

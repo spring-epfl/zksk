@@ -219,7 +219,7 @@ class DLRepProof(Proof):
         # We check everything is indeed a BigNumber, else we cast it
         for name, sec in secrets_dict.items():
             if not isinstance(sec, Bn):
-                secrets_dict[name] = Bn.from_decimal(str(sec))
+                secrets_dict[name] = Bn(sec)
 
         return DLRepProver(self, secrets_dict)
         

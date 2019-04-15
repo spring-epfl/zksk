@@ -68,3 +68,12 @@ class Secret:
             raise Exception("parameter should be an elliptic curve point", ecPt)
         return RightSide(self, ecPt)
 
+
+def create_rhs(secrets_names, generators):
+    return reduce(lambda x1, x2: x1 + x2, map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)))
+
+def create_lhs(generators, secrets):
+    sum_ = generators[0].group.infinite()
+    for i in range(len(generators)):
+        sum_ = sum_ + secrets[i] * generators[i]
+    return sum_

@@ -6,7 +6,7 @@ from CompositionProofs import *
 It uses group pairings, DLRep and And Proofs."""
 
 
-def pi5(r, delta, e, s, m, A1, A2, generators, h0)
+def build_pi5(r, delta, e, s, m, A1, A2, generators, h0)
 """
 public info should be : 
     - w (public key), 
@@ -23,19 +23,32 @@ dl1 = DLRepProof(A1, Secret("r1")*g1 + Secret("r2"*g2))
 dl2 = DLRepProof(A2, Secret("delta1")*g1 + Secret("delta2")*g2)
 
 signature = AndProof(dl1, dl2)
+
+
 gen_pairs = [gT.pair(generators[k], h0) for k in range(L+2)]
-generators = [gT.pair(A2, w), gen_pairs[0],  gT.pair(A2, h0), gT.pair(generators[1], w), gen_pairs[1]]
+
+lhs = gT.pair(A2, w)/gen_pairs[0]
+generators = [gT.pair(A2, h0), gT.pair(generators[1], w), gen_pairs[1]]
 generators.extend(gen_pairs[1:])
 
+secret_dict = {"-e":-e, "r1":r[0], "delta1":delta[0], "s":s}
+"""
+Here notice that the secret -e will have secret name -e and the protocol will not find out it is the opposite of e.
+It does not matter because the only part of the protocol using this knowledge is the verifier checking the responses are consistent, 
+which does not apply here since the elements raised to this e are not part of groups with a same order (verification doesn't apply)
+"""
 secret_dict.update({"m"+str(k+1):m[k]for k in range(len(m))})
 secret_names = secret_dict.keys()
 
 """
 gen_pairs is an array of the form epair(gi, h0)
-generators is the list of elements to multiply i.e all pairings (terms from the equation in the paper are rearranged from a/b = c*d to 1 = a^-1 * b *c*d)
-secret_names are the exponents, in order ie (-)e, r1, delta1, s, m_i as specified in the protocol
-secretèdict binds the secret names to their value
+generators is the list of elements to multiply i.e all pairings
+secret_names are the exponents (ordered) ie (-)e, r1, delta1, s, m_i as specified in the protocol
+secret_dict binds the secret names to their value
 """
 
+pairings_proof = DLRepProof(lhs, create_rhs(secret_names, generators))
 
-pairings_proof = 1
+sigProof = AndProof(signature, pairings_proof)
+#The sigature proof is ready to be used, either with an interactive sigma protocol, 
+# a NI proof or even a simulation (just specify dummy secrets for the proof building and then pass an empty dict to the prover)

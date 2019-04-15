@@ -11,14 +11,6 @@ from collections import defaultdict
 CHAL_LENGTH = Bn(128)
 
 """ Known flaws :
-        - Malicious prover can trick proofs :
-            - claim knowledge of x1 g1, x1 g2 when in fact we have two distinct secrets
-            - by-hand craft a prover x1 g1, x2 g2 (without the get_prover being fed a dict)
-            - fix : the use of 1 randomizer per different secrets implies that if 
-                under a same challenge, two responses are different then the secrets were different.
-                Verifier should check that indeed the responses are the same but GLOBALLY (i.e not just in leaves of the And tree)
-
-
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
             distributivity and commutativity.
@@ -224,3 +216,4 @@ def add_Bn_array(arr, modulus):
             elem = Bn(elem)
         res = res.mod_add(elem, modulus)
     return res
+
