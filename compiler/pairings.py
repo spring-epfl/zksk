@@ -2,7 +2,53 @@ from bplib.bp import BpGroup, G1Elem, G2Elem, GTElem
 from SigmaProtocol import *
 
 
-class MyBpGroup:
+class AdditivePoint:
+    def __init__(self, pt):
+        self.pt = pt
+
+    def export(self, form=0):
+        return self.pt.export(form) if form else self.pt.export()
+
+    def __mul__(self, nb):
+        return self.pt**nb
+
+    def __eq__(self, other):
+        return self.pt == other.pt
+
+    def __add__(self, other):
+        return self.pt*(other.pt)
+
+    __rmul__=__mul__
+
+
+
+class MyG1Group:
+    def __init__(self, bp):
+        self.bp = bp
+
+    def generator(self):
+        return self.gen1()
+
+    def infinite(self):
+        return 0*self.generator()
+
+    def order(self):
+        return self.bp.order()
+
+class MyG2Group:
+    def __init__(self, bp):
+        self.bp = bp
+
+    def generator(self):
+        return self.gen2()
+
+    def infinite(self):
+        return 0*self.generator()
+
+    def order(self):
+        return self.bp.order()
+
+class MyGTGroup:
     def __init__(self, bp):
         self.bp = bp
 
@@ -12,31 +58,15 @@ class MyBpGroup:
     def infinite(self):
         g1, g2 = self.bp.gen1(), self.bp.gen2()
         gT = self.bp.pair(g1, g2)
-        return gT.zero(self.bp)
+        return AdditivePoint(gT.one(self.bp))
 
     def order(self):
         return self.bp.order()
 
     def generator(self):
-        return self.bp.pair(self.bp.gen1(), self.bp.gen2())
+        return AdditivePoint(self.bp.pair(self.bp.gen1(), self.bp.gen2()))
 
-
-
-class AdditivePoint:
-    def __init__(self, pt):
-        self.pt = pt
-
-    def export(self, form=POINT_CONVERSION_COMPRESSED):
-        return self.pt.export(form)
-
-    def __eq__(self, other):
-        return self.pt == other.pt
-
-    def __add__(self, other):
-        return self.pt*(other.pt)
-
-    def __mul__(self, nb):
-        return self.pt**nb
+        
 
 
 
