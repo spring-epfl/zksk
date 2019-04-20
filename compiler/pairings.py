@@ -1,6 +1,9 @@
 from bplib.bp import BpGroup, G1Elem, G2Elem, GTElem
 from SigmaProtocol import *
 
+"""
+check everything because bidule.group actually returns the GT group and not the G1/G2 groups (do our classes mimic them well?)
+"""
 
 class AdditivePoint:
     def __init__(self, pt):
@@ -17,6 +20,7 @@ class AdditivePoint:
 
     def __add__(self, other):
         return self.pt*(other.pt)
+        
 
     __rmul__=__mul__
 
@@ -27,10 +31,10 @@ class MyG1Group:
         self.bp = bp
 
     def generator(self):
-        return self.gen1()
+        return self.bp.gen1()
 
     def infinite(self):
-        return 0*self.generator()
+        return self.generator().inf(self.bp)
 
     def order(self):
         return self.bp.order()
@@ -40,10 +44,10 @@ class MyG2Group:
         self.bp = bp
 
     def generator(self):
-        return self.gen2()
+        return self.bp.gen2()
 
     def infinite(self):
-        return 0*self.generator()
+        return self.generator().inf(self.bp)
 
     def order(self):
         return self.bp.order()
@@ -53,7 +57,7 @@ class MyGTGroup:
         self.bp = bp
 
     def groups(self):
-        return self.bp.gen1().group, self.bp.gen2().group
+        return MyG1Group(self.bp), MyG2Group(self.bp)
 
     def infinite(self):
         g1, g2 = self.bp.gen1(), self.bp.gen2()
