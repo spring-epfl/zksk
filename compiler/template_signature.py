@@ -1,6 +1,98 @@
 from DLRep import * 
 from Subproof import *
 from CompositionProofs import *
+from SigmaProtocol import *
+
+class Signer:
+    def __init__(generators, henerators):
+        self.generators = generators
+        self.henerators = henerators
+        self.h0 = henerators[0]
+        self.group = self.h0.group
+        self.gamma = 0
+    
+    def keyGen(self):
+        self.gamma = self.h0.group.order.random()
+        self.w = gamma*h0
+        return self.w
+
+    def sign(self):
+        """
+        Signs a committed message Cm ie returns A,e,s such that A = (g0 + s*g1 + Cm) * 1/e+gamma
+        >>> G = MyGTGroup()
+        >>> gens = [2,3,4]*G.gen1()
+        >>> hens = [2,3,4]*G.gen2()
+        >>> s = Signer(gens, hens)
+        >>> s.verifier.lhs = 12*gens[1]
+        >>> A,e,s2 = s.sign()
+        >>> (e + s.gamma)*A == self.verifier.lhs
+        True
+        """
+        if self.gamma == 0:
+            self.keyGen()
+        pedersen_product = self.verifier.lhs
+        e = self.generators[0].group.order().random()
+        s2 = self.generators[0].group.order().random()
+        prod = self.generators[0]+s2*self.generators[1]+pedersen_product
+        A = ((gamma+e).mod_inverse(self.group.order())*prod
+        return A,e,s2
+
+
+def pedersen_tosign(messages, generators):
+    """
+    Prepare a pedersen commitment for the correct construction of the sequence to be signed.
+    Returns a non-interactive proof as well as a verifier object able to verify the said proof.
+    """
+    #Test the generator length to see if we were passed g0 (power 1)
+    if len(generators)==len(messages)+2:
+        generators = generators[1:]
+    s1 = self.generators[0].group.order().random()
+    #define secret names as s' m1 m2 ...mL
+    names = ["s'"] + ["m"+str(i+1) for i in range(len(messages)+1)] 
+    secrets = [s1] + messages
+    pedersen_proof = DLRepProof(create_lhs(generators, secrets), create_rhs(names, generators))
+    pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
+    return pedersen_prover.get_NI_proof(), pedersen_proof.get_verifier()
+
+def verify_signature(A,e,s, w, generators, h0, messages):
+    product = [generators[0]] + create_lhs(generators[1:], [s]+messages)
+    return A.pair(w+e*h0) == product.pair(h0)
+    
+
+
+
+
+
+def sign_and_verify(messages, signer:Signer):
+    """
+    Wrapper method which given a set of generators and messages, performs the whole protocol from the key generation to the signature verification.
+    """
+    generators, henerators = signer.generators, signer.henerators
+    pedersen_NI, signer.verifier = pedersen_tosign(messages, generators)
+
+    #verification is done on the signer side. can be moved in Signer.sign()
+    if signer.verifier.verify_NI(pedersen_NI):
+        print("Pedersen commitment verified on the signer side. Signing...")
+    
+    w = signer.keyGen()
+    A,e,s2 = signer.sign()
+    print("Done signing..")
+    #sign takes no additional argument since we already gave the verifier object (included the LHS = the actual Pedersen commitment to the signer)
+
+    if verify_signature(A,e,s2+s1, w, generators, henerators[0], messages) :
+        print ("Signature verified!")
+
+    
+    
+
+
+
+
+class Signed:
+    def __init__(self):
+        self.A = 0
+        self.e
+        self.same
 
 
 class SignatureProof(Proof):
@@ -21,6 +113,10 @@ class SignatureProver(Prover):
 
     def commit(self):
         return self.andp.commit()
+
+
+
+        
 
 """A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
 It uses group pairings, DLRep and And Proofs."""
