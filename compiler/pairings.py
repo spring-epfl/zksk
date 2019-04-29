@@ -17,13 +17,19 @@ def test():
     True
 
     We define the PairablePoint class which overrides G1 and G2 points in such a way that pt.group actually returns the G1/G2 groups and not the GT:
-    >>> G.gen1().group == G, mG.gen1().group == mG
-    (True, False)
-    >>> mG.gen1().group, mG.groups()[0]
+    >>> G.gen1().group == G
+    True
+    >>> mG.gen1().group == mG
+    Traceback (most recent call last):
+        ...
+    Exception: Comparison between different group types
+    >>> mG.gen1().group == mG.groups()[0]
     True
     
     Also, these points allow internal pair
-    >>> G.pair(G.gen1(), G.gen2()) == gmg[0].pair(gmg[1]).pt
+    >>> G.pair(G.gen1(), G.gen2()) == gmg.pt
+    True
+    >>> mG.gen1().pair(mG.gen2()) == gmg
     True
 
 
@@ -49,13 +55,15 @@ def test():
     We also derive G1 and G2 groups from GT
     >>> G1, G2 = mG.groups()
     >>> g1, g2 = G1.generator(), G2.generator()
-    >>> G1.infinite() == G.gen1().inf(G)
+    >>> G1.infinite().pt == G.gen1().inf(G)
+    True
+    >>> G1.infinite() == PairablePoint(G.gen1().inf(G),1)
     True
     >>> g1*0 ==G1.infinite()
     True
     >>> g1*0 == g1*G.order()
     True
-    >>> G2.infinite() == G.gen2().inf(G)
+    >>> G2.infinite().pt == G.gen2().inf(G)
     True
     >>> g2*0 == G2.infinite()
     True
@@ -68,9 +76,11 @@ def test():
 class MyGTGroup:
     """
     A wrapper for the GT group such that it creates additive points and allows to retrieve groups G1 and G2.
+    The group ID is set to 0 to allow comparisons between groups of different types to raise an explicit Exception.
     """
     def __init__(self, bp):
         self.bp = bp
+        self.id = 0
 
     def groups(self):
         return MyG1Group(self.bp), MyG2Group(self.bp)
@@ -129,7 +139,10 @@ class PairablePoint:
         self.group_id = idg
         self.gtgroup = MyGTGroup(self.pt.group)
         self.group = self.gtgroup.groups()[self.group_id-1]
+
     
+    def __eq__(self, other):
+        return self.pt == other.pt
     
     def __add__(other):
         return PairablePoint(self.pt+other.pt, self.group_id)
@@ -146,7 +159,7 @@ class PairablePoint:
     __rmul__ = __mul__
 
     def pair(self, other):
-        return AdditivePoint(self.pt.group.pair(self, other))
+        return AdditivePoint(self.pt.group.pair(self.pt, other.pt))
 
 
 
@@ -162,10 +175,15 @@ class MyG1Group:
         return PairablePoint(self.bp.gen1(), self.id)
 
     def infinite(self):
-        return PairablePoint(self.generator().inf(self.bp), self.id)
+        return PairablePoint(self.generator().pt.inf(self.bp), self.id)
 
     def order(self):
         return self.bp.order()
+
+    def __eq__(self, other):
+        if self.id != other.id:
+            raise Exception("Comparison between different group types")
+        return self.bp == other.bp and self.generator() == other.generator() and self.order() == other.order()
 
 class MyG2Group:
     """
@@ -179,10 +197,15 @@ class MyG2Group:
         return PairablePoint(self.bp.gen2(), self.id)
 
     def infinite(self):
-        return PairablePoint(self.generator().inf(self.bp), self.id)
+        return PairablePoint(self.generator().pt.inf(self.bp), self.id)
 
     def order(self):
         return self.bp.order()
+
+    def __eq__(self, other):
+        if self.id != other.id:
+            raise Exception("Comparison between different group types")
+        return self.bp == other.bp and self.generator() == other.generator() and self.order() == other.order()
         
 
 if __name__ == "__main__":
