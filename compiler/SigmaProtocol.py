@@ -7,6 +7,8 @@ import binascii
 import pdb
 from hashlib import sha256
 from collections import defaultdict
+from pairings import *
+import msgpack
 
 CHAL_LENGTH = Bn(128)
 
@@ -77,7 +79,7 @@ class Prover:
         pass
 
     def get_NI_proof(
-            self, message=''
+            self, message='', encoding=None
     ):  
         """ Non-interactive proof 
         :param message: a string message.
@@ -85,11 +87,11 @@ class Prover:
         """
         commitment = self.commit()
         message = message.encode()
-        protocol = encode(self.get_proof_id())
+        protocol = encode(self.get_proof_id(), encoding)
 
         # Computing the challenge
         conc = protocol
-        conc += encode(commitment)
+        conc += encode(commitment, encoding)
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
@@ -130,7 +132,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             raise Exception("Responses for a same secret name do not match!")
         return (commitment == self.proof.recompute_commitment(challenge, response) )
 
-    def verify_NI(self, challenge, response, message=''):
+    def verify_NI(self, challenge, response, message='', encoding=None):
         """
         verification for the non interactive proof
         :param challenge: the challenge a petlib.bn.Bn instance computed from get_NI_proof method
@@ -141,10 +143,10 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         if self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
-        protocol = encode(self.get_proof_id())
+        protocol = encode(self.get_proof_id(), encoding)
         r_guess = self.proof.recompute_commitment(challenge, response)  #We retrieve the commitment using the verification identity
         conc = protocol
-        conc += encode(r_guess)
+        conc += encode(r_guess, encoding)
         conc += message
         myhash = sha256(conc).digest()
         return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
@@ -216,4 +218,9 @@ def add_Bn_array(arr, modulus):
             elem = Bn(elem)
         res = res.mod_add(elem, modulus)
     return res
+
+def enc_GXpt(obj):
+    if isinstance(obj, PairablePoint) or isinstance(obj, AdditivePoint):
+        return msgpack.ExtType(10, b'')
+
 

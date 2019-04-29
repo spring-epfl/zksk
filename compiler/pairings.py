@@ -1,5 +1,4 @@
 from bplib.bp import BpGroup, G1Elem, G2Elem, GTElem
-from SigmaProtocol import *
 
 def test():
     """
@@ -144,7 +143,7 @@ class PairablePoint:
     def __eq__(self, other):
         return self.pt == other.pt
     
-    def __add__(other):
+    def __add__(self, other):
         return PairablePoint(self.pt+other.pt, self.group_id)
 
     def __mul__(self, nb):

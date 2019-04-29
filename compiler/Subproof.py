@@ -1,5 +1,7 @@
 from petlib.ec import EcPt
 from petlib.bn import Bn
+from functools import reduce
+import pdb
 
 class RightSide:
     """
@@ -14,8 +16,8 @@ class RightSide:
         :param secret: of type Secret
         :param ecPt: of type petlib.ec.EcPt
         """
-        if not isinstance(secret, Secret) or not isinstance(ecPt, EcPt):
-            raise Exception("in {0} * {1}, the first parameter should be a string (the secret name), and the second parameter should be an elliptic curve point".format(secret, ecPt))
+        if not isinstance(secret, Secret):
+            raise Exception("in {0} * {1}, the first parameter should be a string ".format(secret, ecPt))
         self.secrets = [secret]
         self.pts = [ecPt]
     def __add__(self, other):
@@ -64,8 +66,6 @@ class Secret:
         :param ecPt: an instance of petlib.ec.EcPt
         :return: a RightSide fresh instance abstracting the multiplication between this Secret and ecPt
         """
-        if not isinstance(ecPt, EcPt):
-            raise Exception("parameter should be an elliptic curve point", ecPt)
         return RightSide(self, ecPt)
 
 
@@ -74,6 +74,7 @@ def create_rhs(secrets_names, generators):
 
 def create_lhs(generators, secrets):
     sum_ = generators[0].group.infinite()
+
     for i in range(len(generators)):
         sum_ = sum_ + secrets[i] * generators[i]
     return sum_
