@@ -1,4 +1,4 @@
-from functools import reduce
+
 
 import os, sys
 
@@ -9,7 +9,8 @@ sys.path.append(src_code_path)
 from DLRep import *
 from Subproof import *
 from CompositionProofs import *
-
+from pairings import *
+from template_signature import *
 import pytest
 
 N = 5
@@ -537,3 +538,14 @@ def test_malicious_and_proofs():
     resp = prov.compute_response(chal)
     with pytest.raises(Exception):
         v = verif.verify(resp)
+
+def test_signature_setup():
+    mG = MyGTGroup(BpGroup())
+    g,h = mG.gen1(), mG.gen2()
+    w = [mG.order().random() for i in range(5)]
+    generators = [g*k for k in w]
+    henerators = [h*k for k in w]
+    messages = [Bn(30), Bn(31), Bn(32)]
+    signer = Signer(generators, henerators)
+    assert sign_and_verify(messages, signer)
+
