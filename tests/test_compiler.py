@@ -540,9 +540,9 @@ def test_malicious_and_proofs():
         v = verif.verify(resp)
 
 def test_signature_setup():
-    mG = MyGTGroup(BpGroup())
-    g,h = mG.gen1(), mG.gen2()
-    w = [mG.order().random() for i in range(5)]
+    mG =BilinearGroupPair()
+    g,h = mG.G1.generator(), mG.G2.generator()
+    w = [mG.G1.order().random() for i in range(5)]
     generators = [g*k for k in w]
     henerators = [h*k for k in w]
     messages = [Bn(30), Bn(31), Bn(32)]

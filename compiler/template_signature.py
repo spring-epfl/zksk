@@ -12,7 +12,7 @@ class Signer:
         self.h0 = henerators[0]
         self.group = self.h0.group
         self.gamma = 0
-        keyGen()
+        self.keyGen()
     
     def keyGen(self):
         self.gamma = self.h0.group.order().random()

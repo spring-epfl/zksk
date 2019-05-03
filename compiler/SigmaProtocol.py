@@ -220,7 +220,7 @@ def add_Bn_array(arr, modulus):
     return res
 
 def enc_GXpt(obj):
-    if isinstance(obj, PairablePoint) or isinstance(obj, AdditivePoint):
+    if isinstance(obj, G1Point) or isinstance(obj, AdditivePoint) or isinstance(obj, G2Point):
         return msgpack.ExtType(10, b'')
 
 
