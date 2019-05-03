@@ -27,9 +27,9 @@ def test():
     True
 
     We define the AdditivePoint class which defines GT points additively:
-    >>> gmg == AdditivePoint(g)
+    >>> gmg == AdditivePoint(g, m)
     True
-    >>> AdditivePoint(g**(g.group.order())) == mG.infinite()
+    >>> AdditivePoint(g**(g.group.order()), m) == mG.infinite()
     True
 
     I.e it overrides the multiplicative syntax of Bplib GT points by an additive one
@@ -41,7 +41,7 @@ def test():
     True
     >>> g1.export() == g1mg.export()
     True
-    >>> g1.group == g1mg.group.bp
+    >>> g1.group == g1mg.bp.bpgp
     True
 
 
@@ -50,7 +50,7 @@ def test():
     >>> g1, g2 = G1.generator(), G2.generator()
     >>> G1.infinite().pt == G.gen1().inf(G)
     True
-    >>> G1.infinite() == G1Point(G.gen1().inf(G))
+    >>> G1.infinite() == G1Point(G.gen1().inf(G), m)
     True
     >>> g1*0 ==G1.infinite()
     True
@@ -67,9 +67,10 @@ def test():
 
 class BilinearGroupPair:
     def __init__(self):
-        self.GT = GTGroup(BpGroup())
-        self.G1 = G1Group(self.GT.bp)
-        self.G2 = G2Group(self.GT.bp)
+        self.bpgp = BpGroup()
+        self.GT = GTGroup(self)
+        self.G1 = G1Group(self)
+        self.G2 = G2Group(self)
 
     def groups(self):
         """
@@ -90,15 +91,15 @@ class GTGroup:
 
     def infinite(self):
         if self.inf is None:
-            self.inf = AdditivePoint(self.generator().pt.one(self.bp))
+            self.inf = AdditivePoint(self.generator().pt.one(self.bp.bpgp), self.bp)
         return self.inf
 
     def order(self):
-        return self.bp.order()
+        return self.bp.bpgp.order()
 
     def generator(self):
         if self.gen is None:
-            self.gen = AdditivePoint(self.bp.pair(self.bp.gen1(), self.bp.gen2()))
+            self.gen = self.bp.G1.generator().pair(self.bp.G2.generator())
         return self.gen
         
 
@@ -106,9 +107,10 @@ class AdditivePoint:
     """
     A wrapper for GT points so they use additive notation.
     """
-    def __init__(self, pt):
+    def __init__(self, pt, bp):
         self.pt = pt
-        self.group = GTGroup(self.pt.group)
+        self.bp = bp
+        self.group = self.bp.GT
 
     def export(self, form=0):
         return self.pt.export(form) if form else self.pt.export()
@@ -119,14 +121,14 @@ class AdditivePoint:
         Special case in 0 since the underlying bplib function is broken for this value.
         """
         if nb == 0:
-            return AdditivePoint(self.pt/self.pt)
-        return AdditivePoint(self.pt**nb)
+            return AdditivePoint(self.pt/self.pt, self.bp)
+        return AdditivePoint(self.pt**nb, self.bp)
 
     def __eq__(self, other):
         return self.pt == other.pt
 
     def __add__(self, other):
-        return AdditivePoint(self.pt*(other.pt))
+        return AdditivePoint(self.pt*(other.pt), self.bp)
 
     __rmul__=__mul__
 
@@ -134,23 +136,20 @@ class G1Point:
     """
     A wrapper for G1 points so they can be paired with a G2 point by pt.pair(other)
     """
-    def __init__(self, ecpt):
-        """
-        TODO : decide if self.group returns the GT group or the G1 (or G2) group. If the latter, decide how to determine G1/G2
-        """
+    def __init__(self, ecpt, bpairing):
         self.pt = ecpt
-        self.GT = GTGroup(self.pt.group)
-        self.group = G1Group(self.GT.bp)
+        self.bp = bpairing
+        self.group = self.bp.G1
 
     
     def __eq__(self, other):
         return self.pt == other.pt
     
     def __add__(self, other):
-        return G1Point(self.pt+other.pt)
+        return G1Point(self.pt+other.pt, self.bp)
 
     def __mul__(self, nb):
-        return G1Point(self.pt*nb)
+        return G1Point(self.pt*nb, self.bp)
     
     def export(self, form=0):
         return self.pt.export(form) if form else self.pt.export()
@@ -161,29 +160,26 @@ class G1Point:
     __rmul__ = __mul__
 
     def pair(self, other):
-        return AdditivePoint(self.group.bp.pair(self.pt, other.pt))
+        return AdditivePoint(self.bp.bpgp.pair(self.pt, other.pt), self.bp)
 
 class G2Point:
     """
     A wrapper for G2 points
     """
-    def __init__(self, ecpt):
-        """
-        TODO : decide if self.group returns the GT group or the G1 (or G2) group. If the latter, decide how to determine G1/G2
-        """
+    def __init__(self, ecpt, bpairing):
         self.pt = ecpt
-        self.GT = GTGroup(self.pt.group)
-        self.group = G2Group(self.GT.bp)
+        self.bp = bpairing
+        self.group = self.bp.G2
 
     
     def __eq__(self, other):
         return self.pt == other.pt
     
     def __add__(self, other):
-        return G2Point(self.pt+other.pt)
+        return G2Point(self.pt+other.pt, self.bp)
 
     def __mul__(self, nb):
-        return G2Point(self.pt*nb)
+        return G2Point(self.pt*nb, self.bp)
     
     def export(self, form=0):
         return self.pt.export(form) if form else self.pt.export()
@@ -197,49 +193,49 @@ class G1Group:
     """
     A wrapper for the G1 (behaving like an EcGroup) group. Group ID is 1 for G1.
     """
-    def __init__(self, bp):
+    def __init__(self, bp:BilinearGroupPair):
         self.bp = bp
         self.gen = None
         self.inf = None
 
     def generator(self):
         if self.gen is None:
-            self.gen = G1Point(self.bp.gen1())
+            self.gen = G1Point(self.bp.bpgp.gen1(), self.bp)
         return self.gen
 
     def infinite(self):
         if self.inf is None:
-            self.inf = G1Point(self.generator().pt.inf(self.bp))
+            self.inf = G1Point(self.generator().pt.inf(self.bp.bpgp), self.bp)
         return self.inf
 
     def order(self):
-        return self.bp.order()
+        return self.bp.bpgp.order()
 
     def __eq__(self, other):
-        return self.bp == other.bp and self.__class__ == other.__class__
+        return self.bp.bpgp == other.bp.bpgp and self.__class__ == other.__class__
 
 class G2Group:
     """
     A wrapper for the G2 group. Group ID is 2.
     """
-    def __init__(self, bp):
+    def __init__(self, bp:BilinearGroupPair):
         self.bp = bp
         self.gen = None
         self.inf = None
 
     def generator(self):
         if self.gen is None:
-            self.gen = G2Point(self.bp.gen2())
+            self.gen = G2Point(self.bp.bpgp.gen2(), self.bp)
         return self.gen
 
 
     def infinite(self):
         if self.inf is None:
-            self.inf = G2Point(self.generator().pt.inf(self.bp))
+            self.inf = G2Point(self.generator().pt.inf(self.bp.bpgp), self.bp)
         return self.inf
 
     def order(self):
-        return self.bp.order()
+        return self.bp.bpgp.order()
 
 
 if __name__ == "__main__":
