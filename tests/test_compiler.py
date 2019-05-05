@@ -545,7 +545,9 @@ def test_signature_setup():
     w = [mG.G1.order().random() for i in range(5)]
     generators = [g*k for k in w]
     henerators = [h*k for k in w]
+    keypair = gen_keys(generators, henerators)
     messages = [Bn(30), Bn(31), Bn(32)]
-    signer = Signer(generators, henerators)
-    assert sign_and_verify(messages, signer)
+    assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
+
+
 

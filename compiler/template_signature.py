@@ -5,34 +5,64 @@ from SigmaProtocol import *
 from pairings import *
 import pdb
 
-class Signer:
-    def __init__(self, generators, henerators):
+
+
+class Signature:
+    def __init__(self, A, e, s):
+        self.A = A
+        self.e = e
+        self.s = s
+
+
+class PublicKey:
+    def __init__(self, w, g, h):
+        self.w = w
+        self.generators = g
+        self.henerators = h
+        self.h0 = self.henerators[0]
+
+    def verify_signature(self, A,e,s, messages):
+        product = self.generators[0] + create_lhs(self.generators[1:], [s]+messages)
+        return A.pair(self.w+e*self.h0) == product.pair(self.h0)
+
+
+
+
+class KeyPair:
+    def __init__(self, g, h):
+        self.sk = SecretKey(h[0].group.order().random(), g, h)
+        self.pk = PublicKey(self.sk.gamma*h[0], g, h)
+        self.generators = g
+        self.henerators = h
+
+def gen_keys(g, h):
+    """
+    Generates a public key and the associated secret key with respect to a base h0 and returns them.
+    """
+    kp = KeyPair(g, h)
+    return kp
+
+class SecretKey:
+    def __init__(self, value, generators, henerators):
         self.generators = generators
         self.henerators = henerators
         self.h0 = henerators[0]
         self.group = self.h0.group
-        self.gamma = 0
-        self.keyGen()
-    
-    def keyGen(self):
-        self.gamma = self.h0.group.order().random()
-        self.w = self.gamma*self.h0
+        self.gamma = value
 
-    def sign(self):
+    def sign(self, cmessages):
         """
         Signs a committed message Cm ie returns A,e,s such that A = (g0 + s*g1 + Cm) * 1/e+gamma
-        >>> G = MyGTGroup()
-        >>> gens = [2,3,4]*G.gen1()
-        >>> hens = [2,3,4]*G.gen2()
-        >>> s = Signer(gens, hens)
-        >>> s.verifier.lhs = 12*gens[1]
+        >>> G = BilinearGroupPair()
+        >>> gens = [2,3,4]*G.G1.generator()
+        >>> hens = [2,3,4]*G.G2.generator()
+        >>> pk, sk = gen_keys(gens, hens)
+
         >>> A,e,s2 = s.sign()
         >>> (e + s.gamma)*A == self.verifier.lhs
         True
         """
-        if self.gamma == 0:
-            self.keyGen()
-        pedersen_product = self.verifier.lhs
+        pedersen_product = cmessages
         e = self.group.order().random()
         s2 = self.group.order().random()
         prod = self.generators[0]+s2*self.generators[1]+pedersen_product
@@ -40,45 +70,49 @@ class Signer:
         return A,e,s2
 
 
-def user_commit(messages, generators):
+def user_commit(messages, generators, to_sign):
     """
     Prepare a pedersen commitment for the correct construction of the sequence to be signed.
     Returns a non-interactive proof as well as a verifier object able to verify the said proof.
     """
-    #Test the generator length to see if we were passed g0 (power 1)
-    if len(generators)==len(messages)+2:
-        generators = generators[1:]
     s1 = generators[0].group.order().random()
+    cmessages = s1*generators[1]+ to_sign
+
     #define secret names as s' m1 m2 ...mL
     names = ["s'"] + ["m"+str(i+1) for i in range(len(messages))] 
     secrets = [s1] + messages
 
-    pedersen_proof = DLRepProof(create_lhs(generators, secrets), create_rhs(names, generators))
+    pedersen_proof = DLRepProof(cmessages, create_rhs(names, generators))
     pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
-    return pedersen_prover.get_NI_proof(encoding=enc_GXpt), pedersen_proof.get_verifier(), s1
+    return pedersen_prover.get_NI_proof(encoding=enc_GXpt), pedersen_proof.get_verifier(), s1, cmessages
 
-def verify_signature(A,e,s, w, generators, h0, messages):
-    product = generators[0] + create_lhs(generators[1:], [s]+messages)
-    return A.pair(w+e*h0) == product.pair(h0)
+
     
-def sign_and_verify(messages, signer:Signer):
+def sign_and_verify(messages, keypair, zkp=0):
     """
     Wrapper method which given a set of generators and messages, performs the whole protocol from the key generation to the signature verification.
     """
-    generators, h0 = signer.generators, signer.h0
-    pedersen_NI, signer.verifier, s1 = user_commit(messages, generators)
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+    s1 = Bn(0)
+    to_sign = create_lhs(generators[2:], messages)
 
-    #verification is done on the signer side. can be moved in Signer.sign()
-    if signer.verifier.verify_NI(*pedersen_NI, encoding=enc_GXpt):
-        print("Pedersen commitment verified on the signer side. Signing...")
+    if zkp:
+        """
+        If we require proof of correct construction, we should add a shadowing term. To avoid recomputing the whole sequence we pass what we
+        already have and will add the shadowing term in user_commit
+        """
+        pedersen_NI, verifier, s1, to_sign = user_commit(messages, generators, to_sign)
+        #verification is done on the signer side. can be moved in sk.sign()
+        if verifier.verify_NI(*pedersen_NI, encoding=enc_GXpt):
+            print("Pedersen commitment verified on the signer side.")
+    print("Signing...")
     
-    w = signer.w
-    A,e,s2 = signer.sign()
+    A,e,s2 = sk.sign(to_sign)
     print("Done signing..")
     s = s1+s2
-    #sign takes no additional argument since we already gave the verifier object (included the LHS = the actual Pedersen commitment to the signer)
 
-    if verify_signature(A,e,s, w, generators, h0, messages) :
+    if pk.verify_signature(A,e,s, messages) :
         print ("Signature verified!")
         return True
     return False
@@ -87,14 +121,14 @@ class SignatureProof(Proof):
     """
     Proof of knowledge of a (A,e,s) signature over a set of messages.
     """
-    def __init__(self, signer:Signer):
+    def __init__(self, pk, sk):
         """
         Instantiates a Signature Proof which is an enhanced version of AndProof allowing to access additional parameters
         """
         #preprocess all is needed for the signature PK
-        self.generators = signer.generators
-        self.h0 = signer.h0
-        self.w = signer.w
+        self.generators = pk.generators
+        self.h0 = pk.h0
+        self.w = pk.w
 
 
 
