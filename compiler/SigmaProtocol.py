@@ -70,7 +70,7 @@ class Prover:
     
 
     def get_proof_id(self):
-        """:return: a descriptor of the Proof with the protocol name and the public info. 
+        """:return: a descriptor of the Proof with the protocol name and the public info (generators, LHS). 
         Does NOT contain the secrets' names.
         """
         return self.proof.get_proof_id()

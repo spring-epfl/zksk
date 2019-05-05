@@ -69,6 +69,14 @@ class SecretKey:
         A = (self.gamma+e).mod_inverse(self.group.order())*prod
         return Signature(A,e,s2)
 
+    def verify_proof(self, NIproof, lhs):
+        """
+        Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
+        verify the non-interactive proof passed as argument.
+        """
+        secret_names = ["s1"] + ["m"+str(i+1)for i in range (len(self.generators)-2)]
+        proof = DLRepProof(lhs, create_rhs(secret_names, self.generators[1:]))
+        return proof.get_verifier().verify_NI(*NIproof, encoding=enc_GXpt)
 
 def user_commit(messages, generators, to_sign):
     """
@@ -104,8 +112,8 @@ def sign_and_verify(messages, keypair, zkp=0):
         """
         pedersen_NI, verifier, s1, to_sign = user_commit(messages, generators, to_sign)
         #verification is done on the signer side. can be moved in sk.sign()
-        if verifier.verify_NI(*pedersen_NI, encoding=enc_GXpt):
-            print("Pedersen commitment verified on the signer side.")
+        if sk.verify_proof(pedersen_NI, to_sign):
+            print("Pedersen commitment verified on the secret key side.")
     print("Signing...")
     
     signature = sk.sign(to_sign)
