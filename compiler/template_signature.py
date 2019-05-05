@@ -21,9 +21,9 @@ class PublicKey:
         self.henerators = h
         self.h0 = self.henerators[0]
 
-    def verify_signature(self, A,e,s, messages):
-        product = self.generators[0] + create_lhs(self.generators[1:], [s]+messages)
-        return A.pair(self.w+e*self.h0) == product.pair(self.h0)
+    def verify_signature(self, signature, messages):
+        product = self.generators[0] + create_lhs(self.generators[1:], [signature.s]+messages)
+        return signature.A.pair(self.w+signature.e*self.h0) == product.pair(self.h0)
 
 
 
@@ -67,7 +67,7 @@ class SecretKey:
         s2 = self.group.order().random()
         prod = self.generators[0]+s2*self.generators[1]+pedersen_product
         A = (self.gamma+e).mod_inverse(self.group.order())*prod
-        return A,e,s2
+        return Signature(A,e,s2)
 
 
 def user_commit(messages, generators, to_sign):
@@ -108,11 +108,13 @@ def sign_and_verify(messages, keypair, zkp=0):
             print("Pedersen commitment verified on the signer side.")
     print("Signing...")
     
-    A,e,s2 = sk.sign(to_sign)
+    signature = sk.sign(to_sign)
     print("Done signing..")
-    s = s1+s2
 
-    if pk.verify_signature(A,e,s, messages) :
+    # Updating the signature exponent (unchanged if no shadowing term)
+    signature.s = s1+signature.s
+
+    if pk.verify_signature(signature, messages) :
         print ("Signature verified!")
         return True
     return False
