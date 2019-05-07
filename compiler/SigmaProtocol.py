@@ -117,8 +117,9 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
 
     def verify(
             self, response, commitment=None,
-            challenge=None):  #Can verify simulations with optional arguments
+            challenge=None): 
         """
+        Can verify simulations with optional arguments.
         verifies this proof
         :param response: the response given by the prover
         :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response

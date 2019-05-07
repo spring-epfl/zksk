@@ -141,7 +141,7 @@ class DLRepProof(Proof):
     for the sake of having an example say we want to create the proof PK{(x1, x2): y = x1 * g1 + x2 * g2}
     """
 
-    def __init__(self, lhs, rightSide, additional=None):
+    def __init__(self, lhs, rightSide):
         """
         :param rightSide: an instance of the 'RightSide' class. For the previous example 'rightSide' would be: Secret("x1") * g1 + Secret("x2") * g2. Here gi-s are instances of petlib.ec.EcPt
         :param lhs: an instance of petlib.ec.EcPt. The prover has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
@@ -161,15 +161,6 @@ class DLRepProof(Proof):
         :param generators: a list of petlib.ec.EcPt
         :secret_names: a list of strings equal to the names of the secrets
         """
-        if not isinstance(generators, list):  # we have a single generator
-            raise Exception("generators must be a list of generators values")
-
-        if isinstance(generators, list) and len(generators) == 0:
-            raise Exception(
-                "A list of generators must be of length at least one.")
-
-        if not isinstance(secret_names, list):
-            raise Exception("secret_names must be a list of secrets names")
 
         if len(secret_names) != len(generators):
             raise Exception(
@@ -244,7 +235,4 @@ class DLRepProof(Proof):
 
         leftside = raise_powers(self.generators, responses) + (-challenge) * self.lhs
         return leftside
-
-    def set_simulate(self):
-        self.simulate = True
 

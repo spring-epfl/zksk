@@ -11,6 +11,7 @@ from Subproof import *
 from CompositionProofs import *
 from pairings import *
 from template_signature import *
+from template_BLAC import *
 import pytest
 
 N = 5
@@ -550,4 +551,29 @@ def test_signature_setup():
     assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
 
 
-
+def test_BLAC():
+    pr= InequalityProof()
+    G = EcGroup()
+    g = G.generator()
+    x = 3
+    y = x*g
+    y2 = 397474*g
+    g2 = 1397*g
+    pr.initialize([y, y2], [g, g2], "x")
+    secret_dict = {"x":3}
+    prov = pr.get_prover(secret_dict)
+    commitment = prov.commit()
+    ver = pr.get_verifier()
+from template_BLAC import *
+pr= InequalityProof()
+G = EcGroup()
+g = G.generator()
+x = 3
+y = x*g
+y2 = 397474*g
+g2 = 1397*g
+pr.initialize([y, y2], [g, g2], "x")
+secret_dict = {"x":3}
+prov = pr.get_prover(secret_dict)
+commitment = prov.commit()
+ver = pr.get_verifier()

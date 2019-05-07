@@ -40,6 +40,10 @@ class Proof:
         if the proof was correct. To compare to the actual commitment"""
         pass
 
+    
+    def set_simulate(self):
+        self.simulate = True
+
 
 class OrProof(Proof):  
     def __init__(self, *subproofs):
@@ -133,9 +137,6 @@ class OrProof(Proof):
 
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
-
-    def set_simulate(self):
-        self.simulate = True
 
 
 
@@ -394,9 +395,6 @@ class AndProof(Proof):
 
     def get_proof_id(self):
         return ["And", [sub.get_proof_id() for sub in self.subproofs]]
-
-    def set_simulate(self):
-        self.simulate = True
         
     def check_or_flaw(self, forbidden_secrets= None): 
         """ Checks for appearance of reoccuring secrets inside and outside an Or Proof
