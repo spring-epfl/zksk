@@ -258,7 +258,7 @@ class OrVerifier(Verifier):
     def check_responses_consistency(self, responses, responses_dict={}):
         """ In an Or Proof, we don't require responses consistency.
         """
-        return 0
+        return True
     
 
 
@@ -325,8 +325,9 @@ class AndProofVerifier(Verifier):
         If an inconsistency if found during this build, an error code is returned.
         """
         for i in range(len(self.subs)):
-            if self.subs[i].check_responses_consistency(responses[i], responses_dict):
-                return 1
+            if not self.subs[i].check_responses_consistency(responses[i], responses_dict):
+                return False
+        return True
             
 
 

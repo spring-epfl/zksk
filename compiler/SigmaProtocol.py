@@ -129,7 +129,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-        if self.check_responses_consistency(response, {}):
+        if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
         return (commitment == self.proof.recompute_commitment(challenge, response) )
 
@@ -141,7 +141,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :return: a boolean telling if the proof is verified
         """
         self.response = response
-        if self.check_responses_consistency(response, {}):
+        if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
         protocol = encode(self.get_proof_id(), encoding)

@@ -552,7 +552,7 @@ def test_signature_setup():
 
 
 def test_BLAC():
-    pr= InequalityProof()
+    pr= DLRepNotEqualProof()
     G = EcGroup()
     g = G.generator()
     x = 3
@@ -564,16 +564,6 @@ def test_BLAC():
     prov = pr.get_prover(secret_dict)
     commitment = prov.commit()
     ver = pr.get_verifier()
-from template_BLAC import *
-pr= InequalityProof()
-G = EcGroup()
-g = G.generator()
-x = 3
-y = x*g
-y2 = 397474*g
-g2 = 1397*g
-pr.initialize([y, y2], [g, g2], "x")
-secret_dict = {"x":3}
-prov = pr.get_prover(secret_dict)
-commitment = prov.commit()
-ver = pr.get_verifier()
+    chal = ver.send_challenge(commitment)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)
