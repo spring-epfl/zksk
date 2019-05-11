@@ -275,7 +275,11 @@ class AndProofProver(Prover):
     def get_randomizers(self) -> dict: 
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
         random_vals = {}
-        {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
+        dict_name_gen = dict(zip(self.secret_names, self.generators))
+        name_set = set(self.secret_names)
+        for u in name_set:
+            random_vals[u] = dict_name_gen[u].group.order().random()
+        # old:{random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
@@ -376,14 +380,14 @@ class AndProof(Proof):
             print('Can only simulate')
             return get_simulator()
         def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secret_names.copy())
+            keys = set(sub_proof.secret_names)
             secrets_for_prover = []
             for s_name in secrets_dict:
                 if s_name in keys:
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
             return sub_proof.get_prover(dict(secrets_for_prover))
-
-        return AndProofProver(self, [sub_proof_prover(sub_proof) for sub_proof in self.subproofs], secrets_dict)
+        andp= AndProofProver(self, [sub_proof_prover(sub_proof) for sub_proof in self.subproofs], secrets_dict)
+        return andp 
 
     def get_verifier(self):
         return AndProofVerifier(self, [subp.get_verifier() for subp in self.subproofs])

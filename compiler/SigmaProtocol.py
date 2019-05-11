@@ -192,14 +192,14 @@ def check_groups(
 
 #Useful for several proofs :
 
-def chal_randbits(bitlength):
+def chal_randbits(bitlength=CHAL_LENGTH):
     maxi = Bn(2).pow(bitlength)
     return maxi.random()
 
 
 def get_secret_names(sub_list):
     secrets = []
-    [secrets.extend(elem.secret_names.copy()) for elem in sub_list]
+    [secrets.extend(elem.secret_names) for elem in sub_list]
     return secrets
 
 def get_generators(sub_list):

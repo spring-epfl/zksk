@@ -13,6 +13,7 @@ from pairings import *
 from template_signature import *
 from template_BLAC import *
 import pytest
+import pdb
 
 N = 5
 G = EcGroup(713)
@@ -31,12 +32,7 @@ for wurd in secrets_aliases:  # we build N secrets
     secret_tab.append(secrets_values[wurd])
     # peggy wishes to prove she knows the discrete logarithm equal to this value
 
-powers = [a * b for a, b in zip(secret_tab, tab_g)
-          ]  # The Ys of which we will prove logarithm knowledge
-lhs = G.infinite()
-for y in powers:
-    lhs += y
-
+lhs = create_lhs(tab_g, secret_tab)
 
 def create_rhs(secrets_names, generators):
     return reduce(lambda x1, x2: x1 + x2, map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)))
@@ -552,14 +548,14 @@ def test_signature_setup():
 
 
 def test_BLAC():
-    pr= DLRepNotEqualProof()
     G = EcGroup()
     g = G.generator()
     x = 3
     y = x*g
     y2 = 397474*g
     g2 = 1397*g
-    pr.initialize([y, y2], [g, g2], "x")
+
+    pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"])
     secret_dict = {"x":3}
     prov = pr.get_prover(secret_dict)
     commitment = prov.commit()
@@ -567,3 +563,49 @@ def test_BLAC():
     chal = ver.send_challenge(commitment)
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
+
+def test_false_BLAC():
+    G = EcGroup()
+    g = G.generator()
+    x = 3
+    y = x*g
+    g2 = 1397*g
+    y2 = 3*g2
+    
+    pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"])
+    secret_dict = {"x":3}
+    prov = pr.get_prover(secret_dict)
+    commitment = prov.commit()
+    ver = pr.get_verifier()
+    chal = ver.send_challenge(commitment)
+    resp = prov.compute_response(chal)
+    assert not ver.verify(resp)
+
+
+
+def test_and_BLAC():
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
+    pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]])
+
+    andp = pr1 & pr2
+
+    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+    assert prot.run()
+
+
+def test_not_and_BLAC():
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[1]*tab_g[3]
+
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
+    pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]])
+    andp = pr1 & pr2
+
+    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+    assert not prot.run()
+
+
+def test_BLAC_NI():
+    pass
+
