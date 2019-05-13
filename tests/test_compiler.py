@@ -546,7 +546,6 @@ def test_signature_setup():
     messages = [Bn(30), Bn(31), Bn(32)]
     assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
 
-
 def test_BLAC():
     G = EcGroup()
     g = G.generator()
@@ -555,7 +554,7 @@ def test_BLAC():
     y2 = 397474*g
     g2 = 1397*g
 
-    pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"])
+    pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
     secret_dict = {"x":3}
     prov = pr.get_prover(secret_dict)
     commitment = prov.commit()
@@ -564,7 +563,7 @@ def test_BLAC():
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
 
-def test_false_BLAC():
+def test_false_BLAC1():
     G = EcGroup()
     g = G.generator()
     x = 3
@@ -581,18 +580,81 @@ def test_false_BLAC():
     resp = prov.compute_response(chal)
     assert not ver.verify(resp)
 
-
-
 def test_and_BLAC():
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
-    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
     pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]])
+
+    andp = pr1 & pr2
+    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+    assert prot.run()
+
+def test_and_BLAC_binding1():
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2 = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0])*tab_g[0])
 
     andp = pr1 & pr2
 
     prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
     assert prot.run()
 
+
+def test_and_BLAC_not_binding():
+    #Prove (H0 = h0*x, H1 != h1*x) , H2 = h2*x with same secret name x. should not be detected since binding=False by default.
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2]*tab_g[3]
+
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
+    pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
+    andp = pr1 & pr2
+    prov = andp.get_prover(secrets_values)
+    prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[2]
+    
+    prot = SigmaProtocol(andp.get_verifier(), prov)
+    assert prot.run()
+
+    
+def test_and_BLAC_binding2():
+    #Prove (H0 = h0*x, H1 != h1*x) , H2 = h2*x with same secret name x. should be detected since binding=True.
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2]*tab_g[3]
+
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
+    andp = pr1 & pr2
+    prov = andp.get_prover(secrets_values)
+    prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[2]
+    ver = andp.get_verifier()
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    with pytest.raises(Exception):
+        ver.verify(resp)
+
+
+"""
+def test_not_and_BLAC_binding():
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2]*tab_g[3]
+
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True)
+    andp = pr1 & pr2
+
+    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+    assert not prot.run()
+
+def test_and_BLAC_false_binding():
+    lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
+
+    andp = pr1 & pr2
+    prov = andp.get_prover(secrets_values)
+
+    prot = SigmaProtocol(andp.get_verifier(), prov)
+    assert prot.run()
 
 def test_not_and_BLAC():
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
@@ -609,3 +671,4 @@ def test_not_and_BLAC():
 def test_BLAC_NI():
     pass
 
+ """

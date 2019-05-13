@@ -65,14 +65,21 @@ class DLRepProver(Prover):
         :return: a single commitment (of type petlib.ec.EcPt) for the whole proof
         """
 
-        if self.secret_values == {} : #We check we are not a strawman prover
+        if self.secret_values == {} : 
+            #We check we are not a strawman prover
             raise Exception("Trying to do a legit proof without the secrets. Can only simulate")
         tab_g = self.generators
         G = tab_g[0].group
-        self.group_order = G.order()  # Will be useful for all the protocol
-
-        if randomizers_dict == None:  # If we are not provided a randomizer dict from above, we compute it
+        self.group_order = G.order()  
+        # Will be useful for all the protocol
+    
+        if randomizers_dict == None:  
+            # If we are not provided a randomizer dict from above, we compute it
             secret_to_random_value = self.get_randomizers()
+        elif any([sec not in randomizers_dict.keys() for sec in self.secret_names]):
+            # We were passed an incomplete dict, fill the empty slots but keep the existing ones
+            secret_to_random_value = self.get_randomizers()
+            secret_to_random_value.update(randomizers_dict)
         else:
             secret_to_random_value = randomizers_dict
 

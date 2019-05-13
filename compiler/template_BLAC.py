@@ -13,7 +13,7 @@ def generate_aliases():
     return DEFAULT_ALIASES[0]+nb1.hex(), DEFAULT_ALIASES[1]+nb2.hex()
 
 class DLRepNotEqualProof(Proof):
-    def __init__(self, valid_tuple, invalid_tuple, secret_names):
+    def __init__(self, valid_tuple, invalid_tuple, secret_names, binding=False):
         """
         Takes (H0,h0), (H1,h1), ["x"] such that H0 = x*h0 and H1 != x*h1.
         All arguments should be iterable.
@@ -25,6 +25,7 @@ class DLRepNotEqualProof(Proof):
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.secret_names = secret_names
         self.simulate = False
+        self.binding = binding
         
     def update(self, precommitment):
         return self.build_and(precommitment)
@@ -44,7 +45,8 @@ class DLRepNotEqualProof(Proof):
         p = []
         for i in range(len(precommitment)):
             p.append(DLRepProof(precommitment[i], create_rhs(self.aliases, [self.generators[i], self.lhs[i]])))
-        
+        if self.binding:
+            p.append(DLRepProof(self.lhs[0], Secret(self.secret_names[0])*self.generators[0]))
         self.constructed_proof = AndProof(*p)
         self.constructed_proof.precommitment = precommitment
         return self.constructed_proof
@@ -84,10 +86,10 @@ class DLRepNotEqualProver(Prover):
 
     def commit(self, randomizers_dict = None):
         """
-        Triggers the inside prover commit. Drops the randomizer dict which was drawn for the "official" 
-        secret name which we never use plain
+        Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
+        used if the binding of the proof is set True.
         """
-        return self.precommit(), self.constructed_prover.commit()
+        return self.precommit(), self.constructed_prover.commit(randomizers_dict)
 
 
     def precommit(self):
@@ -98,6 +100,8 @@ class DLRepNotEqualProver(Prover):
         C = self.blinder*(cur_secret*self.generators[1] - self.lhs[1])
         self.constructed_proof = self.proof.update([C])
         self.constructed_dict = dict(zip(self.constructed_proof.secret_names, new_secrets))
+        if self.proof.binding:
+            self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.constructed_proof.get_prover(self.constructed_dict)
         return [C]
 
@@ -114,6 +118,9 @@ class DLRepNotEqualProver(Prover):
 
 
 class DLRepNotEqualVerifier(Verifier):
+    """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
+    The check_responses_consistency method is not overriden there since secrets are always different.
+    """
     def __init__(self, proof):
         self.proof =proof
         self.lhs = proof.lhs
@@ -121,14 +128,15 @@ class DLRepNotEqualVerifier(Verifier):
         self.secret_names = proof.secret_names
         self.aliases = proof.aliases
 
-    def process_precommitment(self, precommitment):
-        self.constructed_proof = self.proof.update(precommitment)
+    def process_precommitment(self, commitment):
+        self.constructed_proof = self.proof.update(commitment[0])
         self.constructed_verifier = self.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
-        precom, self.commitment = com[0], com
-        self.process_precommitment(precom)
+        self.commitment = com
+        self.process_precommitment(com)
         self.challenge = self.constructed_verifier.send_challenge(com[1])
+
         return self.challenge
 
     def verify_NI(self, challenge, response, precommitment, message='', encoding=None):
@@ -139,3 +147,6 @@ class DLRepNotEqualVerifier(Verifier):
             if el == self.generators[0].group.infinite():
                 return False
         return True
+
+    def check_responses_consistency(self, response, response_dict):
+        return self.constructed_verifier.check_responses_consistency(response, response_dict)

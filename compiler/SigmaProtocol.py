@@ -105,7 +105,7 @@ class Prover:
 
 class Verifier:  # The Verifier class is built on an array of generators, an array of secrets'IDs and public info
 
-    def send_challenge(self, commitment, chal_size = 128):
+    def send_challenge(self, commitment):
         """
         :param commitment: a petlib.bn.Bn number
         :return: a random challenge smaller than 2**128
@@ -114,6 +114,9 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.challenge = chal_randbits(CHAL_LENGTH)
 
         return self.challenge
+
+    def process_precommitment(self, precommitment):
+        pass
 
     def verify(
             self, response, commitment=None,
@@ -160,8 +163,6 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         return self.proof.get_proof_id()
 
     def check_responses_consistency(self, response, response_dict):
-        print("GAGA",response)
-        print(self.secret_names)
         return 1
 
 

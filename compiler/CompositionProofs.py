@@ -286,6 +286,11 @@ class AndProofProver(Prover):
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
+        elif any([sec not in randomizers_dict.keys() for sec in self.secret_names]):
+            # We were passed an incomplete dict, fill the empty slots but keep the existing ones
+            secret_to_random_value = self.get_randomizers()
+            randomizers_dict.update(secret_to_random_value)
+
         self.commitment =  []
         for subp in self.subs:
             self.commitment.append(subp.commit(randomizers_dict = randomizers_dict))
@@ -322,6 +327,20 @@ class AndProofVerifier(Verifier):
         
         self.generators = self.proof.generators
         self.secret_names = self.proof.secret_names
+
+    def send_challenge(self, commitment):
+        """
+        :param commitment: a petlib.bn.Bn number
+        :return: a random challenge smaller than 2**128
+        """
+        self.commitment = commitment
+        self.challenge = chal_randbits(CHAL_LENGTH)
+
+        #We distribute the commitments such that if any suproof needs a precommitment
+        # to finish its construction, it can
+        for idx in range(len(self.subs)):
+            self.subs[idx].process_precommitment(commitment[idx])
+        return self.challenge
 
     def check_responses_consistency(self, responses, responses_dict={}):
         """Checks the responses are consistent for reoccurring secret names. 
