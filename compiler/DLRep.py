@@ -132,11 +132,11 @@ class DLRepVerifier(Verifier):
         """Goes through the secret names of the current DLRepProof and checks consistency with respect to a response dictionary.
         Updates the dictionary if the entry doesn't exist yet.
         """
-        print("names are", self.secret_names)
         for i in range(len(self.secret_names)):
             s = self.secret_names[i]
             if s in responses_dict.keys():
                 if response[i] != responses_dict[s] :
+                    print("names are", self.secret_names, "incorrect for", self.secret_names[i])
                     return False
             else:
                 responses_dict.update({s:response[i]})

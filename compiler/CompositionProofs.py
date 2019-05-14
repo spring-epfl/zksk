@@ -281,6 +281,17 @@ class AndProofProver(Prover):
             random_vals[u] = dict_name_gen[u].group.order().random()
         # old:{random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
+    
+    def precommit(self):
+        precommitment = []
+        for idx in range(len(self.subs)):
+            subprecom = self.subs[idx].precommit()
+            if subprecom is not None:
+                if len(precommitment) == 0:
+                    precommitment = [None]*len(self.subs)
+                precommitment[idx] = subprecom
+        return precommitment if len(precommitment) != 0 else None
+            
 
     def commit(self, randomizers_dict=None) -> AndProofCommitment:
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
@@ -289,7 +300,8 @@ class AndProofProver(Prover):
         elif any([sec not in randomizers_dict.keys() for sec in self.secret_names]):
             # We were passed an incomplete dict, fill the empty slots but keep the existing ones
             secret_to_random_value = self.get_randomizers()
-            randomizers_dict.update(secret_to_random_value)
+            secret_to_random_value.update(randomizers_dict)
+            randomizers_dict = secret_to_random_value
 
         self.commitment =  []
         for subp in self.subs:
@@ -338,8 +350,7 @@ class AndProofVerifier(Verifier):
 
         #We distribute the commitments such that if any suproof needs a precommitment
         # to finish its construction, it can
-        for idx in range(len(self.subs)):
-            self.subs[idx].process_precommitment(commitment[idx])
+        self.process_precommitment(commitment)
         return self.challenge
 
     def check_responses_consistency(self, responses, responses_dict={}):
@@ -351,6 +362,12 @@ class AndProofVerifier(Verifier):
             if not self.subs[i].check_responses_consistency(responses[i], responses_dict):
                 return False
         return True
+
+    def process_precommitment(self, commitment):
+        if commitment is None:
+            return
+        for idx in range(len(self.subs)):
+            self.subs[idx].process_precommitment(commitment[idx])
             
 
 

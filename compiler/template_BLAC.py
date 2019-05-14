@@ -83,27 +83,30 @@ class DLRepNotEqualProver(Prover):
         self.secret_names = proof.secret_names
         self.aliases = proof.aliases
         self.secret_values = secret_values
+        self.blinder = None
 
     def commit(self, randomizers_dict = None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
         used if the binding of the proof is set True.
         """
+        if self.blinder is not None:
+            #We have already built our constructed proof. Only commit.
+            return self.precommitment, self.constructed_prover.commit(randomizers_dict)
         return self.precommit(), self.constructed_prover.commit(randomizers_dict)
 
 
     def precommit(self):
         cur_secret = self.secret_values[self.secret_names[0]]
-        order = self.generators[0].group.order()
-        self.blinder = order.random()
+        self.blinder = self.grouporder.random()
         new_secrets = (cur_secret*self.blinder % self.grouporder, -self.blinder)
-        C = self.blinder*(cur_secret*self.generators[1] - self.lhs[1])
-        self.constructed_proof = self.proof.update([C])
+        self.precommitment = [self.blinder*(cur_secret*self.generators[1] - self.lhs[1])]
+        self.constructed_proof = self.proof.update(self.precommitment)
         self.constructed_dict = dict(zip(self.constructed_proof.secret_names, new_secrets))
         if self.proof.binding:
             self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.constructed_proof.get_prover(self.constructed_dict)
-        return [C]
+        return self.precommitment
 
     def compute_response(self, challenge):
         self.challenge = challenge
@@ -112,7 +115,8 @@ class DLRepNotEqualProver(Prover):
         return self.response
 
     def get_NI_proof(self, message ='', encoding=None):
-        return (self.constructed_proof.precommitment, self.constructed_prover.get_NI_proof())
+        precommitment = self.precommit()
+        return (*self.constructed_prover.get_NI_proof(), precommitment)
 
 
 
@@ -129,7 +133,12 @@ class DLRepNotEqualVerifier(Verifier):
         self.aliases = proof.aliases
 
     def process_precommitment(self, commitment):
-        self.constructed_proof = self.proof.update(commitment[0])
+        if len(commitment)>1:
+            #commitment is (precommitment, actual_commitment)
+            self.constructed_proof = self.proof.update(commitment[0])
+        elif len(commitment) ==1 :
+            # commitment is only a precommitment
+            self.constructed_proof = self.proof.update(commitment)
         self.constructed_verifier = self.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
@@ -140,7 +149,8 @@ class DLRepNotEqualVerifier(Verifier):
         return self.challenge
 
     def verify_NI(self, challenge, response, precommitment, message='', encoding=None):
-        return self.check_unity() and self.constructed_verifier.verify_NI(challenge, response, message, encoding)
+        self.process_precommitment(precommitment)
+        return self.check_unity() and self.constructed_verifier.verify_NI(challenge, response, message = message, encoding=encoding)
 
     def check_unity(self):
         for el in self.constructed_proof.precommitment[1:]:

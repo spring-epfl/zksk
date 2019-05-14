@@ -85,6 +85,11 @@ class Prover:
         :param message: a string message.
         :return: a challenge that is a hash of (lhs, commitment, message) and a list of responses. Each response has type petlib.bn.Bn 
         """
+        precommitment = None
+        # precommit to 1.gather encapsulated precommitments 
+        # 2.write the precommitments in their respective proof so the get_proof_id embeds them
+        precommitment = self.precommit()
+        
         commitment = self.commit()
         message = message.encode()
         protocol = encode(self.get_proof_id(), encoding)
@@ -96,7 +101,10 @@ class Prover:
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
         responses = self.compute_response(challenge)
-        return (challenge, responses)
+        return (challenge, responses) if precommitment ==None else (challenge, responses, precommitment)
+
+    def precommit(self):
+        return None
 
 
 
@@ -136,7 +144,7 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
             raise Exception("Responses for a same secret name do not match!")
         return (commitment == self.proof.recompute_commitment(challenge, response) )
 
-    def verify_NI(self, challenge, response, message='', encoding=None):
+    def verify_NI(self, challenge, response, precommitment = None, message='', encoding=None):
         """
         verification for the non interactive proof
         :param challenge: the challenge a petlib.bn.Bn instance computed from get_NI_proof method
@@ -144,6 +152,8 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :return: a boolean telling if the proof is verified
         """
         self.response = response
+        if precommitment:
+            self.process_precommitment(precommitment)
         if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
