@@ -16,7 +16,7 @@ class DLRepNotEqualProof(Proof):
     def __init__(self, valid_tuple, invalid_tuple, secret_names, binding=False):
         """
         Takes (H0,h0), (H1,h1), ["x"] such that H0 = x*h0 and H1 != x*h1.
-        All arguments should be iterable.
+        All these arguments should be iterable.
         """
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
@@ -79,7 +79,6 @@ class DLRepNotEqualProver(Prover):
         self.lhs = proof.lhs
         self.generators = proof.generators #h0,h1
         self.proof = proof
-        self.grouporder = self.generators[0].group.order()
         self.secret_names = proof.secret_names
         self.aliases = proof.aliases
         self.secret_values = secret_values
@@ -98,8 +97,8 @@ class DLRepNotEqualProver(Prover):
 
     def precommit(self):
         cur_secret = self.secret_values[self.secret_names[0]]
-        self.blinder = self.grouporder.random()
-        new_secrets = (cur_secret*self.blinder % self.grouporder, -self.blinder)
+        self.blinder = self.generators[0].group.order().random()
+        new_secrets = (cur_secret*self.blinder % self.generators[0].group.order(), -self.blinder)
         self.precommitment = [self.blinder*(cur_secret*self.generators[1] - self.lhs[1])]
         self.constructed_proof = self.proof.update(self.precommitment)
         self.constructed_dict = dict(zip(self.constructed_proof.secret_names, new_secrets))

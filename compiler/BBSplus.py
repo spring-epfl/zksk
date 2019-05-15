@@ -14,11 +14,31 @@ class Signature:
         self.s = s
 
 
+
+class KeyPair:
+    def __init__(self, bilinearpair, length):
+        """
+        length should be an upperbound on the number of messages
+        """
+
+        self.generators = []
+        self.henerators = []
+        for i in range(length+2):
+            """
+            randWord = randomword(30).encode("UTF-8")
+            randWord2 = randomword(30).encode("UTF-8")
+            self.generators.append(bilinearpair.G1.hash_to_point(randWord))
+            self.henerators.append(bilinearpair.G2.hash_to_point(randWord))
+            """
+        
+        self.pk = PublicKey(self.sk.gamma*h[0], self.generators, self.henerators)
+        self.sk = SecretKey(h[0].group.order().random(), self)
+
 class PublicKey:
-    def __init__(self, w, g, h):
+    def __init__(self, w, generators, henerators):
         self.w = w
-        self.generators = g
-        self.henerators = h
+        self.generators = generators
+        self.henerators = henerators
         self.h0 = self.henerators[0]
 
     def verify_signature(self, signature, messages):
@@ -27,25 +47,11 @@ class PublicKey:
 
 
 
-
-class KeyPair:
-    def __init__(self, g, h):
-        self.sk = SecretKey(h[0].group.order().random(), g, h)
-        self.pk = PublicKey(self.sk.gamma*h[0], g, h)
-        self.generators = g
-        self.henerators = h
-
-def gen_keys(g, h):
-    """
-    Generates a public key and the associated secret key with respect to a base h0 and returns them.
-    """
-    kp = KeyPair(g, h)
-    return kp
-
 class SecretKey:
-    def __init__(self, value, generators, henerators):
-        self.generators = generators
-        self.henerators = henerators
+    def __init__(self, value, keypair):
+        self.generators = keypair.generators
+        self.henerators = keypair.henerators
+        self.pk = keypair.pk
         self.h0 = henerators[0]
         self.group = self.h0.group
         self.gamma = value
@@ -69,14 +75,14 @@ class SecretKey:
         A = (self.gamma+e).mod_inverse(self.group.order())*prod
         return Signature(A,e,s2)
 
-    def verify_proof(self, NIproof, lhs):
-        """
-        Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
-        verify the non-interactive proof passed as argument.
-        """
-        secret_names = ["s1"] + ["m"+str(i+1)for i in range (len(self.generators)-2)]
-        proof = DLRepProof(lhs, create_rhs(secret_names, self.generators[1:]))
-        return proof.get_verifier().verify_NI(*NIproof, encoding=enc_GXpt)
+def verify_proof(self, NIproof, lhs, generators):
+    """
+    Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
+    verify the non-interactive proof passed as argument.
+    """
+    secret_names = ["s1"] + ["m"+str(i+1)for i in range (len(generators)-2)]
+    proof = DLRepProof(lhs, create_rhs(secret_names, generators[1:]))
+    return proof.get_verifier().verify_NI(*NIproof, encoding=enc_GXpt)
 
 def user_commit(messages, generators, to_sign):
     """
@@ -101,22 +107,24 @@ def sign_and_verify(messages, keypair, zkp=0):
     Wrapper method which given a set of generators and messages, performs the whole protocol from the key generation to the signature verification.
     """
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+
+    #We work with the exact number of generators we need since now we know the number of messages
+    L = len(messages)+2
+    generators, henerators = keypair.generators[:L], keypair.henerators[L]
+
     s1 = Bn(0)
     to_sign = create_lhs(generators[2:], messages)
 
     if zkp:
         """
-        If we require proof of correct construction, we should add a shadowing term. To avoid recomputing the whole sequence we pass what we
-        already have and will add the shadowing term in user_commit
+        If we require proof of correct construction, we should add a blinding factor. 
         """
-        pedersen_NI, verifier, s1, to_sign = user_commit(messages, generators, to_sign)
-        #verification is done on the signer side. can be moved in sk.sign()
-        if sk.verify_proof(pedersen_NI, to_sign):
-            print("Pedersen commitment verified on the secret key side.")
+        pedersen_NI, s1, presigned = user_commit(messages, generators, to_sign)
+        if verify_proof(pedersen_NI, presigned, generators):
+            print("Pedersen commitment verified.")
     print("Signing...")
     
-    signature = sk.sign(to_sign)
+    signature = sk.sign(presigned)
     print("Done signing..")
 
     # Updating the signature exponent (unchanged if no shadowing term)
