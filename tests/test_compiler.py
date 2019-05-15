@@ -6,12 +6,12 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
-from DLRep import *
+from primitives.DLRep import *
 from Subproof import *
 from CompositionProofs import *
-from pairings import *
-from template_signature import *
-from template_BLAC import *
+from BilinearPairings import *
+from primitives.BBSplus import *
+from primitives.DLRepNotEqual import *
 import pytest
 import pdb
 
@@ -538,11 +538,8 @@ def test_malicious_and_proofs():
 
 def test_signature_setup():
     mG =BilinearGroupPair()
-    g,h = mG.G1.generator(), mG.G2.generator()
+    keypair = KeyPair(mG, 9)
     w = [mG.G1.order().random() for i in range(5)]
-    generators = [g*k for k in w]
-    henerators = [h*k for k in w]
-    keypair = gen_keys(generators, henerators)
     messages = [Bn(30), Bn(31), Bn(32)]
     assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
 

@@ -1,8 +1,8 @@
-from DLRep import * 
+from primitives.DLRep import * 
 from Subproof import *
 from CompositionProofs import *
 from SigmaProtocol import *
-from pairings import *
+from BilinearPairings import *
 import pdb
 
 
@@ -23,16 +23,22 @@ class KeyPair:
 
         self.generators = []
         self.henerators = []
+        g = bilinearpair.G1.generator()
+        h = bilinearpair.G2.generator()
+        order = bilinearpair.G1.order()
         for i in range(length+2):
+            self.generators.append(order.random()*g)
+            self.henerators.append(order.random()*h)
             """
             randWord = randomword(30).encode("UTF-8")
             randWord2 = randomword(30).encode("UTF-8")
             self.generators.append(bilinearpair.G1.hash_to_point(randWord))
             self.henerators.append(bilinearpair.G2.hash_to_point(randWord))
             """
-        
-        self.pk = PublicKey(self.sk.gamma*h[0], self.generators, self.henerators)
-        self.sk = SecretKey(h[0].group.order().random(), self)
+
+        self.sk = SecretKey(order.random(), self)
+        self.pk = PublicKey(self.sk.gamma*self.henerators[0], self.generators, self.henerators)
+        self.sk.pk = self.pk
 
 class PublicKey:
     def __init__(self, w, generators, henerators):
@@ -51,8 +57,7 @@ class SecretKey:
     def __init__(self, value, keypair):
         self.generators = keypair.generators
         self.henerators = keypair.henerators
-        self.pk = keypair.pk
-        self.h0 = henerators[0]
+        self.h0 = self.henerators[0]
         self.group = self.h0.group
         self.gamma = value
 
@@ -113,7 +118,7 @@ def sign_and_verify(messages, keypair, zkp=0):
     generators, henerators = keypair.generators[:L], keypair.henerators[L]
 
     s1 = Bn(0)
-    to_sign = create_lhs(generators[2:], messages)
+    presigned = create_lhs(generators[2:], messages)
 
     if zkp:
         """

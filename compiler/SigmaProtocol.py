@@ -7,7 +7,7 @@ import binascii
 import pdb
 from hashlib import sha256
 from collections import defaultdict
-from pairings import *
+from BilinearPairings import *
 import msgpack
 
 CHAL_LENGTH = Bn(128)

@@ -1,4 +1,4 @@
-from DLRep import * 
+from primitives.DLRep import * 
 from Subproof import *
 from CompositionProofs import *
 
