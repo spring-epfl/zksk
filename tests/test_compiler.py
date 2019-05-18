@@ -794,11 +794,19 @@ def test_BLAC_NI2():
     ver = andp1.get_verifier()
     assert ver.verify_NI(*nip)
 
-"""
+
 def test_signature_setup():
     mG =BilinearGroupPair()
     keypair = KeyPair(mG, 9)
     w = [mG.G1.order().random() for i in range(5)]
     messages = [Bn(30), Bn(31), Bn(32)]
-    assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
-"""
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+
+    creator = SignatureCreator(pk)
+    comm, pedersen_NI = creator.commit(messages, zkp=True)
+    presignature = sk.sign(comm)
+    signature = creator.obtain_signature(presignature)
+
+    assert verify_proof(pedersen_NI, comm, generators) and pk.verify_signature(signature, messages)

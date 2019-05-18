@@ -4,14 +4,50 @@ from CompositionProofs import *
 from SigmaProtocol import *
 from BilinearPairings import *
 import pdb
+import random, string
 
-
+RD_LENGTH = 30
 
 class Signature:
     def __init__(self, A, e, s):
         self.A = A
         self.e = e
         self.s = s
+
+class SignatureCreator:
+    def __init__(self, pk):
+        self.generators = pk.generators
+        self.h0 = pk.h0
+        self.pk = pk
+        self.s1 = None
+
+    def commit(self, messages, zkp=False):
+        """
+        Prepare a pedersen commitment for the correct construction of the sequence to be signed.
+        Returns a non-interactive proof as well as a verifier object able to verify the said proof.
+        """
+        to_sign= create_rhs(self.generators[2:len(messages)+2], messages)
+        
+        self.s1 = self.generators[0].group.order().random()
+        cmessages = self.s1*self.generators[1]+ to_sign
+        if not zkp:
+            return cmessages
+
+        #define secret names as s' m1 m2 ...mL
+        names = ["s'"] + ["m"+str(i+1) for i in range(len(messages))] 
+        secrets = [self.s1] + messages
+
+        pedersen_proof = DLRepProof(cmessages, to_sign)
+        pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
+        return cmessages, pedersen_prover.get_NI_proof(encoding=enc_GXpt) 
+
+
+    def obtain_signature(self, presignature):
+        """
+        State is the part of the signature which is on the user side
+        """
+        A, e, s = presignature.A, presignature.e, presignature.s + self.s1
+        return Signature(A,e,s)
 
 
 
@@ -27,14 +63,9 @@ class KeyPair:
         h = bilinearpair.G2.generator()
         order = bilinearpair.G1.order()
         for i in range(length+2):
-            self.generators.append(order.random()*g)
-            self.henerators.append(order.random()*h)
-            """
-            randWord = randomword(30).encode("UTF-8")
-            randWord2 = randomword(30).encode("UTF-8")
-            self.generators.append(bilinearpair.G1.hash_to_point(randWord))
-            self.henerators.append(bilinearpair.G2.hash_to_point(randWord))
-            """
+            randWord = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(RD_LENGTH))
+            self.generators.append(bilinearpair.G1.hash_to_point(randWord.encode("UTF-8")))
+        self.henerators.append(bilinearpair.G2.generator())
 
         self.sk = SecretKey(order.random(), self)
         self.pk = PublicKey(self.sk.gamma*self.henerators[0], self.generators, self.henerators)
@@ -90,56 +121,7 @@ def verify_proof(self, NIproof, lhs, generators):
     proof = DLRepProof(lhs, create_rhs(secret_names, generators[1:]))
     return proof.get_verifier().verify_NI(*NIproof, encoding=enc_GXpt)
 
-def user_commit(messages, generators, to_sign):
-    """
-    Prepare a pedersen commitment for the correct construction of the sequence to be signed.
-    Returns a non-interactive proof as well as a verifier object able to verify the said proof.
-    """
-    s1 = generators[0].group.order().random()
-    cmessages = s1*generators[1]+ to_sign
 
-    #define secret names as s' m1 m2 ...mL
-    names = ["s'"] + ["m"+str(i+1) for i in range(len(messages))] 
-    secrets = [s1] + messages
-
-    pedersen_proof = DLRepProof(cmessages, create_rhs(names, generators))
-    pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
-    return pedersen_prover.get_NI_proof(encoding=enc_GXpt), pedersen_proof.get_verifier(), s1, cmessages
-
-
-    
-def sign_and_verify(messages, keypair, zkp=0):
-    """
-    Wrapper method which given a set of generators and messages, performs the whole protocol from the key generation to the signature verification.
-    """
-    pk, sk = keypair.pk, keypair.sk
-
-    #We work with the exact number of generators we need since now we know the number of messages
-    L = len(messages)+2
-    generators, henerators = keypair.generators[:L], keypair.henerators[L]
-
-    s1 = Bn(0)
-    presigned = create_lhs(generators[2:], messages)
-
-    if zkp:
-        """
-        If we require proof of correct construction, we should add a blinding factor. 
-        """
-        pedersen_NI, s1, presigned = user_commit(messages, generators, to_sign)
-        if verify_proof(pedersen_NI, presigned, generators):
-            print("Pedersen commitment verified.")
-    print("Signing...")
-    
-    signature = sk.sign(presigned)
-    print("Done signing..")
-
-    # Updating the signature exponent (unchanged if no shadowing term)
-    signature.s = s1+signature.s
-
-    if pk.verify_signature(signature, messages) :
-        print ("Signature verified!")
-        return True
-    return False
 
 class SignatureProof(Proof):
     """
@@ -153,21 +135,6 @@ class SignatureProof(Proof):
         self.generators = pk.generators
         self.h0 = pk.h0
         self.w = pk.w
-
-
-
-    def get_prover(self, secret_dict, A):
-        prov = SignatureProver(None)
-        A1,A2 = prov.precommit(self.generators, A)
-
-        self.andproof = build_pi5(A1, A2)
-
-        andprover = self.andproof.get_prover(secret_dict)
-        prov.__init__(andprover)
-        return prov
-    
-    def get_verifier(self):
-        return SignatureVerifier(self.andproof.get_verifier())
 
 
     def build_pi5(self, A1, A2):

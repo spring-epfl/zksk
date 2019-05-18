@@ -214,6 +214,9 @@ class G1Group:
     def __eq__(self, other):
         return self.bp.bpgp == other.bp.bpgp and self.__class__ == other.__class__
 
+    def hash_to_point(self, string):
+        return G1Point(self.bp.bpgp.hashG1(string), self.bp)
+
 class G2Group:
     """
     A wrapper for the G2 group. Group ID is 2.
