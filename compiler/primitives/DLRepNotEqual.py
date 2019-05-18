@@ -26,9 +26,6 @@ class DLRepNotEqualProof(Proof):
         self.secret_names = secret_names
         self.simulate = False
         self.binding = binding
-        
-    def update(self, precommitment):
-        return self.build_and(precommitment)
 
     def get_prover(self, secret_values):
         if self.simulate:
@@ -38,41 +35,29 @@ class DLRepNotEqualProof(Proof):
     def get_verifier(self):
         return DLRepNotEqualVerifier(self)
 
-    def build_and(self, precommitment):
+    def build_constructed_proof(self, precommitment):
         """Builds the AndProof associated to a DLRepNotEqualProof.
         """
-        precommitment = [self.generators[0].group.infinite()] + precommitment
+        new_lhs = [self.generators[0].group.infinite()] + precommitment
         p = []
-        for i in range(len(precommitment)):
-            p.append(DLRepProof(precommitment[i], create_rhs(self.aliases, [self.generators[i], self.lhs[i]])))
+        for i in range(len(new_lhs)):
+            p.append(DLRepProof(new_lhs[i], create_rhs(self.aliases, [self.generators[i], self.lhs[i]])))
         if self.binding:
             p.append(DLRepProof(self.lhs[0], Secret(self.secret_names[0])*self.generators[0]))
         self.constructed_proof = AndProof(*p)
-        self.constructed_proof.precommitment = precommitment
+        self.constructed_proof.lhs = new_lhs
         return self.constructed_proof
 
     
     def get_proof_id(self):
-        return ["DLRepNotEqualProof", self.lhs, self.generators, self.constructed_proof.precommitment]
+        return ["DLRepNotEqualProof", self.lhs, self.generators, self.constructed_proof.lhs]
 
     def recompute_commitment(self, challenge, responses):
         """
-        Recomputes the commitment. Appends the precommitment for consistency in the equality check.
-        The precommitment is truncated since we artificially added the infinity point before storing
-        it in the constructed internal proof.
+        Recomputes the commitment. 
         """
-        if not self.check_unity():
-            """
-            This will make any upper equality test to reject the proof
-            """
-            return None
-        return self.constructed_proof.precommitment[1:], self.constructed_proof.recompute_commitment(challenge, responses)
+        return self.constructed_proof.recompute_commitment(challenge, responses)
 
-    def check_unity(self):
-        for el in self.constructed_proof.precommitment[1:]:
-            if el == self.generators[0].group.infinite():
-                return False
-        return True
 
 class DLRepNotEqualProver(Prover):
     def __init__(self, proof, secret_values):
@@ -89,10 +74,9 @@ class DLRepNotEqualProver(Prover):
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
         used if the binding of the proof is set True.
         """
-        if self.blinder is not None:
-            #We have already built our constructed proof. Only commit.
-            return self.precommitment, self.constructed_prover.commit(randomizers_dict)
-        return self.precommit(), self.constructed_prover.commit(randomizers_dict)
+        if self.blinder is None:
+            raise Exception("Please precommit before commiting, else proofs lack parameters")
+        return self.constructed_prover.commit(randomizers_dict)
 
 
     def precommit(self):
@@ -100,7 +84,7 @@ class DLRepNotEqualProver(Prover):
         self.blinder = self.generators[0].group.order().random()
         new_secrets = (cur_secret*self.blinder % self.generators[0].group.order(), -self.blinder)
         self.precommitment = [self.blinder*(cur_secret*self.generators[1] - self.lhs[1])]
-        self.constructed_proof = self.proof.update(self.precommitment)
+        self.constructed_proof = self.proof.build_constructed_proof(self.precommitment)
         self.constructed_dict = dict(zip(self.constructed_proof.secret_names, new_secrets))
         if self.proof.binding:
             self.constructed_dict.update(self.secret_values)
@@ -112,10 +96,6 @@ class DLRepNotEqualProver(Prover):
         self.constructed_prover.challenge=  challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
-
-    def get_NI_proof(self, message ='', encoding=None):
-        precommitment = self.precommit()
-        return (*self.constructed_prover.get_NI_proof(), precommitment)
 
 
 
@@ -131,28 +111,18 @@ class DLRepNotEqualVerifier(Verifier):
         self.secret_names = proof.secret_names
         self.aliases = proof.aliases
 
-    def process_precommitment(self, commitment):
-        if len(commitment)>1:
-            #commitment is (precommitment, actual_commitment)
-            self.constructed_proof = self.proof.update(commitment[0])
-        elif len(commitment) ==1 :
-            # commitment is only a precommitment
-            self.constructed_proof = self.proof.update(commitment)
+    def process_precommitment(self, precommitment):
+        self.constructed_proof = self.proof.build_constructed_proof(precommitment)
         self.constructed_verifier = self.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
         self.commitment = com
-        self.process_precommitment(com)
-        self.challenge = self.constructed_verifier.send_challenge(com[1])
+        self.challenge = self.constructed_verifier.send_challenge(com)
 
         return self.challenge
 
-    def verify_NI(self, challenge, response, precommitment, message='', encoding=None):
-        self.process_precommitment(precommitment)
-        return self.check_unity() and self.constructed_verifier.verify_NI(challenge, response, message = message, encoding=encoding)
-
-    def check_unity(self):
-        for el in self.constructed_proof.precommitment[1:]:
+    def check_adequate_lhs(self):
+        for el in self.constructed_proof.lhs[1:]:
             if el == self.generators[0].group.infinite():
                 return False
         return True

@@ -536,13 +536,6 @@ def test_malicious_and_proofs():
     with pytest.raises(Exception):
         v = verif.verify(resp)
 
-def test_signature_setup():
-    mG =BilinearGroupPair()
-    keypair = KeyPair(mG, 9)
-    w = [mG.G1.order().random() for i in range(5)]
-    messages = [Bn(30), Bn(31), Bn(32)]
-    assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
-
 def test_BLAC():
     G = EcGroup()
     g = G.generator()
@@ -552,13 +545,17 @@ def test_BLAC():
     g2 = 1397*g
 
     pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
+    prv= DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
     secret_dict = {"x":3}
     prov = pr.get_prover(secret_dict)
+    ver = prv.get_verifier()
+
+    ver.process_precommitment(prov.precommit())
     commitment = prov.commit()
-    ver = pr.get_verifier()
     chal = ver.send_challenge(commitment)
+    
     resp = prov.compute_response(chal)
-    assert ver.verify(resp)
+    assert ver.check_adequate_lhs() and ver.verify(resp)
 
 def test_false_BLAC1():
     G = EcGroup()
@@ -569,10 +566,12 @@ def test_false_BLAC1():
     y2 = 3*g2
     
     pr= DLRepNotEqualProof([y, g], [y2, g2], ["x"])
+    prv= DLRepNotEqualProof([y, g], [y2, g2], ["x"])
     secret_dict = {"x":3}
     prov = pr.get_prover(secret_dict)
+    ver = prv.get_verifier()
+    ver.process_precommitment(prov.precommit())
     commitment = prov.commit()
-    ver = pr.get_verifier()
     chal = ver.send_challenge(commitment)
     resp = prov.compute_response(chal)
     assert not ver.verify(resp)
@@ -581,21 +580,31 @@ def test_and_BLAC():
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
     pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]])
-
     andp = pr1 & pr2
-    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+
+
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2v = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]])
+
+    andpv = pr1v & pr2v
+    prot = SigmaProtocol(andpv.get_verifier(), andp.get_prover(secrets_values))
     assert prot.run()
 
 def test_not_and_BLAC():
-    """ Second subproof not correct since the two members have the same DL
-    """
+    #Second subproof not correct since the two members have the same DL
+    
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
     y3 = secret_tab[1]*tab_g[3]
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
     pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]])
 
     andp = pr1 & pr2
-    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2v = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]])
+
+    andpv = pr1v & pr2v
+    prot = SigmaProtocol(andpv.get_verifier(), andp.get_prover(secrets_values))
     assert not prot.run()    
 
 def test_and_BLAC_binding1():
@@ -604,8 +613,12 @@ def test_and_BLAC_binding1():
     pr2 = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0])*tab_g[0])
 
     andp = pr1 & pr2
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2v = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0])*tab_g[0])
 
-    prot = SigmaProtocol(andp.get_verifier(), andp.get_prover(secrets_values))
+    andpv= pr1v & pr2v
+
+    prot = SigmaProtocol(andpv.get_verifier(), andp.get_prover(secrets_values))
     assert prot.run()
 
 
@@ -617,13 +630,18 @@ def test_and_BLAC_not_binding():
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
     pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
     andp = pr1 & pr2
+
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]])
+    pr2v = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
+    andpv = pr1v & pr2v
+
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[2]
     
-    prot = SigmaProtocol(andp.get_verifier(), prov)
+    prot = SigmaProtocol(andpv.get_verifier(), prov)
     assert prot.run()
 
-    
+
 def test_and_BLAC_binding2():
     #Prove (H0 = h0*x, H1 != h1*x) , H2 = h2*x with same secret name x. should be detected since binding=True.
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
@@ -632,9 +650,15 @@ def test_and_BLAC_binding2():
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
     pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
     andp = pr1 & pr2
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2v = DLRepProof(lhs_tab[2], Secret(secrets_aliases[0])*tab_g[2])
+    andpv = pr1v & pr2v
+
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[2]
-    ver = andp.get_verifier()
+    
+    ver = andpv.get_verifier()
+    ver.process_precommitment(prov.precommit())
     com = prov.commit()
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
@@ -643,36 +667,45 @@ def test_and_BLAC_binding2():
 
 
 def test_not_and_BLAC_binding():
-    """ Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x. (not only cheating, a contradiction)
-    Should be detected since binding = True
-    """
+    #Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x. (not only cheating, a contradiction)
+    #Should be detected since binding = True
+
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
     y3 = secret_tab[2]*tab_g[3]
 
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
     pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True)
     andp = pr1 & pr2
+
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr2v = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True)
+    andpv = pr1v & pr2v
+
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
 
-    prot = SigmaProtocol(andp.get_verifier(), prov)
+    prot = SigmaProtocol(andpv.get_verifier(), prov)
     with pytest.raises(Exception):
         prot.run()
 
 def test_and_BLAC_binding3():
-    """ Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x. (not only cheating, a contradiction)
-    Should be undetected since binding = False in at least one proof
-    """
+    #Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x. (not only cheating, a contradiction)
+    #Should be undetected since binding = False in at least one proof
+    
     lhs_tab =  [x*g for x,g in zip(secret_tab, tab_g)]
     y3 = secret_tab[2]*tab_g[3]
 
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=False)
     pr2 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True)
     andp = pr1 & pr2
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=False)
+    pr2v = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True)
+    andpv = pr1v & pr2v
+
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
 
-    prot = SigmaProtocol(andp.get_verifier(), prov)
+    prot = SigmaProtocol(andpv.get_verifier(), prov)
     assert prot.run()
         
 def test_multi_and_BLAC_binding1():
@@ -685,10 +718,18 @@ def test_multi_and_BLAC_binding1():
 
     andp = pr1 & pr2 & pr3 & pr4
 
+    pr11 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [secrets_aliases[0]], binding=True)
+    pr21 = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0])*tab_g[0])
+    
+    pr31 = DLRepNotEqualProof([lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], [secrets_aliases[2]], binding=True)
+    pr41 = DLRepNotEqualProof([lhs_tab[1], tab_g[1]], [lhs_tab[3], tab_g[3]], [secrets_aliases[0]], binding=True)
+
+    andp1 = pr11 & pr21 & pr31 & pr41
+
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
 
-    prot = SigmaProtocol(andp.get_verifier(), prov)
+    prot = SigmaProtocol(andp1.get_verifier(), prov)
     with pytest.raises(Exception):
         prot.run()
 
@@ -752,3 +793,12 @@ def test_BLAC_NI2():
     nip =prov.get_NI_proof()
     ver = andp1.get_verifier()
     assert ver.verify_NI(*nip)
+
+"""
+def test_signature_setup():
+    mG =BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    w = [mG.G1.order().random() for i in range(5)]
+    messages = [Bn(30), Bn(31), Bn(32)]
+    assert sign_and_verify(messages, keypair) and sign_and_verify(messages, keypair, zkp=True)
+"""

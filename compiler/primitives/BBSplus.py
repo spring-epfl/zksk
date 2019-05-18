@@ -48,7 +48,8 @@ class PublicKey:
         self.h0 = self.henerators[0]
 
     def verify_signature(self, signature, messages):
-        product = self.generators[0] + create_lhs(self.generators[1:], [signature.s]+messages)
+        generators =self.generators[:len(messages)+1]
+        product = generators[0] + create_lhs(generators[1:], [signature.s]+messages)
         return signature.A.pair(self.w+signature.e*self.h0) == product.pair(self.h0)
 
 

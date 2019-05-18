@@ -37,7 +37,8 @@ class SigmaProtocol:
     ) -> bool:  # a method used to chain SigmaProtocols verifications
         victor = self.verifierClass
         peggy = self.proverClass
-
+        precommitment = peggy.precommit()
+        victor.process_precommitment(precommitment)
         (commitment) = peggy.commit()
         challenge = victor.send_challenge(commitment)
         response = peggy.compute_response(challenge)
@@ -135,6 +136,8 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         :param response: the response given by the prover
         :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response
         """
+        if not self.check_adequate_lhs():
+            return False
         self.response = response
         if commitment is None:
             commitment = self.commitment
@@ -154,6 +157,8 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
         self.response = response
         if precommitment:
             self.process_precommitment(precommitment)
+        if not self.check_adequate_lhs():
+            return False
         if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
@@ -174,6 +179,9 @@ class Verifier:  # The Verifier class is built on an array of generators, an arr
 
     def check_responses_consistency(self, response, response_dict):
         return 1
+
+    def check_adequate_lhs(self):
+        return True
 
 
 def check_groups(

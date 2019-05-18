@@ -347,10 +347,6 @@ class AndProofVerifier(Verifier):
         """
         self.commitment = commitment
         self.challenge = chal_randbits(CHAL_LENGTH)
-
-        #We distribute the commitments such that if any suproof needs a precommitment
-        # to finish its construction, it can
-        self.process_precommitment(commitment)
         return self.challenge
 
     def check_responses_consistency(self, responses, responses_dict={}):
@@ -363,12 +359,24 @@ class AndProofVerifier(Verifier):
                 return False
         return True
 
-    def process_precommitment(self, commitment):
-        if commitment is None:
+    def process_precommitment(self, precommitment):
+        if precommitment is None:
             return
         for idx in range(len(self.subs)):
-            self.subs[idx].process_precommitment(commitment[idx])
-            
+            self.subs[idx].process_precommitment(precommitment[idx])
+    
+    def check_adequate_lhs(self):
+        """
+        Check that all the left-hand sides of the proofs have a coherent value.
+        In particular, it will return False if a DLRepNotEqualProof is in the tree and
+        if it is about to prove its components are in fact equal.
+        This allows not to waste computation time in running useless verifications.
+        """
+        for sub in self.subs:
+            if not sub.check_adequate_lhs():
+                return False
+        return True
+
 
 
         
