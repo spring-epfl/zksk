@@ -8,7 +8,7 @@ from Subproof import *
 import pdb
 DEFAULT_ALIASES = ("alpha_", "beta_")
 
-def generate_aliases():
+def generate_DLRNE_aliases():
     nb1, nb2 = chal_randbits(), chal_randbits()
     return DEFAULT_ALIASES[0]+nb1.hex(), DEFAULT_ALIASES[1]+nb2.hex()
 
@@ -20,7 +20,7 @@ class DLRepNotEqualProof(Proof):
         """
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
-        self.aliases = generate_aliases()
+        self.aliases = generate_DLRNE_aliases()
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.secret_names = secret_names
@@ -50,7 +50,7 @@ class DLRepNotEqualProof(Proof):
 
     
     def get_proof_id(self):
-        return ["DLRepNotEqualProof", self.lhs, self.generators, self.constructed_proof.lhs]
+        return ["DLRepNotEqualProof", self.constructed_proof.generators, self.constructed_proof.lhs]
 
     def recompute_commitment(self, challenge, responses):
         """
