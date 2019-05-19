@@ -33,11 +33,11 @@ class SignatureCreator:
         """
         to_sign= create_lhs(self.generators[2:len(messages)+2], messages)
         
+        if not zkp:
+            return to_sign
+        
         self.s1 = self.generators[0].group.order().random()
         lhs = self.s1*self.generators[1]+ to_sign
-        if not zkp:
-            return lhs
-
         #define secret names as s' m1 m2 ...mL
         names = ["s'"] + ["m"+str(i+1) for i in range(len(messages))] 
         secrets = [self.s1] + messages
