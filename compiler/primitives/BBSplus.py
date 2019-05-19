@@ -29,7 +29,7 @@ class SignatureCreator:
     def commit(self, messages, zkp=False):
         """
         Prepare a pedersen commitment for the correct construction of the sequence to be signed.
-        Returns a non-interactive proof as well as a verifier object able to verify the said proof.
+        Returns a non-interactive proof if zkp parameter is set to true.
         """
         to_sign= create_lhs(self.generators[2:len(messages)+2], messages)
         
@@ -50,7 +50,7 @@ class SignatureCreator:
 
     def obtain_signature(self, presignature):
         """
-        State is the part of the signature which is on the user side
+        S1 is the part of the signature blinding factor which is on the user side
         """
         A, e, s = presignature.A, presignature.e, presignature.s + self.s1
         return Signature(A,e,s)
@@ -102,14 +102,6 @@ class SecretKey:
     def sign(self, lhs):
         """
         Signs a committed message Cm ie returns A,e,s such that A = (g0 + s*g1 + Cm) * 1/e+gamma
-        >>> G = BilinearGroupPair()
-        >>> gens = [2,3,4]*G.G1.generator()
-        >>> hens = [2,3,4]*G.G2.generator()
-        >>> pk, sk = gen_keys(gens, hens)
-
-        >>> A,e,s2 = s.sign()
-        >>> (e + s.gamma)*A == self.verifier.lhs
-        True
         """
         pedersen_product = lhs
         e = self.group.order().random()
@@ -196,8 +188,7 @@ class SignatureProver(Prover):
 
     def commit(self, randomizers_dict = None):
         """
-        Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
-        used if the binding of the proof is set True.
+        Triggers the inside prover commit. Transfers the randomizer dict coming from above.
         """
         if self.blinder is None:
             raise Exception("Please precommit before commiting, else proofs lack parameters")
