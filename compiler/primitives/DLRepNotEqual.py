@@ -50,8 +50,11 @@ class DLRepNotEqualProof(Proof):
 
     
     def get_proof_id(self):
-        return ["DLRepNotEqualProof", self.constructed_proof.generators, self.constructed_proof.lhs]
-
+        st = ["DLRepNotEqualProof", self.constructed_proof.generators, self.constructed_proof.lhs]
+        if self.binding:
+            st.append(self.constructed_proof.subproofs[2].get_proof_id())
+        return st
+        
     def recompute_commitment(self, challenge, responses):
         """
         Recomputes the commitment. 

@@ -704,6 +704,7 @@ def test_and_BLAC_binding3():
 
     prov = andp.get_prover(secrets_values)
     prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
+    
 
     prot = SigmaProtocol(andpv.get_verifier(), prov)
     assert prot.run()
@@ -832,5 +833,6 @@ def test_signature_proof():
     ver = sigproof1.get_verifier()
     ver.process_precommitment(prov.precommit())
     comm = prov.commit()
-    st = sigproof.get_proof_id()
-    pdb.set_trace()
+    chal = ver.send_challenge(comm)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)

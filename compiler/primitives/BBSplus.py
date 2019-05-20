@@ -154,7 +154,7 @@ class SignatureProof(Proof):
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
         dl1 = DLRepProof(self.A1, Secret(self.aliases[0])*g1 + Secret(self.aliases[1])*g2)
-        dl2 = DLRepProof(self.h0.bp.GT.infinite(), Secret(self.aliases[2])*g1 + Secret(self.aliases[3])*g2 + Secret(self.secret_names[0])*(-1*self.A1))
+        dl2 = DLRepProof(g0.group.infinite(), Secret(self.aliases[2])*g1 + Secret(self.aliases[3])*g2 + Secret(self.secret_names[0])*(-1*self.A1))
 
         signature = AndProof(dl1, dl2)
 
@@ -182,8 +182,9 @@ class SignatureProof(Proof):
     def get_verifier(self):
         return SignatureVerifier(self)
 
-    def recompute_commitment(self):
-        pass
+    def recompute_commitment(self, challenge, responses):
+        return self.constructed_proof.recompute_commitment(challenge, responses)
+        
 
         
 
@@ -247,7 +248,7 @@ class SignatureVerifier(AndProofVerifier):
         return self.challenge
 
     def check_adequate_lhs(self):
-        if self.constructed_proof.lhs[2] != self.precommitment[1].pair(self.proof.pk.w):
+        if self.constructed_proof.subproofs[1].lhs != self.precommitment[1].pair(self.proof.pk.w)+(-1*self.generators[0]).pair(self.proof.h0):
                 return False
         return True
 
