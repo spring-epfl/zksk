@@ -62,19 +62,19 @@ class DLRepNotEqualProof(Proof):
 class DLRepNotEqualProver(Prover):
     def __init__(self, proof, secret_values):
         self.lhs = proof.lhs
-        self.generators = proof.generators #h0,h1
+        self.generators = proof.generators 
         self.proof = proof
         self.secret_names = proof.secret_names
         self.aliases = proof.aliases
         self.secret_values = secret_values
-        self.blinder = None
+        self.constructed_proof = None
 
     def commit(self, randomizers_dict = None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
         used if the binding of the proof is set True.
         """
-        if self.blinder is None:
+        if self.constructed_proof is None:
             raise Exception("Please precommit before commiting, else proofs lack parameters")
         return self.constructed_prover.commit(randomizers_dict)
 
@@ -85,7 +85,7 @@ class DLRepNotEqualProver(Prover):
         new_secrets = (cur_secret*self.blinder % self.generators[0].group.order(), -self.blinder)
         self.precommitment = [self.blinder*(cur_secret*self.generators[1] - self.lhs[1])]
         self.constructed_proof = self.proof.build_constructed_proof(self.precommitment)
-        self.constructed_dict = dict(zip(self.constructed_proof.secret_names, new_secrets))
+        self.constructed_dict = dict(zip(self.aliases, new_secrets))
         if self.proof.binding:
             self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.constructed_proof.get_prover(self.constructed_dict)
@@ -102,7 +102,6 @@ class DLRepNotEqualProver(Prover):
 
 class DLRepNotEqualVerifier(Verifier):
     """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
-    The check_responses_consistency method is not overriden there since secrets are always different.
     """
     def __init__(self, proof):
         self.proof =proof

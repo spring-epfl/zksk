@@ -823,6 +823,14 @@ def test_signature_proof():
     lhs = creator.commit(messages)
     presignature = sk.sign(lhs)
     signature = creator.obtain_signature(presignature)
+    secret_dict = {"e":signature.e, "s":signature.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
 
-    sigproof = SignatureProof(signature, ["m1", "m2", "m3"], pk)
-    
+
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+    prov = sigproof.get_prover(secret_dict)
+    sigproof1= SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+    ver = sigproof1.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    comm = prov.commit()
+    st = sigproof.get_proof_id()
+    pdb.set_trace()

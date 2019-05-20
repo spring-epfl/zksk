@@ -132,6 +132,9 @@ class AdditivePoint:
 
     __rmul__=__mul__
 
+    def __repr__(self):
+        return "GTPt("+ str(self.pt.__hash__())+")"
+
 class G1Point:
     """
     A wrapper for G1 points so they can be paired with a G2 point by pt.pair(other)
@@ -162,6 +165,12 @@ class G1Point:
     def pair(self, other):
         return AdditivePoint(self.bp.bpgp.pair(self.pt, other.pt), self.bp)
 
+    def __repr__(self):
+        return "G1Pt("+ str(self.pt.__hash__())+")"
+
+
+
+
 class G2Point:
     """
     A wrapper for G2 points
@@ -188,6 +197,9 @@ class G2Point:
         return self.pt == other.pt
     
     __rmul__ = __mul__
+
+    def __repr__(self):
+        return "G2Pt("+ str(self.pt.__hash__())+")"
 
 class G1Group:
     """
