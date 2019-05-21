@@ -137,6 +137,7 @@ class DLRepVerifier(Verifier):
             if s in responses_dict.keys():
                 if response[i] != responses_dict[s] :
                     print("names are", self.secret_names, "incorrect for", self.secret_names[i])
+                    print("values are", response[i], "should be", responses_dict[s])
                     return False
             else:
                 responses_dict.update({s:response[i]})

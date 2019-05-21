@@ -836,3 +836,149 @@ def test_signature_proof():
     chal = ver.send_challenge(comm)
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
+
+
+def test_and_sig():
+    mG =BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs)
+    signature = creator.obtain_signature(presignature)
+    secret_dict = {"e":signature.e, "s":signature.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature2 = sk.sign(lhs)
+    signature2 = creator.obtain_signature(presignature2)
+    secret_dict2 = {"e1":signature2.e, "s1":signature2.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
+    sigproof1 = SignatureProof(signature2, ["e1", "s1", "m1", "m2", "m3"], pk)
+
+    secret_dict.update(secret_dict2)
+    andp = sigproof & sigproof1
+    prov = andp.get_prover(secret_dict)
+    ver = andp.get_verifier()
+    prot = SigmaProtocol(ver, prov)
+    assert prot.run()
+
+def test_signature_and_DLRNE():
+    """
+    Constructs a signature on a set of messages, and then pairs the proof of knowledge of this signature with
+    a proof of non-equality of two DL, one of which is the blinding exponent 's' of the signature.
+    """
+    mG =BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs)
+    signature = creator.obtain_signature(presignature)
+    secret_dict = {"e":signature.e, "s":signature.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+
+    g1 = mG.G1.generator()
+    pg1 = signature.s*g1
+    pg2,g2 = mG.G1.order().random()*g1, mG.G1.order().random()*g1
+    dneq = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=True)
+    sigproof1 = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+    dneq1 = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=True)
+
+    andp = sigproof & dneq
+    andp1 = sigproof1 & dneq1
+    prov = andp.get_prover(secret_dict)
+    ver = andp1.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    commitment = prov.commit()
+
+    challenge = ver.send_challenge(commitment)
+    responses = prov.compute_response(challenge)
+    assert ver.verify(responses)
+
+def test_wrong_signature_and_DLRNE():
+    """
+    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the 
+    signature and in the DLRNE.
+    Should be detected and raise an Exception.
+    """
+    mG =BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs)
+    signature = creator.obtain_signature(presignature)
+    secret_dict = {"e":signature.e, "s":signature.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+
+    g1 = mG.G1.generator()
+    pg1 = signature.s*g1
+    pg2,g2 = mG.G1.order().random()*g1, mG.G1.order().random()*g1
+    dneq = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=True)
+    sigproof1 = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+    dneq1 = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=True)
+
+    andp = sigproof & dneq
+    andp1 = sigproof1 & dneq1
+    prov = andp.get_prover(secret_dict)
+
+    prov.subs[1].secret_values['s'] = signature.s+1
+    ver = andp1.get_verifier()
+    ver.process_precommitment(prov.precommit())
+
+    commitment = prov.commit()
+
+    challenge = ver.send_challenge(commitment)
+    responses = prov.compute_response(challenge)
+    with pytest.raises(Exception):
+        ver.verify(responses)
+
+def test_wrong_signature_and_DLRNE():
+    """
+    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the 
+    signature and in the DLRNE.
+    Should not be detected since bindings in the DLRNE are False.
+    """
+    mG =BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+    pk, sk = keypair.pk, keypair.sk
+    generators, henerators = keypair.generators, keypair.henerators
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs)
+    signature = creator.obtain_signature(presignature)
+    secret_dict = {"e":signature.e, "s":signature.s, "m1":messages[0], "m2":messages[1], "m3":messages[2]}
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+
+    g1 = mG.G1.generator()
+    pg1 = signature.s*g1+g1
+    pg2,g2 = mG.G1.order().random()*g1, mG.G1.order().random()*g1
+    dneq = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=False)
+    sigproof1 = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+    dneq1 = DLRepNotEqualProof((pg1,g1), (pg2,g2), ["s"], binding=False)
+
+    andp = sigproof & dneq
+    andp1 = sigproof1 & dneq1
+    prov = andp.get_prover(secret_dict)
+
+    prov.subs[1].secret_values['s'] = signature.s+1
+    ver = andp1.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    commitment = prov.commit()
+
+    challenge = ver.send_challenge(commitment)
+    responses = prov.compute_response(challenge)
+    assert ver.verify(responses)

@@ -161,7 +161,7 @@ class SignatureProof(Proof):
         gen_pairs = [g.pair(self.h0) for g in self.generators]
         self.pair_lhs = self.A2.pair(self.pk.w)+(-1*gen_pairs[0])
         generators = [-1*(self.A2.pair(self.h0)), self.generators[2].pair(self.pk.w), gen_pairs[2]]
-        generators.extend(gen_pairs[2:])
+        generators.extend(gen_pairs[1:])
 
         # Build secret names [e, r1, delta1, s, m_i]
         new_secret_names = self.secret_names[:1] + [self.aliases[0], self.aliases[2]] + self.secret_names[1:]

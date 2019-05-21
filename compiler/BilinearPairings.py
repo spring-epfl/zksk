@@ -151,6 +151,9 @@ class G1Point:
     def __add__(self, other):
         return G1Point(self.pt+other.pt, self.bp)
 
+    def __sub__(self, other):
+        return self+(-1*other)
+
     def __mul__(self, nb):
         return G1Point(self.pt*nb, self.bp)
     
