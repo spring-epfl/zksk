@@ -24,9 +24,7 @@ for i in range(1, N):
 o = G.order()
 secrets_aliases = ["x1", "x2", "x3", "x4", "x5"]
 secrets_values = dict()
-secret_tab = (
-    []
-)  
+secret_tab = []
 # This array is only useful to compute the public info because zip doesn't take dicts. #spaghetti
 for wurd in secrets_aliases:  # we build N secrets
     secrets_values[wurd] = o.random()
@@ -38,7 +36,7 @@ lhs = G.wsum(secret_tab, tab_g)
 rhs1 = create_rhs(secrets_aliases, tab_g)
 
 
-def test_dlrep_true():  
+def test_dlrep_true():
     # Legit run
     pedersen_true = DLRepProof(lhs, rhs1)
     true_prover = pedersen_true.get_prover(secrets_values)
@@ -47,7 +45,7 @@ def test_dlrep_true():
     assert proof.run() == True
 
 
-def test_dlrep_wrong_public():  
+def test_dlrep_wrong_public():
     # We use generators and secrets from previous run but random public info
     randWord = randomword(30).encode("UTF-8")
     public_wrong = G.hash_to_point(randWord)
@@ -58,7 +56,7 @@ def test_dlrep_wrong_public():
     assert wrongpub.run() == False
 
 
-def test_dlrep_NI():  
+def test_dlrep_NI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
     niprover = niproof.get_prover(secrets_values)
@@ -67,7 +65,7 @@ def test_dlrep_NI():
     assert niverif.verify_NI(chal, resp, message="mymessage") == True
 
 
-def test_dlrep_wrongNI():  
+def test_dlrep_wrongNI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
     niprover = niproof.get_prover(secrets_values)
@@ -88,11 +86,10 @@ def test_dlrep_simulation():
 def test_diff_groups_dlrep():
     tab_g1 = tab_g.copy()
     tab_g1[2] = EcGroup(706).generator()
-    with pytest.raises(
-        Exception
-    ):  
+    with pytest.raises(Exception):
         # An exception should be raised due to different groups coexisting in a DLRepProof
         niproof = DLRepProof(tab_g1, secrets_aliases, lhs)
+
 
 def get_generators(nb_wanted, start_index=0):  # What is start_index?
     G = EcGroup(713)
@@ -157,7 +154,14 @@ def setup_and_proofs():
     generators2 = get_generators(n2, start_index=n1)
 
     secrets_dict = dict(
-        [("x0", Bn(1)), ("x1", Bn(2)), ("x2", Bn(5)), ("x3", Bn(100)), ("x4", Bn(43)), ("x5", Bn(10))]
+        [
+            ("x0", Bn(1)),
+            ("x1", Bn(2)),
+            ("x2", Bn(5)),
+            ("x3", Bn(100)),
+            ("x4", Bn(43)),
+            ("x5", Bn(10)),
+        ]
     )
 
     sum_1 = G.wsum(
@@ -167,16 +171,14 @@ def setup_and_proofs():
     for i in range(3, 6):
         secrets_2.append(secrets_dict["x" + str(i)])
 
-    sum_2 = G.wsum(secrets_2,generators2)
+    sum_2 = G.wsum(secrets_2, generators2)
     pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
 
-    pp2 = DLRepProof(
-        sum_2, create_rhs(["x0", "x3", "x4", "x5"], generators2)
-    )
+    pp2 = DLRepProof(sum_2, create_rhs(["x0", "x3", "x4", "x5"], generators2))
     return pp1, pp2, secrets_dict
 
 
-def test_wrong_and_proofs():  
+def test_wrong_and_proofs():
     # An alien EcPt is inserted in the generators
     n1 = 3
     n2 = 1
@@ -185,7 +187,14 @@ def test_wrong_and_proofs():
     generators2[0] = EcGroup(706).generator()
 
     secrets_dict = dict(
-        [("x0", Bn(1)), ("x1", Bn(2)), ("x2", Bn(5)), ("x3", Bn(100)), ("x4", Bn(43)), ("x5", Bn(10))]
+        [
+            ("x0", Bn(1)),
+            ("x1", Bn(2)),
+            ("x2", Bn(5)),
+            ("x3", Bn(100)),
+            ("x4", Bn(43)),
+            ("x5", Bn(10)),
+        ]
     )
     sum_1 = G.wsum(
         [secrets_dict["x0"], secrets_dict["x1"], secrets_dict["x2"]], generators1
@@ -193,12 +202,10 @@ def test_wrong_and_proofs():
 
     secrets_2 = [secrets_dict["x0"]]
 
-    sum_2 = G.wsum( secrets_2, generators2)
+    sum_2 = G.wsum(secrets_2, generators2)
     pp1 = DLRepProof(sum_1, create_rhs(["x0", "x1", "x2"], generators1))
     pp2 = DLRepProof(sum_2, create_rhs(["x0"], generators2))
-    with pytest.raises(
-        Exception
-    ):  
+    with pytest.raises(Exception):
         # An exception should be raised because of a shared secrets linked to two different groups
         and_proof = AndProof(pp1, pp2)
 
@@ -237,7 +244,7 @@ def test_wrong_and_proofs():
 
 def test_3_and_proofs():
     pp1, pp2, secrets_dict = setup_and_proofs()
-    and_proof = AndProof([pp1, pp2, pp2], pp1, pp1, [pp1, pp2])
+    and_proof = AndProof(pp1, pp2, pp2, pp1, pp1, pp1, pp2)
     and_prover = and_proof.get_prover(secrets_dict)
     and_verifier = and_proof.get_verifier()
 
@@ -976,7 +983,7 @@ def test_signature_setup():
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs, pedersen_NI = creator.commit(messages, zkp=True)
@@ -994,7 +1001,7 @@ def test_signature_proof():
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1025,7 +1032,7 @@ def test_and_sig():
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1070,7 +1077,7 @@ def test_signature_and_DLRNE():
     keypair = KeyPair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1114,7 +1121,7 @@ def test_wrong_signature_and_DLRNE():
     keypair = KeyPair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1162,7 +1169,7 @@ def test_wrong_signature_and_DLRNE():
     keypair = KeyPair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
-    generators, henerators = keypair.generators, keypair.henerators
+    generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)

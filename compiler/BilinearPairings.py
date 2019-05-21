@@ -107,8 +107,8 @@ class GTGroup:
 
     def wsum(self, weights, generators):
         res = self.infinite()
-        for w,g in zip(weights, generators):
-            res = res + w*g
+        for w, g in zip(weights, generators):
+            res = res + w * g
         return res
 
 
@@ -245,8 +245,8 @@ class G1Group:
 
     def wsum(self, weights, generators):
         res = self.infinite()
-        for w,g in zip(weights, generators):
-            res = res + w*g
+        for w, g in zip(weights, generators):
+            res = res + w * g
         return res
 
 
@@ -275,8 +275,8 @@ class G2Group:
 
     def wsum(self, weights, generators):
         res = self.infinite()
-        for w,g in zip(weights, generators):
-            res = res + w*g
+        for w, g in zip(weights, generators):
+            res = res + w * g
         return res
 
 

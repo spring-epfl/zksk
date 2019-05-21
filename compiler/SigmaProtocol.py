@@ -80,13 +80,11 @@ class Prover:
     def get_NI_proof(self, message="", encoding=None):
         """ Non-interactive proof 
         :param message: a string message.
-        :return: a challenge that is a hash of (lhs, commitment, message) and a list of responses. Each response has type petlib.bn.Bn 
+        :return: a challenge that is a hash of a proof descriptor containing all public information along with left-hand-sides, and a list of responses. 
         """
-        precommitment = None
         # precommit to 1.gather encapsulated precommitments
         # 2.write the precommitments in their respective proof so the get_proof_id embeds them
         precommitment = self.precommit()
-
         commitment = self.commit()
         message = message.encode()
         protocol = encode(self.get_proof_id(), encoding)
@@ -97,18 +95,18 @@ class Prover:
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
+        
         responses = self.compute_response(challenge)
-        return (
-            (challenge, responses)
-            if precommitment == None
-            else (challenge, responses, precommitment)
-        )
+        if precommitment == None:
+            return (challenge, responses)
+        else:
+            return (challenge, responses, precommitment)
 
     def precommit(self):
         return None
 
 
-class Verifier: 
+class Verifier:
     def send_challenge(self, commitment):
         """
         :param commitment: a petlib.bn.Bn number
@@ -158,9 +156,7 @@ class Verifier:
             raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
         protocol = encode(self.get_proof_id(), encoding)
-        r_guess = self.proof.recompute_commitment(
-            challenge, response
-        )  
+        r_guess = self.proof.recompute_commitment(challenge, response)
         # We retrieve the commitment using the verification identity
         conc = protocol
         conc += encode(r_guess, encoding)
@@ -192,10 +188,7 @@ def check_groups(list_of_secret_names, list_of_generators):
         mydict[word].append(idx)
 
     # Now we use this dictionary to check all the generators related to a particular secret live in the same group
-    for (
-        word,
-        gen_idx,
-    ) in mydict.items():  
+    for (word, gen_idx) in mydict.items():
         # word is the key, gen_idx is the value = a list of indices
         ref_order = list_of_generators[gen_idx[0]].group.order()
 
@@ -219,13 +212,13 @@ def chal_randbits(bitlength=CHAL_LENGTH):
 
 def get_secret_names(sub_list):
     secrets = []
-    [secrets.extend(elem.proof.secret_names) for elem in sub_list]
+    [secrets.extend(elem.secret_names) for elem in sub_list]
     return secrets
 
 
 def get_generators(sub_list):
     generators = []
-    [generators.extend(elem.proof.generators.copy()) for elem in sub_list]
+    [generators.extend(elem.generators.copy()) for elem in sub_list]
     return generators
 
 

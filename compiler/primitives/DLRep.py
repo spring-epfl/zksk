@@ -44,10 +44,8 @@ class DLRepProver(Prover):
         the same random value. 
         """
         output = {}
-        for idx, sec in enumerate(
-            self.proof.secret_names
-        ):  
-        # This overwrites if shared secrets but allows to access the appropriate group order
+        for idx, sec in enumerate(self.proof.secret_names):
+            # This overwrites if shared secrets but allows to access the appropriate group order
             key = sec
             to_append = self.proof.generators[idx].group.order().random()
             output.update({key: to_append})
@@ -69,13 +67,9 @@ class DLRepProver(Prover):
         self.group_order = G.order()
         # Will be useful for all the protocol
 
-        if randomizers_dict == None:
+        if randomizers_dict == None or randomizers_dict=={}:
             # If we are not provided a randomizer dict from above, we compute it
             secret_to_random_value = self.get_randomizers()
-        elif any([sec not in randomizers_dict.keys() for sec in self.proof.secret_names]):
-            # We were passed an incomplete dict, fill the empty slots but keep the existing ones
-            secret_to_random_value = self.get_randomizers()
-            secret_to_random_value.update(randomizers_dict)
         else:
             secret_to_random_value = randomizers_dict
 
@@ -102,9 +96,7 @@ class DLRepProver(Prover):
         ]
         return resps
 
-    def simulate_proof(
-        self, responses_dict=None, challenge=None
-    ): 
+    def simulate_proof(self, responses_dict=None, challenge=None):
         """
         :param responses_dict: a dictionnary from secret names (strings) to responses (petlib.bn.Bn numbers)
         :param challenge: a petlib.bn.Bn equal to the challenge
@@ -118,9 +110,7 @@ class DLRepProver(Prover):
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
 
-        response = [
-            responses_dict[m] for m in self.proof.secret_names
-        ]  
+        response = [responses_dict[m] for m in self.proof.secret_names]
         # random responses, the same for shared secrets
         commitment = self.proof.recompute_commitment(challenge, response)
 
@@ -249,5 +239,7 @@ class DLRepProof(Proof):
         :return: the commitment from the parameters
         """
 
-        leftside = self.lhs.group.wsum(responses, self.generators) + (-challenge) * self.lhs
+        leftside = (
+            self.lhs.group.wsum(responses, self.generators) + (-challenge) * self.lhs
+        )
         return leftside

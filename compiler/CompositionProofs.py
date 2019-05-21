@@ -44,6 +44,7 @@ class Proof:
     def set_simulate(self):
         self.simulate = True
 
+
 def find_residual_chal(arr, challenge, chal_length):
     """ To find c1 such that c = c1 + c2 +c3 mod k,
     We compute c2 + c3 -c and take the opposite
@@ -53,6 +54,7 @@ def find_residual_chal(arr, challenge, chal_length):
     temp_arr.append(-challenge)
     return -add_Bn_array(temp_arr, modulus)
 
+
 class OrProof(Proof):
     def __init__(self, *subproofs):
         """
@@ -61,7 +63,7 @@ class OrProof(Proof):
         :return: A Proof being the Or disjunction of the argument proofs.
 
         """
-        if len(subproofs)<2:
+        if len(subproofs) < 2:
             raise Exception("AndProof needs >1 arguments !")
 
         self.subproofs = list(subproofs)
@@ -69,9 +71,7 @@ class OrProof(Proof):
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
         self.simulate = False
-        check_groups(
-            self.secret_names, self.generators
-        )  
+        check_groups(self.secret_names, self.generators)
         # For now we consider the same constraints as in the And Proof
 
     def get_proof_id(self):
@@ -151,9 +151,7 @@ Important :
 """
 
 
-class OrProver(
-    Prover
-):  
+class OrProver(Prover):
     # This prover is built on two subprovers, max one of them being a simulator
     def __init__(self, proof, subprovers, secret_values):
         self.subs = subprovers
@@ -171,9 +169,7 @@ class OrProver(
         print("No legit prover found, can only simulate the Or Proof")
         return None
 
-    def get_randomizers(
-        self
-    ) -> dict:  
+    def get_randomizers(self) -> dict:
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         """
         random_vals = {}
@@ -192,9 +188,7 @@ class OrProver(
             if index == self.true_prover:
                 commitment.append(self.subs[index].commit())
             else:
-                cur = self.subs[
-                    index
-                ].simulate_proof() 
+                cur = self.subs[index].simulate_proof()
                 self.simulations.append(cur)
                 commitment.append(cur[0])
         return commitment
@@ -264,7 +258,7 @@ class AndProof(Proof):
         Arguments can also be lists of proofs, but not lists of lists.
         :return: An other Proof object being the And conjunction of the argument proofs."""
 
-        if len(subproofs)<2:
+        if len(subproofs) < 2:
             raise Exception("AndProof needs >1 arguments !")
 
         self.subproofs = list(subproofs)
@@ -377,7 +371,9 @@ class AndProofProver(Prover):
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
-        elif any([sec not in randomizers_dict.keys() for sec in self.proof.secret_names]):
+        elif any(
+            [sec not in randomizers_dict.keys() for sec in self.proof.secret_names]
+        ):
             # We were passed an incomplete dict, fill the empty slots but keep the existing ones
             secret_to_random_value = self.get_randomizers()
             secret_to_random_value.update(randomizers_dict)
@@ -453,4 +449,3 @@ class AndProofVerifier(Verifier):
             if not sub.check_adequate_lhs():
                 return False
         return True
-

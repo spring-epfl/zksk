@@ -37,7 +37,9 @@ class SignatureCreator:
         Prepare a pedersen commitment for the correct construction of the sequence to be signed.
         Returns a non-interactive proof if zkp parameter is set to true.
         """
-        to_sign = self.pk.generators[0].group.wsum( messages, self.pk.generators[2 : len(messages) + 2])
+        to_sign = self.pk.generators[0].group.wsum(
+            messages, self.pk.generators[2 : len(messages) + 2]
+        )
 
         if not zkp:
             self.s1 = Bn(0)
@@ -69,46 +71,38 @@ class KeyPair:
         """
 
         self.generators = []
-        self.henerators = []
-        g = bilinearpair.G1.generator()
-        h = bilinearpair.G2.generator()
-        order = bilinearpair.G1.order()
         for i in range(length + 2):
-            randWord = "".join(
-                random.SystemRandom().choice(string.ascii_lowercase + string.digits)
-                for _ in range(RD_LENGTH)
-            )
+            randWord = str(i+1)
             self.generators.append(
                 bilinearpair.G1.hash_to_point(randWord.encode("UTF-8"))
             )
-        self.henerators.append(bilinearpair.G2.generator())
+        self.h0 = bilinearpair.G2.generator()
 
-        self.sk = SecretKey(order.random(), self)
+        self.sk = SecretKey(bilinearpair.G1.order().random(), self)
         self.pk = PublicKey(
-            self.sk.gamma * self.henerators[0], self.generators, self.henerators
+            self.sk.gamma * self.h0, self.generators, self.h0
         )
         self.sk.pk = self.pk
 
 
 class PublicKey:
-    def __init__(self, w, generators, henerators):
+    def __init__(self, w, generators, h0):
         self.w = w
         self.generators = generators
-        self.henerators = henerators
-        self.h0 = self.henerators[0]
+        self.h0 = h0
 
     def verify_signature(self, signature, messages):
         generators = self.generators[: len(messages) + 2]
-        product = generators[0] + generators[0].group.wsum(([signature.s] + messages), generators[1:])
+        product = generators[0] + generators[0].group.wsum(
+            ([signature.s] + messages), generators[1:]
+        )
         return signature.A.pair(self.w + signature.e * self.h0) == product.pair(self.h0)
 
 
 class SecretKey:
     def __init__(self, value, keypair):
         self.generators = keypair.generators
-        self.henerators = keypair.henerators
-        self.h0 = self.henerators[0]
-        self.group = self.h0.group
+        self.h0 = keypair.h0
         self.gamma = value
 
     def sign(self, lhs):
@@ -116,10 +110,10 @@ class SecretKey:
         Signs a committed message Cm ie returns A,e,s such that A = (g0 + s*g1 + Cm) * 1/e+gamma
         """
         pedersen_product = lhs
-        e = self.group.order().random()
-        s2 = self.group.order().random()
+        e = self.h0.group.order().random()
+        s2 = self.h0.group.order().random()
         prod = self.generators[0] + s2 * self.generators[1] + pedersen_product
-        A = (self.gamma + e).mod_inverse(self.group.order()) * prod
+        A = (self.gamma + e).mod_inverse(self.h0.group.order()) * prod
         return Signature(A, e, s2)
 
 
@@ -229,7 +223,13 @@ class SignatureProver(Prover):
         return self.constructed_prover.commit(randomizers_dict)
 
     def precommit(self):
-
+        """
+        Generates the lacking information to construct a complete proof and returns it.
+        At the same time, triggers the said proof construction for self and self.proof.
+        After this function returns, the current prover is able to commit.
+        Returned value is to be processed on the verifier side by verifier.process_precommitment( )
+        """
+        # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
         r1, r2 = (
             self.proof.generators[0].group.order().random(),
             self.proof.generators[0].group.order().random(),
@@ -238,8 +238,11 @@ class SignatureProver(Prover):
         new_secrets = [r1, r2, delta1, delta2]
         A1 = r1 * self.proof.generators[1] + r2 * self.proof.generators[2]
         A2 = r1 * self.proof.generators[2] + self.proof.signature.A
+
         self.precommitment = [A1, A2]
         self.proof.build_constructed_proof(self.precommitment)
+
+        # Map the secret names to the values we just computed, and update the secrets dictionary accordingly
         self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
         self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.proof.constructed_proof.get_prover(
@@ -271,7 +274,7 @@ class SignatureVerifier(AndProofVerifier):
     def check_adequate_lhs(self):
         if self.proof.constructed_proof.subproofs[1].lhs != self.precommitment[1].pair(
             self.proof.pk.w
-        ) + (-1 * self.proof.generators[0]).pair(self.proof.h0):
+        ) + (-1 * self.proof.generators[0]).pair(self.proof.pk.h0):
             return False
         return True
 
