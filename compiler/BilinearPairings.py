@@ -1,5 +1,6 @@
 from bplib.bp import BpGroup, G1Elem, G2Elem, GTElem
 
+
 def test():
     """
     Some wrappers to use on top of Bplib groups so groups and points behave well with most of the methods used in petlib.ec
@@ -65,6 +66,7 @@ def test():
     """
     return 1
 
+
 class BilinearGroupPair:
     def __init__(self):
         self.bpgp = BpGroup()
@@ -77,13 +79,14 @@ class BilinearGroupPair:
         Returns the three groups in the following order :  G1, G2, GT.
         """
         return self.G1, self.G2, self.GT
-    
+
 
 class GTGroup:
     """
     A wrapper for the GT group such that it creates additive points and allows to retrieve groups G1 and G2.
     The group ID is set to 0 to allow comparisons between groups of different types to raise an explicit Exception.
     """
+
     def __init__(self, bp):
         self.bp = bp
         self.gen = None
@@ -101,12 +104,19 @@ class GTGroup:
         if self.gen is None:
             self.gen = self.bp.G1.generator().pair(self.bp.G2.generator())
         return self.gen
-        
+
+    def wsum(self, weights, generators):
+        res = self.infinite()
+        for w,g in zip(weights, generators):
+            res = res + w*g
+        return res
+
 
 class AdditivePoint:
     """
     A wrapper for GT points so they use additive notation.
     """
+
     def __init__(self, pt, bp):
         self.pt = pt
         self.bp = bp
@@ -121,94 +131,95 @@ class AdditivePoint:
         Special case in 0 since the underlying bplib function is broken for this value.
         """
         if nb == 0:
-            return AdditivePoint(self.pt/self.pt, self.bp)
-        return AdditivePoint(self.pt**nb, self.bp)
+            return AdditivePoint(self.pt / self.pt, self.bp)
+        return AdditivePoint(self.pt ** nb, self.bp)
 
     def __eq__(self, other):
         return self.pt == other.pt
 
     def __add__(self, other):
-        return AdditivePoint(self.pt*(other.pt), self.bp)
+        return AdditivePoint(self.pt * (other.pt), self.bp)
 
-    __rmul__=__mul__
+    __rmul__ = __mul__
 
     def __repr__(self):
-        return "GTPt("+ str(self.pt.__hash__())+")"
+        return "GTPt(" + str(self.pt.__hash__()) + ")"
+
 
 class G1Point:
     """
     A wrapper for G1 points so they can be paired with a G2 point by pt.pair(other)
     """
+
     def __init__(self, ecpt, bpairing):
         self.pt = ecpt
         self.bp = bpairing
         self.group = self.bp.G1
 
-    
     def __eq__(self, other):
         return self.pt == other.pt
-    
+
     def __add__(self, other):
-        return G1Point(self.pt+other.pt, self.bp)
+        return G1Point(self.pt + other.pt, self.bp)
 
     def __sub__(self, other):
-        return self+(-1*other)
+        return self + (-1 * other)
 
     def __mul__(self, nb):
-        return G1Point(self.pt*nb, self.bp)
-    
+        return G1Point(self.pt * nb, self.bp)
+
     def export(self, form=0):
         return self.pt.export(form) if form else self.pt.export()
 
     def __eq__(self, other):
         return self.pt == other.pt
-    
+
     __rmul__ = __mul__
 
     def pair(self, other):
         return AdditivePoint(self.bp.bpgp.pair(self.pt, other.pt), self.bp)
 
     def __repr__(self):
-        return "G1Pt("+ str(self.pt.__hash__())+")"
-
-
+        return "G1Pt(" + str(self.pt.__hash__()) + ")"
 
 
 class G2Point:
     """
     A wrapper for G2 points
     """
+
     def __init__(self, ecpt, bpairing):
         self.pt = ecpt
         self.bp = bpairing
         self.group = self.bp.G2
 
-    
     def __eq__(self, other):
         return self.pt == other.pt
-    
+
     def __add__(self, other):
-        return G2Point(self.pt+other.pt, self.bp)
+        return G2Point(self.pt + other.pt, self.bp)
 
     def __mul__(self, nb):
-        return G2Point(self.pt*nb, self.bp)
-    
+        return G2Point(self.pt * nb, self.bp)
+
     def export(self, form=0):
         return self.pt.export(form) if form else self.pt.export()
 
     def __eq__(self, other):
         return self.pt == other.pt
-    
+
     __rmul__ = __mul__
 
     def __repr__(self):
-        return "G2Pt("+ str(self.pt.__hash__())+")"
+        return "G2Pt(" + str(self.pt.__hash__()) + ")"
+
 
 class G1Group:
     """
     A wrapper for the G1 (behaving like an EcGroup) group. Group ID is 1 for G1.
     """
-    def __init__(self, bp:BilinearGroupPair):
+
+    def __init__(self, bp: BilinearGroupPair):
         self.bp = bp
         self.gen = None
         self.inf = None
@@ -232,11 +243,19 @@ class G1Group:
     def hash_to_point(self, string):
         return G1Point(self.bp.bpgp.hashG1(string), self.bp)
 
+    def wsum(self, weights, generators):
+        res = self.infinite()
+        for w,g in zip(weights, generators):
+            res = res + w*g
+        return res
+
+
 class G2Group:
     """
     A wrapper for the G2 group. Group ID is 2.
     """
-    def __init__(self, bp:BilinearGroupPair):
+
+    def __init__(self, bp: BilinearGroupPair):
         self.bp = bp
         self.gen = None
         self.inf = None
@@ -246,7 +265,6 @@ class G2Group:
             self.gen = G2Point(self.bp.bpgp.gen2(), self.bp)
         return self.gen
 
-
     def infinite(self):
         if self.inf is None:
             self.inf = G2Point(self.generator().pt.inf(self.bp.bpgp), self.bp)
@@ -255,7 +273,14 @@ class G2Group:
     def order(self):
         return self.bp.bpgp.order()
 
+    def wsum(self, weights, generators):
+        res = self.infinite()
+        for w,g in zip(weights, generators):
+            res = res + w*g
+        return res
+
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

@@ -26,7 +26,7 @@ def keyGen_ggm(params, n): # n is the number of messages we'll pass
     """
     o = params[3]
     h = params[2]
-    [rands = o.random() for _ in range(2*n)
+    rands = [o.random() for _ in range(2*n)]
     
     x = rands[:len(A)//2]   #length n   
     y = rands[len(A)//2:]   #length n
@@ -52,14 +52,14 @@ def amac_ggm(iparams, sk, u, u_prime, messages):
 
     secret_names = ["x"+str(i) for i in range(n)]
 
-    [constructed_u = el*u for el in messages]
+    constructed_u = [el*u for el in messages]
     final_u = [u]
     final_u.extend(constructed_u)
     u_proof = DLRepProof(final_u, secret_names, u_prime)
 
     C_proof = DLRepProof([g, h], ["x0", "x0b"], Cx)
 
-    [h_proofs = DLRepProof([h], secret_names[i+1], X[i+1]) for i in range(n-1)
+    h_proofs = [DLRepProof([h], secret_names[i+1], X[i+1]) for i in range(n-1)]
     h_and = AndProof(h_proofs)
 
     amac = AndProof(u_proof, C_proof, h_and)

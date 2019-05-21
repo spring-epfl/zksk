@@ -3,6 +3,7 @@ from petlib.bn import Bn
 from functools import reduce
 import pdb
 
+
 class RightSide:
     """
     A class that can be obtained by composing (with the addition operator) elements of type Secret with element of type petlib.ec.EcPt.
@@ -11,25 +12,34 @@ class RightSide:
     c.f. DLRepProof to see how RightSide is used.
     Secret("x") can be assigned a value at its creation by creating it like so: Secret("x", val) where val is of type petlib.bn.Bn
     """
+
     def __init__(self, secret, ecPt):
         """
         :param secret: of type Secret
         :param ecPt: of type petlib.ec.EcPt
         """
         if not isinstance(secret, Secret):
-            raise Exception("in {0} * {1}, the first parameter should be a string ".format(secret, ecPt))
+            raise Exception(
+                "in {0} * {1}, the first parameter should be a string ".format(
+                    secret, ecPt
+                )
+            )
         self.secrets = [secret]
         self.pts = [ecPt]
+
     def __add__(self, other):
         """
         :param other: of type RightSide
         :return: a new element of type RightSide representing self + other
         """
         if not isinstance(other, RightSide):
-            raise Exception("${0} doesn't correspond to something like \"x1\" * g1 + \"x2\" * g2 + ... + \"xn\" * gn")
+            raise Exception(
+                '${0} doesn\'t correspond to something like "x1" * g1 + "x2" * g2 + ... + "xn" * gn'
+            )
         self.secrets.extend(other.secrets)
         self.pts.extend(other.pts)
         return self
+
     def eval(self):
         """
         this method allows for writing things such as 
@@ -42,15 +52,20 @@ class RightSide:
         """
         for secret in self.secrets:
             if secret.value == None:
-                raise Exception("trying to evaluate secret {0} which was set with no value".format(secret.name))
+                raise Exception(
+                    "trying to evaluate secret {0} which was set with no value".format(
+                        secret.name
+                    )
+                )
 
         def ith_mul(i):
             return self.secrets[i].value * self.pts[i]
 
-        summation = ith_mul(0) 
+        summation = ith_mul(0)
         for i in range(1, len(self.secrets)):
             summation += ith_mul(i)
         return summation
+
 
 class Secret:
     def __init__(self, name, value=None):
@@ -70,11 +85,7 @@ class Secret:
 
 
 def create_rhs(secrets_names, generators):
-    return reduce(lambda x1, x2: x1 + x2, map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)))
-
-def create_lhs(generators, secrets):
-    sum_ = generators[0].group.infinite()
-
-    for i in range(len(generators)):
-        sum_ = sum_ + secrets[i] * generators[i]
-    return sum_
+    return reduce(
+        lambda x1, x2: x1 + x2,
+        map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)),
+    )

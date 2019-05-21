@@ -6,11 +6,14 @@ from CompositionProofs import *
 from primitives.DLRep import *
 from Subproof import *
 import pdb
+
 DEFAULT_ALIASES = ("alpha_", "beta_")
+
 
 def generate_DLRNE_aliases():
     nb1, nb2 = chal_randbits(), chal_randbits()
-    return DEFAULT_ALIASES[0]+nb1.hex(), DEFAULT_ALIASES[1]+nb2.hex()
+    return DEFAULT_ALIASES[0] + nb1.hex(), DEFAULT_ALIASES[1] + nb2.hex()
+
 
 class DLRepNotEqualProof(Proof):
     def __init__(self, valid_tuple, invalid_tuple, secret_names, binding=False):
@@ -26,10 +29,11 @@ class DLRepNotEqualProof(Proof):
         self.secret_names = secret_names
         self.simulate = False
         self.binding = binding
+        self.constructed_proof = None
 
     def get_prover(self, secret_values):
         if self.simulate:
-            secret_values={}
+            secret_values = {}
         return DLRepNotEqualProver(self, secret_values)
 
     def get_verifier(self):
@@ -41,20 +45,32 @@ class DLRepNotEqualProof(Proof):
         new_lhs = [self.generators[0].group.infinite()] + precommitment
         p = []
         for i in range(len(new_lhs)):
-            p.append(DLRepProof(new_lhs[i], create_rhs(self.aliases, [self.generators[i], self.lhs[i]])))
+            p.append(
+                DLRepProof(
+                    new_lhs[i],
+                    create_rhs(self.aliases, [self.generators[i], self.lhs[i]]),
+                )
+            )
         if self.binding:
-            p.append(DLRepProof(self.lhs[0], Secret(self.secret_names[0])*self.generators[0]))
+            p.append(
+                DLRepProof(
+                    self.lhs[0], Secret(self.secret_names[0]) * self.generators[0]
+                )
+            )
         self.constructed_proof = AndProof(*p)
         self.constructed_proof.lhs = new_lhs
         return self.constructed_proof
 
-    
     def get_proof_id(self):
-        st = ["DLRepNotEqualProof", self.constructed_proof.generators, self.constructed_proof.lhs]
+        st = [
+            "DLRepNotEqualProof",
+            self.constructed_proof.generators,
+            self.constructed_proof.lhs,
+        ]
         if self.binding:
             st.append(self.constructed_proof.subproofs[2].get_proof_id())
         return st
-        
+
     def recompute_commitment(self, challenge, responses):
         """
         Recomputes the commitment. 
@@ -64,58 +80,56 @@ class DLRepNotEqualProof(Proof):
 
 class DLRepNotEqualProver(Prover):
     def __init__(self, proof, secret_values):
-        self.lhs = proof.lhs
-        self.generators = proof.generators 
         self.proof = proof
-        self.secret_names = proof.secret_names
-        self.aliases = proof.aliases
         self.secret_values = secret_values
-        self.constructed_proof = None
 
-    def commit(self, randomizers_dict = None):
+    def commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
         used if the binding of the proof is set True.
         """
-        if self.constructed_proof is None:
-            raise Exception("Please precommit before commiting, else proofs lack parameters")
+        if self.proof.constructed_proof is None:
+            raise Exception(
+                "Please precommit before commiting, else proofs lack parameters"
+            )
         return self.constructed_prover.commit(randomizers_dict)
 
-
     def precommit(self):
-        cur_secret = self.secret_values[self.secret_names[0]]
-        self.blinder = self.generators[0].group.order().random()
-        new_secrets = (cur_secret*self.blinder % self.generators[0].group.order(), -self.blinder)
-        self.precommitment = [self.blinder*(cur_secret*self.generators[1] - self.lhs[1])]
-        self.constructed_proof = self.proof.build_constructed_proof(self.precommitment)
-        self.constructed_dict = dict(zip(self.aliases, new_secrets))
+        cur_secret = self.secret_values[self.proof.secret_names[0]]
+        self.blinder = self.proof.generators[0].group.order().random()
+        new_secrets = (
+            cur_secret * self.blinder % self.proof.generators[0].group.order(),
+            -self.blinder,
+        )
+        self.precommitment = [
+            self.blinder * (cur_secret * self.proof.generators[1] - self.proof.lhs[1])
+        ]
+        self.proof.build_constructed_proof(self.precommitment)
+        self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
         if self.proof.binding:
             self.constructed_dict.update(self.secret_values)
-        self.constructed_prover = self.constructed_proof.get_prover(self.constructed_dict)
+        self.constructed_prover = self.proof.constructed_proof.get_prover(
+            self.constructed_dict
+        )
         return self.precommitment
 
     def compute_response(self, challenge):
         self.challenge = challenge
-        self.constructed_prover.challenge=  challenge
+        self.constructed_prover.challenge = challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
-
-
 
 
 class DLRepNotEqualVerifier(Verifier):
     """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
     """
+
     def __init__(self, proof):
-        self.proof =proof
-        self.lhs = proof.lhs
-        self.generators = proof.generators
-        self.secret_names = proof.secret_names
-        self.aliases = proof.aliases
+        self.proof = proof
 
     def process_precommitment(self, precommitment):
-        self.constructed_proof = self.proof.build_constructed_proof(precommitment)
-        self.constructed_verifier = self.constructed_proof.get_verifier()
+        self.proof.build_constructed_proof(precommitment)
+        self.constructed_verifier = self.proof.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
         self.commitment = com
@@ -124,10 +138,12 @@ class DLRepNotEqualVerifier(Verifier):
         return self.challenge
 
     def check_adequate_lhs(self):
-        for el in self.constructed_proof.lhs[1:]:
-            if el == self.generators[0].group.infinite():
+        for el in self.proof.constructed_proof.lhs[1:]:
+            if el == self.proof.generators[0].group.infinite():
                 return False
         return True
 
     def check_responses_consistency(self, response, response_dict):
-        return self.constructed_verifier.check_responses_consistency(response, response_dict)
+        return self.constructed_verifier.check_responses_consistency(
+            response, response_dict
+        )
