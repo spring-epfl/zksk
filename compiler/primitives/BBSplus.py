@@ -26,6 +26,36 @@ class Signature:
         self.e = e
         self.s = s_
 
+    def verify_signature(self, pk, messages):
+        generators = pk.generators[: len(messages) + 2]
+        product = generators[0] + generators[0].group.wsum(
+            ([self.s] + messages), generators[1:]
+        )
+        return self.A.pair(pk.w + self.e * pk.h0) == product.pair(pk.h0)
+
+
+class UserCommitmentMessage:
+    """
+    Embeds the product to be presigned by the issuer. If blinded by a user pedersen commitment, a NI proof is also specified.
+    """
+
+    def __init__(self, commitment, pedersen_NIproof=None):
+        self.commitment_message = commitment
+        self.NIproof = pedersen_NIproof
+
+    def verify_blinding(self, pk, nb_messages):
+        """
+        Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
+        verify the non-interactive proof passed as argument.
+        """
+        if self.NIproof is None:
+            raise Exception("No proof to verify")
+        generators = pk.generators[1 : nb_messages + 2]
+        lhs = self.commitment_message
+        secret_names = ["s'"] + ["m" + str(i + 1) for i in range(len(generators))]
+        proof = DLRepProof(lhs, create_rhs(secret_names, generators))
+        return proof.get_verifier().verify_NI(*self.NIproof, encoding=enc_GXpt)
+
 
 class SignatureCreator:
     def __init__(self, pk):
@@ -37,24 +67,23 @@ class SignatureCreator:
         Prepare a pedersen commitment for the correct construction of the sequence to be signed.
         Returns a non-interactive proof if zkp parameter is set to true.
         """
-        to_sign = self.pk.generators[0].group.wsum(
+        lhs = self.pk.generators[0].group.wsum(
             messages, self.pk.generators[2 : len(messages) + 2]
         )
+        self.s1 = Bn(0)
+        NIproof = None
+        if zkp:
+            self.s1 = self.pk.generators[0].group.order().random()
+            lhs = self.s1 * self.pk.generators[1] + lhs
+            # define secret names as s' m1 m2 ...mL
+            names = ["s'"] + ["m" + str(i + 1) for i in range(len(messages))]
+            secrets = [self.s1] + messages
+            rhs = create_rhs(names, self.pk.generators[1:])
 
-        if not zkp:
-            self.s1 = Bn(0)
-            return to_sign
-
-        self.s1 = self.pk.generators[0].group.order().random()
-        lhs = self.s1 * self.pk.generators[1] + to_sign
-        # define secret names as s' m1 m2 ...mL
-        names = ["s'"] + ["m" + str(i + 1) for i in range(len(messages))]
-        secrets = [self.s1] + messages
-        rhs = create_rhs(names, self.pk.generators[1:])
-
-        pedersen_proof = DLRepProof(lhs, rhs)
-        pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
-        return lhs, pedersen_prover.get_NI_proof(encoding=enc_GXpt)
+            pedersen_proof = DLRepProof(lhs, rhs)
+            pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
+            NIproof = pedersen_prover.get_NI_proof(encoding=enc_GXpt)
+        return UserCommitmentMessage(lhs, NIproof)
 
     def obtain_signature(self, presignature):
         """
@@ -72,16 +101,14 @@ class KeyPair:
 
         self.generators = []
         for i in range(length + 2):
-            randWord = str(i+1)
+            randWord = str(i + 1)
             self.generators.append(
                 bilinearpair.G1.hash_to_point(randWord.encode("UTF-8"))
             )
         self.h0 = bilinearpair.G2.generator()
 
         self.sk = SecretKey(bilinearpair.G1.order().random(), self)
-        self.pk = PublicKey(
-            self.sk.gamma * self.h0, self.generators, self.h0
-        )
+        self.pk = PublicKey(self.sk.gamma * self.h0, self.generators, self.h0)
         self.sk.pk = self.pk
 
 
@@ -90,13 +117,6 @@ class PublicKey:
         self.w = w
         self.generators = generators
         self.h0 = h0
-
-    def verify_signature(self, signature, messages):
-        generators = self.generators[: len(messages) + 2]
-        product = generators[0] + generators[0].group.wsum(
-            ([signature.s] + messages), generators[1:]
-        )
-        return signature.A.pair(self.w + signature.e * self.h0) == product.pair(self.h0)
 
 
 class SecretKey:
@@ -115,17 +135,6 @@ class SecretKey:
         prod = self.generators[0] + s2 * self.generators[1] + pedersen_product
         A = (self.gamma + e).mod_inverse(self.h0.group.order()) * prod
         return Signature(A, e, s2)
-
-
-def verify_blinding(NIproof, lhs, generators, nb_messages):
-    """
-    Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
-    verify the non-interactive proof passed as argument.
-    """
-    generators = generators[1 : nb_messages + 2]
-    secret_names = ["s'"] + ["m" + str(i + 1) for i in range(len(generators))]
-    proof = DLRepProof(lhs, create_rhs(secret_names, generators))
-    return proof.get_verifier().verify_NI(*NIproof, encoding=enc_GXpt)
 
 
 class SignatureProof(Proof):
@@ -272,9 +281,10 @@ class SignatureVerifier(AndProofVerifier):
         return self.challenge
 
     def check_adequate_lhs(self):
-        if self.proof.constructed_proof.subproofs[1].lhs != self.precommitment[1].pair(
-            self.proof.pk.w
-        ) + (-1 * self.proof.generators[0]).pair(self.proof.pk.h0):
+        required_lhs = self.precommitment[1].pair(self.proof.pk.w) + (
+            -1 * self.proof.generators[0]
+        ).pair(self.proof.pk.h0)
+        if self.proof.constructed_proof.subproofs[1].lhs != required_lhs:
             return False
         return True
 

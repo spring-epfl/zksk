@@ -67,7 +67,7 @@ class DLRepProver(Prover):
         self.group_order = G.order()
         # Will be useful for all the protocol
 
-        if randomizers_dict == None or randomizers_dict=={}:
+        if randomizers_dict == None or randomizers_dict == {}:
             # If we are not provided a randomizer dict from above, we compute it
             secret_to_random_value = self.get_randomizers()
         else:

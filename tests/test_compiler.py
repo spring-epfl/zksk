@@ -986,13 +986,13 @@ def test_signature_setup():
     generators, h0 = keypair.generators, keypair.h0
 
     creator = SignatureCreator(pk)
-    lhs, pedersen_NI = creator.commit(messages, zkp=True)
-    presignature = sk.sign(lhs)
+    usr_commitment = creator.commit(messages, zkp=True)
+    presignature = sk.sign(usr_commitment.commitment_message)
     signature = creator.obtain_signature(presignature)
 
-    assert verify_blinding(
-        pedersen_NI, lhs, generators, len(messages)
-    ) and pk.verify_signature(signature, messages)
+    assert usr_commitment.verify_blinding(
+        pk, len(messages)
+    ) and signature.verify_signature(pk, messages)
 
 
 def test_signature_proof():
@@ -1005,7 +1005,7 @@ def test_signature_proof():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs)
+    presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     secret_dict = {
         "e": signature.e,
@@ -1036,7 +1036,7 @@ def test_and_sig():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs)
+    presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     secret_dict = {
         "e": signature.e,
@@ -1049,7 +1049,7 @@ def test_and_sig():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature2 = sk.sign(lhs)
+    presignature2 = sk.sign(lhs.commitment_message)
     signature2 = creator.obtain_signature(presignature2)
     secret_dict2 = {
         "e1": signature2.e,
@@ -1081,7 +1081,7 @@ def test_signature_and_DLRNE():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs)
+    presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     secret_dict = {
         "e": signature.e,
@@ -1125,7 +1125,7 @@ def test_wrong_signature_and_DLRNE():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs)
+    presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     secret_dict = {
         "e": signature.e,
@@ -1173,7 +1173,7 @@ def test_wrong_signature_and_DLRNE():
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs)
+    presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     secret_dict = {
         "e": signature.e,

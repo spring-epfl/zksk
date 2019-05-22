@@ -95,7 +95,7 @@ class Prover:
         conc += message
         myhash = sha256(conc).digest()
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
-        
+
         responses = self.compute_response(challenge)
         if precommitment == None:
             return (challenge, responses)
