@@ -1,10 +1,9 @@
 """
 see https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
-from SigmaProtocol import *
+from Abstractions import *
 from CompositionProofs import *
 from primitives.DLRep import *
-from Subproof import *
 import pdb
 
 DEFAULT_ALIASES = ("alpha_", "beta_")

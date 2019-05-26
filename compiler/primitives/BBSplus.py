@@ -1,7 +1,6 @@
 from primitives.DLRep import *
-from Subproof import *
 from CompositionProofs import *
-from SigmaProtocol import *
+from Abstractions import *
 from BilinearPairings import *
 import pdb
 import random, string

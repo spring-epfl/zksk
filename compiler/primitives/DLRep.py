@@ -5,10 +5,9 @@ over a chosen finite field.
 """
 
 import random, string
-from Subproof import RightSide
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
-from SigmaProtocol import *
+from Abstractions import *
 from hashlib import sha256
 import binascii
 from CompositionProofs import Proof

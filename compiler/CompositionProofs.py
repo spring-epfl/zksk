@@ -1,5 +1,5 @@
 from petlib.bn import Bn
-from SigmaProtocol import *
+from Abstractions import *
 
 AndProofCommitment = list
 AndProofResponse = list

@@ -5,14 +5,44 @@ src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
 from primitives.DLRep import *
-from Subproof import *
 from CompositionProofs import *
 from BilinearPairings import *
 from primitives.BBSplus import *
 from primitives.DLRepNotEqual import *
-from SigmaProtocol import *
+from Abstractions import *
 import pytest
 import pdb
+
+class SigmaProtocol:
+    """
+    an interface for sigma protocols.
+    """
+
+    def __init__(self, verifierClass, proverClass):
+        self.verifierClass = verifierClass
+        self.proverClass = proverClass
+
+    def setup(self):
+        pass
+
+    def verify(self) -> bool:
+        victor = self.verifierClass
+        peggy = self.proverClass
+        precommitment = peggy.precommit()
+        victor.process_precommitment(precommitment)
+        (commitment) = peggy.commit()
+        challenge = victor.send_challenge(commitment)
+        response = peggy.compute_response(challenge)
+        return victor.verify(response)
+
+    def run(self):
+        if self.verify():
+            print("Verified for {0}".format(self.__class__.__name__))
+            return True
+        else:
+            print("Not verified for {0}".format(self.__class__.__name__))
+            return False
+
 
 N = 5
 G = EcGroup(713)
@@ -1203,3 +1233,45 @@ def test_wrong_signature_and_DLRNE():
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
     assert ver.verify(responses)
+
+
+def test_and_NI_sig():
+    mG = BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs.commitment_message)
+    signature = creator.obtain_signature(presignature)
+    secret_dict = {
+        "e": signature.e,
+        "s": signature.s,
+        "m1": messages[0],
+        "m2": messages[1],
+        "m3": messages[2],
+    }
+    sigproof = SignatureProof(signature, ["e", "s", "m1", "m2", "m3"], pk)
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature2 = sk.sign(lhs.commitment_message)
+    signature2 = creator.obtain_signature(presignature2)
+    secret_dict2 = {
+        "e1": signature2.e,
+        "s1": signature2.s,
+        "m1": messages[0],
+        "m2": messages[1],
+        "m3": messages[2],
+    }
+    sigproof1 = SignatureProof(signature2, ["e1", "s1", "m1", "m2", "m3"], pk)
+
+    secret_dict.update(secret_dict2)
+    andp = sigproof & sigproof1
+    andprover = andp.get_prover(secret_dict)
+    nip = andprover.get_NI_proof(encoding=enc_GXpt)
+    anv = andp.get_verifier()
+    assert anv.verify_NI(*nip, encoding=enc_GXpt)
