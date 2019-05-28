@@ -54,6 +54,7 @@ class DLRepProver(Prover):
         """
         :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
         :return: a single commitment (of type petlib.ec.EcPt) for the whole proof
+        The function will misbehave if passed a non-empty but incomplete randomizers_dict.
         """
 
         if self.secret_values == {}:
@@ -67,7 +68,7 @@ class DLRepProver(Prover):
         # Will be useful for all the protocol
 
         if randomizers_dict == None or randomizers_dict == {}:
-            # If we are not provided a randomizer dict from above, we compute it
+            # If we are not provided a randomizer dict from above, we compute it.
             secret_to_random_value = self.get_randomizers()
         else:
             secret_to_random_value = randomizers_dict
@@ -100,6 +101,7 @@ class DLRepProver(Prover):
         :param responses_dict: a dictionnary from secret names (strings) to responses (petlib.bn.Bn numbers)
         :param challenge: a petlib.bn.Bn equal to the challenge
         :return: a list of valid commitments for each secret value given responses_dict and a challenge
+        The function will misbehave if passed a non-empty but incomplete responses_dict.
         """
         # Set the recompute_commitment
         if responses_dict is None or responses_dict == {}:

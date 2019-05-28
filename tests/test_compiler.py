@@ -1037,7 +1037,6 @@ def test_sim_multiDLRNE():
 
 
 def test_DLRNE_sim_binding():
-
     lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
     y3 = secret_tab[2] * tab_g[3]
 
@@ -1048,7 +1047,7 @@ def test_DLRNE_sim_binding():
         binding=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]]
     )
     andp = pr1 & pr2
     prov = andp.get_prover()
@@ -1057,9 +1056,47 @@ def test_DLRNE_sim_binding():
     assert ver.verify(sim)
 
 
-def test_or_DLRNE():
-    pass
+def test_or_DLRNE():    
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2] * tab_g[3]
 
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+    pr2 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+    )
+    orp = pr1 | pr2 |pr2
+    prov = orp.get_prover(secrets_values)
+    ver = orp.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    pdb.set_trace()
+    if not ver.verify(resp):
+        pdb.set_trace()
+    
+
+def test_or_NI_DLRNE():    
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2] * tab_g[3]
+
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+    pr2 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]], binding=True
+    )
+    orp = pr1 | pr2 
+    nip = orp.prove(secrets_values)
+    assert orp.verify(nip)
 
 def test_signature_setup():
     mG = BilinearGroupPair()

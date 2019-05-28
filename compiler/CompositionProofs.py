@@ -178,9 +178,9 @@ class OrProver(Prover):
         self.subs = subprovers
         self.proof = proof
         self.secret_values = secret_values
-
+        self.true_prover_idx = self.find_legit_prover()
         self.simulations = []
-        self.true_prover = self.find_legit_prover()
+        self.setup_simulations()
 
     def find_legit_prover(self):
         for index in range(len(self.subs)):
@@ -189,6 +189,12 @@ class OrProver(Prover):
                 return index
         print("No legit prover found, can only simulate the Or Proof")
         return None
+    
+    def setup_simulations(self):
+        for index in range(len(self.subs)):
+            if index != self.true_prover_idx:
+                cur = self.subs[index].simulate_proof()
+                self.simulations.append(cur)
 
     def get_randomizers(self) -> dict:
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them
@@ -197,21 +203,35 @@ class OrProver(Prover):
         {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
         return random_vals
 
+    def precommit(self):
+        precommitment = []
+        for index in range(len(self.subs)):
+            if index == self.true_prover_idx:
+                precommitment.append(self.subs[index].precommit())
+            else:
+                if index > self.true_prover_idx:
+                    index1 = index - 1
+                else:
+                    index1 = index
+                precommitment.append(self.simulations[index1].precommitment)
+        return precommitment
+
     def commit(self, randomizers_dict=None):
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
         """
-        if self.true_prover == None:
+        if self.true_prover_idx == None:
             raise Exception("cannot commit in a simulator")
-
         commitment = []
         for index in range(len(self.subs)):
-            if index == self.true_prover:
-                commitment.append(self.subs[index].commit())
+            if index == self.true_prover_idx:
+                commitment.append(self.subs[index].commit(randomizers_dict))
             else:
-                cur = self.subs[index].simulate_proof()
-                self.simulations.append(cur)
-                commitment.append(cur.commitment)
+                if index > self.true_prover_idx:
+                    index1 = index - 1
+                else:
+                    index1 = index
+                commitment.append(self.simulations[index1].commitment)
         return commitment
 
     def compute_response(self, challenge):
@@ -220,12 +240,12 @@ class OrProver(Prover):
         response = []
         challenges = []
         for index in range(len(self.subs)):
-            if index == self.true_prover:
+            if index == self.true_prover_idx:
                 challenges.append(residual_chal)
                 response.append(self.subs[index].compute_response(residual_chal))
             else:
                 # Note len(simulations) = len(subproofs) - 1 !
-                if index > self.true_prover:
+                if index > self.true_prover_idx:
                     index1 = index - 1
                 else:
                     index1 = index

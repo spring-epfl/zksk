@@ -101,7 +101,7 @@ class DLRepNotEqualProver(Prover):
         self.blinder = self.proof.generators[0].group.order().random()
         new_secrets = (
             cur_secret * self.blinder % self.proof.generators[0].group.order(),
-            -self.blinder,
+            -self.blinder % self.proof.generators[0].group.order(),
         )
         self.precommitment = [
             self.blinder * (cur_secret * self.proof.generators[1] - self.proof.lhs[1])
@@ -123,7 +123,7 @@ class DLRepNotEqualProver(Prover):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         group = self.proof.generators[0].group
-        lhs = [group.order().random() * group.generator()]
+        lhs = [group.order().random()* group.generator()]
         self.proof.build_constructed_proof(lhs)
         self.constructed_prover = self.proof.constructed_proof.get_prover()
         tr = self.constructed_prover.simulate_proof(responses_dict, challenge)
