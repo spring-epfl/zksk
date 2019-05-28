@@ -102,10 +102,8 @@ class DLRepProver(Prover):
         :return: a list of valid commitments for each secret value given responses_dict and a challenge
         """
         # Set the recompute_commitment
-        if responses_dict is None:
-            responses_dict = (
-                self.get_randomizers()
-            )  # TODO : should we ensure consistency for two identical statements to simulate ?
+        if responses_dict is None or responses_dict == {}:
+            responses_dict = self.get_randomizers()
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
 
@@ -113,7 +111,7 @@ class DLRepProver(Prover):
         # random responses, the same for shared secrets
         commitment = self.proof.recompute_commitment(challenge, response)
 
-        return commitment, challenge, response
+        return SimulationTranscript(commitment, challenge, response)
 
 
 class DLRepVerifier(Verifier):
@@ -183,7 +181,7 @@ class DLRepProof(Proof):
         self.lhs = lhs
         self.simulate = False
 
-    def get_prover(self, secrets_dict):
+    def get_prover(self, secrets_dict={}):
         """
         :param secrets_dict: a dictionnary mapping secret names to petlib.bn.Bn numbers
         :return: an instance of DLRepProver

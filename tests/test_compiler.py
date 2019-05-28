@@ -13,6 +13,7 @@ from Abstractions import *
 import pytest
 import pdb
 
+
 class SigmaProtocol:
     """
     an interface for sigma protocols.
@@ -89,28 +90,24 @@ def test_dlrep_wrong_public():
 def test_dlrep_NI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
-    niprover = niproof.get_prover(secrets_values)
-    niverif = niproof.get_verifier()
-    chal, resp = niprover.get_NI_proof(message="mymessage")
-    assert niverif.verify_NI(chal, resp, message="mymessage") == True
+    tr = niproof.prove(secrets_values, message="mymessage")
+    assert niproof.verify(tr, message="mymessage") == True
 
 
 def test_dlrep_wrongNI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
-    niprover = niproof.get_prover(secrets_values)
-    niverif = niproof.get_verifier()
-    chal, resp = niprover.get_NI_proof(message="mymessage")
-    resp[1] = tab_g[0].group.order().random()
-    assert niverif.verify_NI(chal, resp, message="mymessage") == False
+    tr = niproof.prove(secrets_values, message="mymessage")
+    tr.responses[1] = tab_g[0].group.order().random()
+    assert niproof.verify(tr, message="mymessage") == False
 
 
 def test_dlrep_simulation():
     ped_proof = DLRepProof(lhs, rhs1)
     sim_prover = ped_proof.get_simulator()
     sim_verif = ped_proof.get_verifier()
-    (com, chal, resp) = sim_prover.simulate_proof()
-    assert sim_verif.verify(resp, com, chal) == True
+    tr = sim_prover.simulate_proof()
+    assert sim_verif.verify(tr) == True
 
 
 def test_diff_groups_dlrep():
@@ -306,19 +303,16 @@ def test_simulate_andproof():
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
-    com, ch, resp = andsim.simulate_proof()
-    assert andv.verify(resp, com, ch) == True
+    tr = andsim.simulate_proof()
+    assert andv.verify(tr) == True
 
 
 def test_and_NI():
     p1, p2, secrets = setup_and_proofs()
     niproof = AndProof(p1, p2)
-    andprov = niproof.get_prover(secrets)
-    and_verifier = niproof.get_verifier()
-
     message = "toto"
-    chall, resp = andprov.get_NI_proof(message=message)
-    assert and_verifier.verify_NI(chall, resp, message=message) == True
+    tr = niproof.prove(secrets, message=message)
+    assert niproof.verify(tr, message=message) == True
 
 
 def test_wrong_and_NI():
@@ -326,12 +320,9 @@ def test_wrong_and_NI():
     niproof = AndProof(p1, p2)
     wrongs = secrets.copy()
     wrongs["x0"] = G.order().random()
-    andprov = niproof.get_prover(wrongs)
-    and_verifier = niproof.get_verifier()
-
     message = "toto"
-    chall, resp = andprov.get_NI_proof(message=message)
-    assert and_verifier.verify_NI(chall, resp, message=message) == False
+    tr = niproof.prove(wrongs, message=message)
+    assert niproof.verify(tr, message=message) == False
 
 
 def test_and_operator():
@@ -483,8 +474,8 @@ def test_or_sim():
     first_or = OrProof(pp1, pp2)
     sim = first_or.get_simulator()
     ver = first_or.get_verifier()
-    com, chal, resp = sim.simulate_proof()
-    assert ver.verify(resp, com, chal)
+    tr = sim.simulate_proof()
+    assert ver.verify(tr)
 
 
 def verify_proof(proof, secrets):
@@ -534,12 +525,9 @@ def test_multiple_or_proof_syntax():
 def test_or_NI():
     p1, p2, secrets = setup_and_proofs()
     niproof = OrProof(p1, p2)
-    orprov = niproof.get_prover(secrets)
-    or_verifier = niproof.get_verifier()
-
     message = "toto"
-    chall, resp = orprov.get_NI_proof(message=message)
-    assert or_verifier.verify_NI(chall, resp, message=message) == True
+    tr = niproof.prove(secrets, message=message)
+    assert niproof.verify(tr, message=message) == True
 
 
 def test_wrong_or_NI():
@@ -547,12 +535,10 @@ def test_wrong_or_NI():
     niproof = OrProof(p1, p2)
     wrongs = secrets.copy()
     wrongs["x0"] = G.order().random()
-    orprov = niproof.get_prover(wrongs)
-    or_verifier = niproof.get_verifier()
 
     message = "toto"
-    chall, resp = orprov.get_NI_proof(message=message)
-    assert or_verifier.verify_NI(chall, resp, message=message) == False
+    tr = niproof.prove(wrongs, message=message)
+    assert niproof.verify(tr, message=message) == False
 
 
 def test_malicious_and_proofs():
@@ -959,10 +945,9 @@ def test_BLAC_NI():
 
     pr = DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
     secret_dict = {"x": 3}
-    prov = pr.get_prover(secret_dict)
-    nip = prov.get_NI_proof()
-    ver = DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True).get_verifier()
-    assert ver.verify_NI(*nip)
+    nip = pr.prove(secret_dict)
+    pr2 = DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
+    assert pr2.verify(nip)
 
 
 def test_BLAC_NI2():
@@ -1001,10 +986,79 @@ def test_BLAC_NI2():
 
     andp1 = pr11 & pr21 & pr31
 
-    prov = andp.get_prover(secrets_values)
-    nip = prov.get_NI_proof()
-    ver = andp1.get_verifier()
-    assert ver.verify_NI(*nip)
+    nip = andp.prove(secrets_values)
+    assert andp1.verify(nip)
+
+
+def test_sim_DLRNE():
+    g = G.generator()
+    x = 3
+    y = x * g
+    y2 = 397474 * g
+    g2 = 1397 * g
+
+    pr = DLRepNotEqualProof([y, g], [y2, g2], ["x"], binding=True)
+    secret_dict = {"x": 3}
+    prover = pr.get_prover()
+    ver = pr.get_verifier()
+    tr = prover.simulate_proof()
+    assert ver.verify(tr)
+
+
+def test_sim_multiDLRNE():
+
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=False,
+    )
+    pr2 = DLRepProof(lhs_tab[2], Secret(secrets_aliases[2]) * tab_g[2])
+
+    pr3 = DLRepNotEqualProof(
+        [lhs_tab[2], tab_g[2]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[2]],
+        binding=True,
+    )
+    pr4 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]],
+        [lhs_tab[3], tab_g[3]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+
+    andp = pr1 & pr2 & pr3 & pr4
+    prover = andp.get_prover()
+    ver = andp.get_verifier()
+    tr = prover.simulate_proof()
+    assert ver.verify(tr)
+
+
+def test_DLRNE_sim_binding():
+
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2] * tab_g[3]
+
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+    pr2 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+    )
+    andp = pr1 & pr2
+    prov = andp.get_prover()
+    ver = andp.get_verifier()
+    sim = prov.simulate_proof()
+    assert ver.verify(sim)
+
+
+def test_or_DLRNE():
+    pass
 
 
 def test_signature_setup():
@@ -1271,7 +1325,5 @@ def test_and_NI_sig():
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
-    andprover = andp.get_prover(secret_dict)
-    nip = andprover.get_NI_proof(encoding=enc_GXpt)
-    anv = andp.get_verifier()
-    assert anv.verify_NI(*nip, encoding=enc_GXpt)
+    nip = andp.prove(secret_dict, encoding=enc_GXpt)
+    assert andp.verify(nip, encoding=enc_GXpt)

@@ -17,11 +17,26 @@ CHAL_LENGTH = Bn(128)
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
             distributivity and commutativity.
-
-        - Sometimes, we get the group order by g.group.order() but is the returned value of hashtopoint
-        always a generator of the group itself, and not a subgroup ?
 """
 
+
+class NITranscript:
+    """
+    A named tuple for non-interactive proofs transcripts.
+    """
+
+    def __init__(self, challenge, responses, precommitment=None):
+        self.challenge = challenge
+        self.responses = responses
+        self.precommitment = precommitment
+
+
+class SimulationTranscript:
+    def __init__(self, commitment, challenge, responses, precommitment=None):
+        self.commitment = commitment
+        self.challenge = challenge
+        self.responses = responses
+        self.precommitment = precommitment
 
 
 class Prover:
@@ -68,13 +83,13 @@ class Prover:
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
 
         responses = self.compute_response(challenge)
-        if precommitment == None:
-            return (challenge, responses)
-        else:
-            return (challenge, responses, precommitment)
+        return NITranscript(challenge, responses, precommitment)
 
     def precommit(self):
         return None
+
+    def simulate_proof(self):
+        pass
 
 
 class Verifier:
@@ -91,50 +106,60 @@ class Verifier:
     def process_precommitment(self, precommitment):
         pass
 
-    def verify(self, response, commitment=None, challenge=None):
+    def verify(self, arg):
         """
         Can verify simulations with optional arguments.
         verifies this proof
         :param response: the response given by the prover
         :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response
         """
-        if not self.check_adequate_lhs():
-            return False
-        self.response = response
+        commitment = None
+        challenge = None
+        if isinstance(arg, SimulationTranscript):
+            # We were passed a full transcript (i.e a specific challenge and commitment to use), unpack it
+            response = arg.responses
+            precommitment = arg.precommitment
+            commitment = arg.commitment
+            challenge = arg.challenge
+            if precommitment is not None:
+                self.process_precommitment(precommitment)
+        else:
+            response = arg
         if commitment is None:
             commitment = self.commitment
         if challenge is None:
             challenge = self.challenge
-        if not self.check_responses_consistency(response, {}):
-            raise Exception("Responses for a same secret name do not match!")
-        return commitment == self.proof.recompute_commitment(challenge, response)
-
-    def verify_NI(
-        self, challenge, response, precommitment=None, message="", encoding=None
-    ):
-        """
-        verification for the non interactive proof
-        :param challenge: the challenge a petlib.bn.Bn instance computed from get_NI_proof method
-        :param response: computed from get_NI_proof
-        :return: a boolean telling if the proof is verified
-        """
-        self.response = response
-        if precommitment:
-            self.process_precommitment(precommitment)
         if not self.check_adequate_lhs():
             return False
         if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")
+        return commitment == self.proof.recompute_commitment(challenge, response)
+
+    def verify_NI(self, transcript, message="", encoding=None):
+        """
+        verification for the non interactive proof according to Fiat-Shamir heuristics
+        :param challenge: the challenge a petlib.bn.Bn instance computed from get_NI_proof method
+        :param response: computed from get_NI_proof
+        :return: a boolean telling if the proof is verified
+        """
+        if transcript.precommitment is not None:
+            self.process_precommitment(transcript.precommitment)
+        if not self.check_adequate_lhs():
+            return False
+        if not self.check_responses_consistency(transcript.responses, {}):
+            raise Exception("Responses for a same secret name do not match!")
         message = message.encode()
         protocol = encode(self.get_proof_id(), encoding)
-        r_guess = self.proof.recompute_commitment(challenge, response)
+        r_guess = self.proof.recompute_commitment(
+            transcript.challenge, transcript.responses
+        )
         # We retrieve the commitment using the verification identity
         conc = protocol
         # encode is a petlib.pack function also allowing to use msgpack with external types
         conc += encode(r_guess, encoding)
         conc += message
         myhash = sha256(conc).digest()
-        return challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
+        return transcript.challenge == Bn.from_hex(binascii.hexlify(myhash).decode())
 
     def get_proof_id(self):
         """:return: a descriptor of the Proof with the protocol name and the public info. 
@@ -208,11 +233,13 @@ def add_Bn_array(arr, modulus):
 
 
 def enc_GXpt(obj):
-        return msgpack.ExtType(0, b"")
+    return msgpack.ExtType(0, b"")
+
 
 """
 Below are the interface methods
 """
+
 
 class RightSide:
     """

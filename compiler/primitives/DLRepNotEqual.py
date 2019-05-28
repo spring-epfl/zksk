@@ -30,7 +30,7 @@ class DLRepNotEqualProof(Proof):
         self.binding = binding
         self.constructed_proof = None
 
-    def get_prover(self, secret_values):
+    def get_prover(self, secret_values={}):
         if self.simulate:
             secret_values = {}
         return DLRepNotEqualProver(self, secret_values)
@@ -76,6 +76,9 @@ class DLRepNotEqualProof(Proof):
         """
         return self.constructed_proof.recompute_commitment(challenge, responses)
 
+    def get_simulator(self):
+        return DLRepNotEqualProver(self, {})
+
 
 class DLRepNotEqualProver(Prover):
     def __init__(self, proof, secret_values):
@@ -117,6 +120,15 @@ class DLRepNotEqualProver(Prover):
         self.constructed_prover.challenge = challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
+
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        group = self.proof.generators[0].group
+        lhs = [group.order().random() * group.generator()]
+        self.proof.build_constructed_proof(lhs)
+        self.constructed_prover = self.proof.constructed_proof.get_prover()
+        tr = self.constructed_prover.simulate_proof(responses_dict, challenge)
+        tr.precommitment = lhs
+        return tr
 
 
 class DLRepNotEqualVerifier(Verifier):

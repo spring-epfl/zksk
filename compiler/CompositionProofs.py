@@ -21,7 +21,7 @@ class Proof:
         """
         return OrProof(self, other)
 
-    def get_prover(self, secrets_dict):
+    def get_prover(self, secrets_dict={}):
         """
         :param: secrets_dict: a mapping from secret names to secret values
         :return: an instance of Prover"""
@@ -43,6 +43,27 @@ class Proof:
 
     def set_simulate(self):
         self.simulate = True
+
+    def prove(self, secret_dict, message="", encoding=None):
+        """
+        Generate the transcript of a non-interactive proof.
+        """
+        prover = self.get_prover(secret_dict)
+        return prover.get_NI_proof(message, encoding)
+
+    def verify(self, transcript, message="", encoding=None):
+        """
+        Verify the transcript of a non-interactive proof.
+        """
+        verifier = self.get_verifier()
+        return verifier.verify_NI(transcript, message, encoding)
+
+    def simulate():
+        """
+        Generate the transcript of a simulated non-interactive proof.
+        """
+        prover = self.get_prover()
+        return self.prover.simulate_proof()
 
 
 def find_residual_chal(arr, challenge, chal_length):
@@ -95,7 +116,7 @@ class OrProof(Proof):
             )
         return comm
 
-    def get_prover(self, secrets_dict):
+    def get_prover(self, secrets_dict={}):
         """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
         """
         if self.simulate == True or secrets_dict == {}:
@@ -190,11 +211,11 @@ class OrProver(Prover):
             else:
                 cur = self.subs[index].simulate_proof()
                 self.simulations.append(cur)
-                commitment.append(cur[0])
+                commitment.append(cur.commitment)
         return commitment
 
     def compute_response(self, challenge):
-        chals = [el[1] for el in self.simulations]
+        chals = [el.challenge for el in self.simulations]
         residual_chal = find_residual_chal(chals, challenge, CHAL_LENGTH)
         response = []
         challenges = []
@@ -209,35 +230,41 @@ class OrProver(Prover):
                 else:
                     index1 = index
                 cur_sim = self.simulations[index1]
-                challenges.append(cur_sim[1])
-                response.append(cur_sim[2])
+                challenges.append(cur_sim.challenge)
+                response.append(cur_sim.responses)
 
         # We carry the or challenges in a tuple so everything works fine with the interface
         return (challenges, response)
 
     def simulate_proof(self, responses_dict=None, challenge=None):
-        if responses_dict is None:
+        if responses_dict is None or any(
+            [x not in responses_dict.keys() for x in self.proof.secret_names]
+        ):
             responses_dict = self.get_randomizers()
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         com = []
         resp = []
         or_chals = []
+        precom = []
         for index in range(len(self.subs) - 1):
-            (com1, chal1, resp1) = self.subs[index].simulate_proof(responses_dict)
-            com.append(com1)
-            resp.append(resp1)
-            or_chals.append(chal1)
+            subdict = {
+                key: responses_dict[key] for key in self.subs[index].proof.secret_names
+            }
+            transcript = self.subs[index].simulate_proof(subdict)
+            com.append(transcript.commitment)
+            resp.append(transcript.responses)
+            or_chals.append(transcript.challenge)
+            precom.append(transcript.precommitment)
 
         final_chal = find_residual_chal(or_chals, challenge, CHAL_LENGTH)
         or_chals.append(final_chal)
-        com1, __, resp1 = self.subs[index + 1].simulate_proof(
-            responses_dict, final_chal
-        )
-        com.append(com1)
-        resp.append(resp1)
+        trfinal = self.subs[index + 1].simulate_proof(responses_dict, final_chal)
+        com.append(trfinal.commitment)
+        resp.append(trfinal.responses)
+        precom.append(trfinal.precommitment)
 
-        return com, challenge, (or_chals, resp)
+        return SimulationTranscript(com, challenge, (or_chals, resp), precom)
 
 
 class OrVerifier(Verifier):
@@ -279,13 +306,13 @@ class AndProof(Proof):
             comm.append(cur_proof.recompute_commitment(challenge, andresp[i]))
         return comm
 
-    def get_prover(self, secrets_dict):
+    def get_prover(self, secrets_dict={}):
         """ Returns an AndProver, which contains the whole Proof information but also a list of instantiated subprovers, one for each term of the Proof.
         Has access to the secret values.
         """
         if self.simulate == True or secrets_dict == {}:
             print("Can only simulate")
-            return get_simulator()
+            return self.get_simulator()
 
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.secret_names)
@@ -391,15 +418,24 @@ class AndProofProver(Prover):
     def simulate_proof(self, responses_dict=None, challenge=None):
         if responses_dict is None:
             responses_dict = self.get_randomizers()
+        elif any([x not in responses_dict.keys() for x in self.proof.secret_names]):
+            # We were passed an incomplete dictionary, fill it
+            new_dict = self.get_randomizers()
+            new_dict.update(responses_dict)
+            responses_dict = new_dict
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         com = []
         resp = []
+        precom = []
         for subp in self.subs:
-            com1, __, resp1 = subp.simulate_proof(responses_dict, challenge)
-            com.append(com1)
-            resp.append(resp1)
-        return com, challenge, resp
+            filtered = list(set(subp.proof.secret_names) & set(responses_dict.keys()))
+            subdict = {key: responses_dict[key] for key in filtered}
+            simulation = subp.simulate_proof(subdict, challenge)
+            com.append(simulation.commitment)
+            resp.append(simulation.responses)
+            precom.append(simulation.precommitment)
+        return SimulationTranscript(com, challenge, resp, precom)
 
 
 class AndProofVerifier(Verifier):

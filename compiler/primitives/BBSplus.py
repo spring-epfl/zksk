@@ -53,7 +53,7 @@ class UserCommitmentMessage:
         lhs = self.commitment_message
         secret_names = ["s'"] + ["m" + str(i + 1) for i in range(len(generators))]
         proof = DLRepProof(lhs, create_rhs(secret_names, generators))
-        return proof.get_verifier().verify_NI(*self.NIproof, encoding=enc_GXpt)
+        return proof.verify(self.NIproof, encoding=enc_GXpt)
 
 
 class SignatureCreator:
@@ -80,8 +80,7 @@ class SignatureCreator:
             rhs = create_rhs(names, self.pk.generators[1:])
 
             pedersen_proof = DLRepProof(lhs, rhs)
-            pedersen_prover = pedersen_proof.get_prover(dict(zip(names, secrets)))
-            NIproof = pedersen_prover.get_NI_proof(encoding=enc_GXpt)
+            NIproof = pedersen_proof.prove(dict(zip(names, secrets)), encoding=enc_GXpt)
         return UserCommitmentMessage(lhs, NIproof)
 
     def obtain_signature(self, presignature):
@@ -200,7 +199,7 @@ class SignatureProof(Proof):
         self.constructed_proof = AndProof(signature, pairings_proof)
         return self.constructed_proof
 
-    def get_prover(self, secret_values):
+    def get_prover(self, secret_values={}):
         if self.simulate:
             secret_values = {}
         return SignatureProver(self, secret_values)
