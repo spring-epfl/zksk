@@ -581,7 +581,6 @@ def test_BLAC():
     secret_dict = {"x": 3}
     prov = pr.get_prover(secret_dict)
     ver = prv.get_verifier()
-
     ver.process_precommitment(prov.precommit())
     commitment = prov.commit()
     chal = ver.send_challenge(commitment)
@@ -929,8 +928,7 @@ def test_multi_and_BLAC_binding2():
 
     andp1 = pr11 & pr21 & pr31 & pr41
     prov = andp.get_prover(secrets_values)
-    prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
-
+    prov.subs[3].secret_values[secrets_aliases[0]] = secret_tab[1]
     prot = SigmaProtocol(andp1.get_verifier(), prov)
     assert prot.run()
 
@@ -1069,16 +1067,21 @@ def test_or_DLRNE():
     pr2 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
     )
-    orp = pr1 | pr2 |pr2
+    orp = OrProof(pr1, pr2)
     prov = orp.get_prover(secrets_values)
     ver = orp.get_verifier()
-    ver.process_precommitment(prov.precommit())
+    precom = prov.precommit()
+
+    pdb.set_trace()
+    sv_cpp = prov.subs[1].constructed_prover.proof.lhs
+    sv_pp = prov.proof.subproofs[1].constructed_proof.lhs
+    ver.process_precommitment(precom)
+
+    sv_pp2 = prov.proof.subproofs[1].constructed_proof.lhs
     com = prov.commit()
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
-    pdb.set_trace()
-    if not ver.verify(resp):
-        pdb.set_trace()
+    ver.verify(resp)
     
 
 def test_or_NI_DLRNE():    

@@ -130,8 +130,6 @@ class Verifier:
         if challenge is None:
             challenge = self.challenge
         if not self.check_adequate_lhs():
-
-            raise Exception("prout")
             return False
         if not self.check_responses_consistency(response, {}):
             raise Exception("Responses for a same secret name do not match!")

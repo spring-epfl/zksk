@@ -13,12 +13,26 @@ class Proof:
         """
         :return: an AndProof from this proof and the other proof using the infix '&' operator
         """
+        if isinstance(other, AndProof):
+            if isinstance(self, AndProof):
+                return AndProof(*self.subproofs, *other.subproofs)
+            else:
+                return AndProof(self, *other.subproofs)
+        elif isinstance(self, AndProof):
+            return AndProof(*self.subproofs, other)
         return AndProof(self, other)
 
     def __or__(self, other):
         """
         :return: an OrProof from this proof and the other proof using the infix '|' operator
         """
+        if isinstance(other, OrProof):
+            if isinstance(self, OrProof):
+                return OrProof(*self.subproofs, *other.subproofs)
+            else:
+                return OrProof(self, *other.subproofs)
+        elif isinstance(self, OrProof):
+            return OrProof(*self.subproofs, other)
         return OrProof(self, other)
 
     def get_prover(self, secrets_dict={}):
@@ -292,6 +306,12 @@ class OrVerifier(Verifier):
         self.subs = subverifiers
         self.proof = proof
 
+    def process_precommitment(self, precommitment):
+        if precommitment is None:
+            return
+        for idx in range(len(self.subs)):
+            self.subs[idx].process_precommitment(precommitment[idx])
+            
     def check_responses_consistency(self, responses, responses_dict={}):
         """ In an Or Proof, we don't require responses consistency.
         """

@@ -57,7 +57,7 @@ class DLRepNotEqualProof(Proof):
                 )
             )
         self.constructed_proof = AndProof(*p)
-        self.constructed_proof.lhs = new_lhs
+        self.constructed_proof.lhs = new_lhs 
         return self.constructed_proof
 
     def get_proof_id(self):
