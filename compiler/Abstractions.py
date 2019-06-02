@@ -167,7 +167,7 @@ class Verifier:
         """
         return self.proof.get_proof_id()
 
-    def check_responses_consistency(self, response, response_dict):
+    def check_responses_consistency(self, response, response_dict={}):
         return True
 
     def check_adequate_lhs(self):
@@ -233,7 +233,7 @@ def add_Bn_array(arr, modulus):
 
 
 def enc_GXpt(obj):
-    return msgpack.ExtType(0, b"")
+    return msgpack.ExtType(10, obj.__repr__().encode())
 
 
 """

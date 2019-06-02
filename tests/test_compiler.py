@@ -1072,7 +1072,7 @@ def test_or_DLRNE():
     ver = orp.get_verifier()
     precom = prov.precommit()
 
-    pdb.set_trace()
+    #pdb.set_trace()
     sv_cpp = prov.subs[1].constructed_prover.proof.lhs
     sv_pp = prov.proof.subproofs[1].constructed_proof.lhs
     ver.process_precommitment(precom)

@@ -313,8 +313,11 @@ class OrVerifier(Verifier):
             self.subs[idx].process_precommitment(precommitment[idx])
             
     def check_responses_consistency(self, responses, responses_dict={}):
-        """ In an Or Proof, we don't require responses consistency.
+        """ In an Or Proof, we don't require responses consistency through proofs, so the dictionary is never updated.
         """
+        for idx in range(len(self.subs)):
+            if not self.subs[idx].check_responses_consistency(responses[1][idx], {}):
+                return False
         return True
 
 
