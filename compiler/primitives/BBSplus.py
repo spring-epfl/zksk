@@ -6,17 +6,6 @@ import pdb
 import random, string
 
 RD_LENGTH = 30
-DEFAULT_SIGALIASES = ["r1_", "r2_", "delta1_", "delta2_"]
-
-
-def generate_signature_aliases():
-    nb1, nb2 = chal_randbits(), chal_randbits()
-    return (
-        DEFAULT_SIGALIASES[0] + nb1.hex(),
-        DEFAULT_SIGALIASES[1] + nb2.hex(),
-        DEFAULT_SIGALIASES[2] + nb1.hex(),
-        DEFAULT_SIGALIASES[3] + nb2.hex(),
-    )
 
 
 class Signature:
@@ -51,8 +40,10 @@ class UserCommitmentMessage:
             raise Exception("No proof to verify")
         generators = pk.generators[1 : nb_messages + 2]
         lhs = self.commitment_message
-        secret_names = ["s'"] + ["m" + str(i + 1) for i in range(len(generators))]
-        proof = DLRepProof(lhs, create_rhs(secret_names, generators))
+        secret_names = [Secret("s'")] + [
+            Secret("m" + str(i + 1)) for i in range(nb_messages)
+        ]
+        proof = DLRepProof(lhs, wsum_secrets(secret_names, generators))
         return proof.verify(self.NIproof, encoding=enc_GXpt)
 
 
@@ -75,10 +66,11 @@ class SignatureCreator:
             self.s1 = self.pk.generators[0].group.order().random()
             lhs = self.s1 * self.pk.generators[1] + lhs
             # define secret names as s' m1 m2 ...mL
-            names = ["s'"] + ["m" + str(i + 1) for i in range(len(messages))]
+            names = [Secret("s'")] + [
+                Secret("m" + str(i + 1)) for i in range(len(messages))
+            ]
             secrets = [self.s1] + messages
-            rhs = create_rhs(names, self.pk.generators[1:])
-
+            rhs = wsum_secrets(names, self.pk.generators[1 : len(messages) + 2])
             pedersen_proof = DLRepProof(lhs, rhs)
             NIproof = pedersen_proof.prove(dict(zip(names, secrets)), encoding=enc_GXpt)
         return UserCommitmentMessage(lhs, NIproof)
@@ -146,8 +138,9 @@ class SignatureProof(Proof):
         secret_names should be the alias for signature.e, the alias for signature.s, and the aliases for the messages.
         """
         self.pk = pk
-        self.generators = pk.generators[: len(secret_names) + 2]
-        self.aliases = generate_signature_aliases()
+        # We need L+1 generators for L messages. secret_names are messages plus 'e' and 's'
+        self.generators = pk.generators[: len(secret_names)]
+        self.aliases = [Secret("r1"), Secret("r2"), Secret("delta1"), Secret("delta2")]
         self.signature = signature
         self.secret_names = secret_names
         self.constructed_proof = None
@@ -165,17 +158,13 @@ class SignatureProof(Proof):
         """
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
-        dl1 = DLRepProof(
-            self.A1, Secret(self.aliases[0]) * g1 + Secret(self.aliases[1]) * g2
-        )
+        dl1 = DLRepProof(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)
         dl2 = DLRepProof(
             g0.group.infinite(),
-            Secret(self.aliases[2]) * g1
-            + Secret(self.aliases[3]) * g2
-            + Secret(self.secret_names[0]) * (-1 * self.A1),
+            self.aliases[2] * g1
+            + self.aliases[3] * g2
+            + self.secret_names[0] * (-1 * self.A1),
         )
-
-        signature = AndProof(dl1, dl2)
 
         gen_pairs = [g.pair(self.pk.h0) for g in self.generators]
         self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * gen_pairs[0])
@@ -193,10 +182,10 @@ class SignatureProof(Proof):
             + self.secret_names[1:]
         )
         pairings_proof = DLRepProof(
-            self.pair_lhs, create_rhs(new_secret_names, generators)
+            self.pair_lhs, wsum_secrets(new_secret_names, generators)
         )
 
-        self.constructed_proof = AndProof(signature, pairings_proof)
+        self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
         return self.constructed_proof
 
     def get_prover(self, secret_values={}):
@@ -282,7 +271,7 @@ class SignatureVerifier(AndProofVerifier):
         required_lhs = self.precommitment[1].pair(self.proof.pk.w) + (
             -1 * self.proof.generators[0]
         ).pair(self.proof.pk.h0)
-        if self.proof.constructed_proof.subproofs[1].lhs != required_lhs:
+        if self.proof.constructed_proof.subproofs[2].lhs != required_lhs:
             return False
         return True
 

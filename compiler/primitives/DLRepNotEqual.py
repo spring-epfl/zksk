@@ -6,13 +6,6 @@ from CompositionProofs import *
 from primitives.DLRep import *
 import pdb
 
-DEFAULT_ALIASES = ("alpha_", "beta_")
-
-
-def generate_DLRNE_aliases():
-    nb1, nb2 = chal_randbits(), chal_randbits()
-    return DEFAULT_ALIASES[0] + nb1.hex(), DEFAULT_ALIASES[1] + nb2.hex()
-
 
 class DLRepNotEqualProof(Proof):
     def __init__(self, valid_tuple, invalid_tuple, secret_names, binding=False):
@@ -22,7 +15,7 @@ class DLRepNotEqualProof(Proof):
         """
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
-        self.aliases = generate_DLRNE_aliases()
+        self.aliases = [Secret("alpha"), Secret("beta")]
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.secret_names = secret_names
@@ -47,17 +40,13 @@ class DLRepNotEqualProof(Proof):
             p.append(
                 DLRepProof(
                     new_lhs[i],
-                    create_rhs(self.aliases, [self.generators[i], self.lhs[i]]),
+                    wsum_secrets(self.aliases, [self.generators[i], self.lhs[i]]),
                 )
             )
         if self.binding:
-            p.append(
-                DLRepProof(
-                    self.lhs[0], Secret(self.secret_names[0]) * self.generators[0]
-                )
-            )
+            p.append(DLRepProof(self.lhs[0], self.secret_names[0] * self.generators[0]))
         self.constructed_proof = AndProof(*p)
-        self.constructed_proof.lhs = new_lhs 
+        self.constructed_proof.lhs = new_lhs
         return self.constructed_proof
 
     def get_proof_id(self):
@@ -123,7 +112,7 @@ class DLRepNotEqualProver(Prover):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         group = self.proof.generators[0].group
-        lhs = [group.order().random()* group.generator()]
+        lhs = [group.order().random() * group.generator()]
         self.proof.build_constructed_proof(lhs)
         self.constructed_prover = self.proof.constructed_proof.get_prover()
         tr = self.constructed_prover.simulate_proof(responses_dict, challenge)

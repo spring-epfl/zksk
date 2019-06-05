@@ -17,6 +17,7 @@ CHAL_LENGTH = Bn(128)
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
             distributivity and commutativity.
+        - multiple Or Proofs are still bugged for DLRNE and signatures because of constructed_proof objects diverging 
 """
 
 
@@ -305,13 +306,12 @@ class RightSide:
 
 
 class Secret:
-    def __init__(self, name, value=None):
+    def __init__(self, alias=""):
         """
         :param name: a string equal to the name of this secret 
         :param value: an optional petlib.bn.Bn number equal to the secret value. This can be left for later at the creation of the prover.
         """
-        self.name = name
-        self.value = value
+        self.name = str(hash(self)) if alias == "" else alias
 
     def __mul__(self, ecPt):
         """
@@ -320,9 +320,16 @@ class Secret:
         """
         return RightSide(self, ecPt)
 
+    __rmul__ = __mul__
 
-def create_rhs(secrets_names, generators):
-    return reduce(
-        lambda x1, x2: x1 + x2,
-        map(lambda t: Secret(t[0]) * t[1], zip(secrets_names, generators)),
-    )
+    def __repr__(self):
+        return self.name
+
+
+def wsum_secrets(secrets, generators):
+    if len(secrets) != len(generators):
+        raise Exception("Bad wsum")
+    sum_ = secrets[0] * generators[0]
+    for idx in range(len(generators) - 1):
+        sum_ = sum_ + secrets[idx + 1] * generators[idx + 1]
+    return sum_

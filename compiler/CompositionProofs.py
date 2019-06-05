@@ -203,7 +203,7 @@ class OrProver(Prover):
                 return index
         print("No legit prover found, can only simulate the Or Proof")
         return None
-    
+
     def setup_simulations(self):
         for index in range(len(self.subs)):
             if index != self.true_prover_idx:
@@ -311,7 +311,7 @@ class OrVerifier(Verifier):
             return
         for idx in range(len(self.subs)):
             self.subs[idx].process_precommitment(precommitment[idx])
-            
+
     def check_responses_consistency(self, responses, responses_dict={}):
         """ In an Or Proof, we don't require responses consistency through proofs, so the dictionary is never updated.
         """

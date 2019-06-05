@@ -153,13 +153,10 @@ class DLRepProof(Proof):
         """
 
         if isinstance(rightSide, RightSide):
-            self.initialize(
-                rightSide.pts, [secret.name for secret in rightSide.secrets], lhs
-            )
+            self.initialize(rightSide.pts, rightSide.secrets, lhs)
         else:
             raise Exception("undefined behaviour for this input")
 
-    # len of secretDict and generators param of __init__ must match exactly
     def initialize(self, generators, secret_names, lhs):
         """
         this method exists for historical reasons. It is used in __init__ of this class.
@@ -197,18 +194,15 @@ class DLRepProof(Proof):
         if not isinstance(secrets_dict, dict):
             raise Exception("secrets_dict should be a dictionary")
 
-        # Check that the secret names and the keys of the secret values actually match. Could be simplified since it only matters that all names are in dict
-        secret_names_set = set(self.secret_names)
-        secrets_keys = set(secrets_dict.keys())
-        diff1 = secrets_keys.difference(secret_names_set)
-        diff2 = secret_names_set.difference(secrets_keys)
-
-        if len(diff1) > 0 or len(diff2) > 0:
-            raise Exception(
-                "secrets do not match: those secrets should be checked {0} {1}".format(
-                    diff1, diff2
+        for secret in self.secret_names:
+            if secret not in secrets_dict.keys():
+                pdb.set_trace()
+                raise Exception(
+                    "secrets do not match: those secrets should be checked {0} {1}".format(
+                        self.secret_names, secrets_dict.keys()
+                    )
                 )
-            )
+        # Check that the secret names and the keys of the secret values actually match.
 
         # We check everything is indeed a BigNumber, else we cast it
         for name, sec in secrets_dict.items():
