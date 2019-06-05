@@ -30,18 +30,18 @@ class SigmaProtocol:
     def setup(self):
         pass
 
-    def verify(self) -> bool:
+    def verify(self, encoding=None) -> bool:
         victor = self.verifierClass
         peggy = self.proverClass
         precommitment = peggy.precommit()
         victor.process_precommitment(precommitment)
-        (commitment) = peggy.commit()
+        commitment = peggy.commit(encoding=encoding)
         challenge = victor.send_challenge(commitment)
         response = peggy.compute_response(challenge)
         return victor.verify(response)
 
-    def run(self):
-        if self.verify():
+    def run(self, encoding=None):
+        if self.verify(encoding=encoding):
             print("Verified for {0}".format(self.__class__.__name__))
             return True
         else:
@@ -165,7 +165,7 @@ def test_generators_sharing_a_secret():
     pp = DLRepProof(lhs, rhs)
     prover = pp.get_prover({x1: unique_secret})
     assert type(prover) == DLRepProver
-    commitment = prover.commit()
+    statement, commitment = prover.commit()
     assert isinstance(commitment, EcPt)
 
 
@@ -180,7 +180,7 @@ def test_get_many_different_provers():
         G.wsum(secrets_vals, generators), wsum_secrets(secrets_names, generators)
     )
     prover = pp.get_prover(secr_dict)
-    commitment = prover.commit()
+    statement, commitment = prover.commit()
     assert isinstance(commitment, EcPt)
 
 
@@ -571,7 +571,6 @@ def test_malicious_and_proofs():
     x0 = Secret()
     x2 = Secret()
     x1 = Secret()
-    xm = Secret()
     tab_g = get_generators(3)
     g1 = tab_g[0]
     g2 = tab_g[1]
@@ -579,8 +578,8 @@ def test_malicious_and_proofs():
     secret_dict = {x0: 3, x2: 50, x1: 12}
     mal_secret_dict = {x0: 3, x2: 51}
     andp = AndProof(
-        DLRepProof(x1 * g1 + x2 * g2, x1 * g1 + x2 * g2),
-        DLRepProof(x0 * g3 + xm * g2, x0 * g1 + x2 * g2),
+        DLRepProof(12 * g1 + 50 * g2, x1 * g1 + x2 * g2),
+        DLRepProof(3 * g3 + 51 * g2, x0 * g1 + x2 * g2),
     )
 
     prov = andp.get_prover(secret_dict)
@@ -1211,7 +1210,7 @@ def test_and_sig():
     prov = andp.get_prover(secret_dict)
     ver = andp.get_verifier()
     prot = SigmaProtocol(ver, prov)
-    assert prot.run()
+    assert prot.run(encoding=enc_GXpt)
 
 
 def test_signature_and_DLRNE():
@@ -1252,7 +1251,7 @@ def test_signature_and_DLRNE():
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
     ver.process_precommitment(prov.precommit())
-    commitment = prov.commit()
+    commitment = prov.commit(encoding=enc_GXpt)
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
@@ -1304,7 +1303,7 @@ def test_wrong_signature_and_DLRNE1():
 
     ver.process_precommitment(prov.precommit())
 
-    commitment = prov.commit()
+    commitment = prov.commit(encoding=enc_GXpt)
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
@@ -1355,7 +1354,7 @@ def test_wrong_signature_and_DLRNE():
     prov.subs[1].secret_values[s] = signature.s + 1
     ver = andp1.get_verifier()
     ver.process_precommitment(prov.precommit())
-    commitment = prov.commit()
+    commitment = prov.commit(encoding=enc_GXpt)
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)

@@ -26,10 +26,11 @@ class NITranscript:
     A named tuple for non-interactive proofs transcripts.
     """
 
-    def __init__(self, challenge, responses, precommitment=None):
+    def __init__(self, challenge, responses, precommitment=None, statement=None):
         self.challenge = challenge
         self.responses = responses
         self.precommitment = precommitment
+        self.statement = statement
 
 
 class SimulationTranscript:
@@ -48,18 +49,18 @@ class Prover:
     def __init__(self, proof, secret_values):
         pass
 
-    def commit(self, randomizers_dict=None):
+    def commit(self, randomizers_dict=None, encoding=None):
         """
+        Set encoding=enc_GXpt if the proof contains group elements other than petlib.ec.EcPt.
         :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
         :return: a single commitment (of type petlib.bn.Bn) for the whole proof
         """
-        pass
+        try:
+            identifier = encode(self.proof.get_proof_id(), encoding)
+        except TypeError:
+            raise Exception("If your proof contains pairings, please commit with encoding=enc_GXpt")
+        return sha256(identifier).digest(), self.internal_commit(randomizers_dict)
 
-    def get_proof_id(self):
-        """:return: a descriptor of the Proof with the protocol name and the public info (generators, LHS). 
-        Does NOT contain the secrets' names.
-        """
-        return self.proof.get_proof_id()
 
     def compute_response(self, challenge):
         pass
@@ -72,9 +73,9 @@ class Prover:
         # precommit to 1.gather encapsulated precommitments
         # 2.write the precommitments in their respective proof so the get_proof_id embeds them
         precommitment = self.precommit()
-        commitment = self.commit()
+        statement, commitment = self.commit(encoding=encoding)
         message = message.encode()
-        protocol = encode(self.get_proof_id(), encoding)
+        protocol = encode(self.proof.get_proof_id(), encoding)
 
         # Computing the challenge
         conc = protocol
@@ -84,7 +85,7 @@ class Prover:
         challenge = Bn.from_hex(binascii.hexlify(myhash).decode())
 
         responses = self.compute_response(challenge)
-        return NITranscript(challenge, responses, precommitment)
+        return NITranscript(challenge, responses, precommitment, statement)
 
     def precommit(self):
         return None
@@ -99,7 +100,7 @@ class Verifier:
         :param commitment: a petlib.bn.Bn number
         :return: a random challenge smaller than 2**128
         """
-        self.commitment = commitment
+        statement, self.commitment = commitment
         self.challenge = chal_randbits(CHAL_LENGTH)
 
         return self.challenge
@@ -145,6 +146,8 @@ class Verifier:
         """
         if transcript.precommitment is not None:
             self.process_precommitment(transcript.precommitment)
+        if sha256(encode(self.proof.get_proof_id(), encoding)).digest() != transcript.statement:
+            raise Exception("Proof statements mismatch, impossible to verify")
         if not self.check_adequate_lhs():
             return False
         if not self.check_responses_consistency(transcript.responses, {}):

@@ -50,7 +50,7 @@ class DLRepProver(Prover):
             output.update({key: to_append})
         return output
 
-    def commit(self, randomizers_dict=None):
+    def internal_commit(self, randomizers_dict=None):
         """
         :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
         :return: a single commitment (of type petlib.ec.EcPt) for the whole proof

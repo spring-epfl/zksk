@@ -208,7 +208,14 @@ class SignatureProver(Prover):
         self.proof = proof
         self.secret_values = secret_values
 
-    def commit(self, randomizers_dict=None):
+    
+    def commit(self, randomizers_dict=None, encoding=enc_GXpt):
+        """
+        Overrides the generic commit just to have encoding set to enc_GXpt by default.
+        """
+        return super().commit(randomizers_dict=randomizers_dict, encoding=encoding)
+
+    def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above.
         """
@@ -216,7 +223,7 @@ class SignatureProver(Prover):
             raise Exception(
                 "Please precommit before commiting, else proofs lack parameters"
             )
-        return self.constructed_prover.commit(randomizers_dict)
+        return self.constructed_prover.internal_commit(randomizers_dict)
 
     def precommit(self):
         """
@@ -263,7 +270,7 @@ class SignatureVerifier(AndProofVerifier):
         self.constructed_verifier = self.proof.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
-        self.commitment = com
+        statement, self.commitment = com
         self.challenge = self.constructed_verifier.send_challenge(com)
         return self.challenge
 

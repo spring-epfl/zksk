@@ -74,7 +74,7 @@ class DLRepNotEqualProver(Prover):
         self.proof = proof
         self.secret_values = secret_values
 
-    def commit(self, randomizers_dict=None):
+    def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
         used if the binding of the proof is set True.
@@ -83,7 +83,7 @@ class DLRepNotEqualProver(Prover):
             raise Exception(
                 "Please precommit before commiting, else proofs lack parameters"
             )
-        return self.constructed_prover.commit(randomizers_dict)
+        return self.constructed_prover.internal_commit(randomizers_dict)
 
     def precommit(self):
         cur_secret = self.secret_values[self.proof.secret_names[0]]
@@ -132,7 +132,7 @@ class DLRepNotEqualVerifier(Verifier):
         self.constructed_verifier = self.proof.constructed_proof.get_verifier()
 
     def send_challenge(self, com):
-        self.commitment = com
+        statement, self.commitment = com
         self.challenge = self.constructed_verifier.send_challenge(com)
 
         return self.challenge

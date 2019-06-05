@@ -60,7 +60,7 @@ class Proof:
 
     def prove(self, secret_dict, message="", encoding=None):
         """
-        Generate the transcript of a non-interactive proof.
+        Generate the transcript of a non-interactive proof. Set encoding=enc_GXpt if the proof contains group elements other than petlib.ec.EcPt.
         """
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message, encoding)
@@ -230,7 +230,7 @@ class OrProver(Prover):
                 precommitment.append(self.simulations[index1].precommitment)
         return precommitment
 
-    def commit(self, randomizers_dict=None):
+    def internal_commit(self, randomizers_dict=None):
         """ First operation of an Or Prover. 
         Runs all the simulators which are needed to obtain commitments for every subprover.
         """
@@ -239,7 +239,7 @@ class OrProver(Prover):
         commitment = []
         for index in range(len(self.subs)):
             if index == self.true_prover_idx:
-                commitment.append(self.subs[index].commit(randomizers_dict))
+                commitment.append(self.subs[index].internal_commit(randomizers_dict))
             else:
                 if index > self.true_prover_idx:
                     index1 = index - 1
@@ -437,7 +437,7 @@ class AndProofProver(Prover):
                 precommitment[idx] = subprecom
         return precommitment if len(precommitment) != 0 else None
 
-    def commit(self, randomizers_dict=None) -> AndProofCommitment:
+    def internal_commit(self, randomizers_dict=None) -> AndProofCommitment:
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
@@ -451,7 +451,7 @@ class AndProofProver(Prover):
 
         self.commitment = []
         for subp in self.subs:
-            self.commitment.append(subp.commit(randomizers_dict=randomizers_dict))
+            self.commitment.append(subp.internal_commit(randomizers_dict=randomizers_dict))
         return self.commitment
 
     def compute_response(self, challenge: AndProofChallenge) -> AndProofResponse:
@@ -495,7 +495,7 @@ class AndProofVerifier(Verifier):
         :param commitment: a petlib.bn.Bn number
         :return: a random challenge smaller than 2**128
         """
-        self.commitment = commitment
+        statement, self.commitment = commitment
         self.challenge = chal_randbits(CHAL_LENGTH)
         return self.challenge
 
