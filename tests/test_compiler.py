@@ -30,18 +30,18 @@ class SigmaProtocol:
     def setup(self):
         pass
 
-    def verify(self, encoding=None) -> bool:
+    def verify(self) -> bool:
         victor = self.verifierClass
         peggy = self.proverClass
         precommitment = peggy.precommit()
         victor.process_precommitment(precommitment)
-        commitment = peggy.commit(encoding=encoding)
+        commitment = peggy.commit()
         challenge = victor.send_challenge(commitment)
         response = peggy.compute_response(challenge)
         return victor.verify(response)
 
-    def run(self, encoding=None):
-        if self.verify(encoding=encoding):
+    def run(self):
+        if self.verify():
             print("Verified for {0}".format(self.__class__.__name__))
             return True
         else:
@@ -85,6 +85,17 @@ def test_dlrep_true():
     assert proof.run() == True
 
 
+def test_dlrep_bad_hash():
+    g, h = tab_g[0], tab_g[1]
+    x, y = Secret(),Secret()
+    dic = {x:2, y:3}
+    pp1 = DLRepProof(2*g+3*h, x*g+y*h)
+
+    pp2 = DLRepProof(2*g+3*h, y*h+x*g)
+    tr = pp1.prove(dic)
+    with pytest.raises(Exception):
+        pp2.verify(tr)
+
 def test_dlrep_true2():
     # Legit run
     sk, g = G.order().random(), G.generator()
@@ -114,7 +125,7 @@ def test_dlrep_NI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
     tr = niproof.prove(secrets_values, message="mymessage")
-    assert niproof.verify(tr, message="mymessage") == True
+    assert DLRepProof(lhs, rhs1).verify(tr, message="mymessage") 
 
 
 def test_dlrep_wrongNI():
@@ -278,6 +289,18 @@ def assert_verify_proof(verifier, prover):
 
 
 def test_and_proofs():
+    pp1, pp2, secrets_dict = setup_and_proofs()
+    and_proof = AndProof(pp1, pp2)
+    and_prover = and_proof.get_prover(secrets_dict)
+    and_verifier = and_proof.get_verifier()
+
+    assert_verify_proof(and_verifier, and_prover)
+
+
+
+def test_crosslibs_and_proofs():
+    x = Secret()
+    y = Secret()
     pp1, pp2, secrets_dict = setup_and_proofs()
     and_proof = AndProof(pp1, pp2)
     and_prover = and_proof.get_prover(secrets_dict)
@@ -1210,7 +1233,7 @@ def test_and_sig():
     prov = andp.get_prover(secret_dict)
     ver = andp.get_verifier()
     prot = SigmaProtocol(ver, prov)
-    assert prot.run(encoding=enc_GXpt)
+    assert prot.run()
 
 
 def test_signature_and_DLRNE():
@@ -1251,7 +1274,7 @@ def test_signature_and_DLRNE():
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
     ver.process_precommitment(prov.precommit())
-    commitment = prov.commit(encoding=enc_GXpt)
+    commitment = prov.commit()
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
@@ -1303,7 +1326,7 @@ def test_wrong_signature_and_DLRNE1():
 
     ver.process_precommitment(prov.precommit())
 
-    commitment = prov.commit(encoding=enc_GXpt)
+    commitment = prov.commit()
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
@@ -1354,7 +1377,7 @@ def test_wrong_signature_and_DLRNE():
     prov.subs[1].secret_values[s] = signature.s + 1
     ver = andp1.get_verifier()
     ver.process_precommitment(prov.precommit())
-    commitment = prov.commit(encoding=enc_GXpt)
+    commitment = prov.commit()
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)

@@ -1,7 +1,7 @@
 import random, string
 from functools import reduce
 from collections import namedtuple
-from petlib.ec import EcGroup
+from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from petlib.pack import *
 import binascii
@@ -49,17 +49,12 @@ class Prover:
     def __init__(self, proof, secret_values):
         pass
 
-    def commit(self, randomizers_dict=None, encoding=None):
+    def commit(self, randomizers_dict=None):
         """
-        Set encoding=enc_GXpt if the proof contains group elements other than petlib.ec.EcPt.
         :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
         :return: a single commitment (of type petlib.bn.Bn) for the whole proof
         """
-        try:
-            identifier = encode(self.proof.get_proof_id(), encoding)
-        except TypeError:
-            raise Exception("If your proof contains pairings, please commit with encoding=enc_GXpt")
-        return sha256(identifier).digest(), self.internal_commit(randomizers_dict)
+        return self.proof.hash_statement(), self.internal_commit(randomizers_dict)
 
 
     def compute_response(self, challenge):
@@ -73,7 +68,7 @@ class Prover:
         # precommit to 1.gather encapsulated precommitments
         # 2.write the precommitments in their respective proof so the get_proof_id embeds them
         precommitment = self.precommit()
-        statement, commitment = self.commit(encoding=encoding)
+        statement, commitment = self.commit()
         message = message.encode()
         protocol = encode(self.proof.get_proof_id(), encoding)
 
@@ -101,8 +96,8 @@ class Verifier:
         :return: a random challenge smaller than 2**128
         """
         statement, self.commitment = commitment
+        self.proof.check_statement(statement)
         self.challenge = chal_randbits(CHAL_LENGTH)
-
         return self.challenge
 
     def process_precommitment(self, precommitment):
@@ -146,8 +141,7 @@ class Verifier:
         """
         if transcript.precommitment is not None:
             self.process_precommitment(transcript.precommitment)
-        if sha256(encode(self.proof.get_proof_id(), encoding)).digest() != transcript.statement:
-            raise Exception("Proof statements mismatch, impossible to verify")
+        self.proof.check_statement(transcript.statement)
         if not self.check_adequate_lhs():
             return False
         if not self.check_responses_consistency(transcript.responses, {}):

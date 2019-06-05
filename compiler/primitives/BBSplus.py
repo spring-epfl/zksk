@@ -208,13 +208,6 @@ class SignatureProver(Prover):
         self.proof = proof
         self.secret_values = secret_values
 
-    
-    def commit(self, randomizers_dict=None, encoding=enc_GXpt):
-        """
-        Overrides the generic commit just to have encoding set to enc_GXpt by default.
-        """
-        return super().commit(randomizers_dict=randomizers_dict, encoding=encoding)
-
     def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above.
@@ -271,7 +264,8 @@ class SignatureVerifier(AndProofVerifier):
 
     def send_challenge(self, com):
         statement, self.commitment = com
-        self.challenge = self.constructed_verifier.send_challenge(com)
+        self.proof.check_statement(statement)
+        self.challenge = self.constructed_verifier.send_challenge(com, mute=True)
         return self.challenge
 
     def check_adequate_lhs(self):

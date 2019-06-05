@@ -133,7 +133,8 @@ class DLRepNotEqualVerifier(Verifier):
 
     def send_challenge(self, com):
         statement, self.commitment = com
-        self.challenge = self.constructed_verifier.send_challenge(com)
+        self.proof.check_statement(statement)
+        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
 
         return self.challenge
 

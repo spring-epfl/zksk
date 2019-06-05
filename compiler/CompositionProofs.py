@@ -60,7 +60,7 @@ class Proof:
 
     def prove(self, secret_dict, message="", encoding=None):
         """
-        Generate the transcript of a non-interactive proof. Set encoding=enc_GXpt if the proof contains group elements other than petlib.ec.EcPt.
+        Generate the transcript of a non-interactive proof.
         """
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message, encoding)
@@ -72,13 +72,30 @@ class Proof:
         verifier = self.get_verifier()
         return verifier.verify_NI(transcript, message, encoding)
 
-    def simulate():
+    def simulate(self):
         """
         Generate the transcript of a simulated non-interactive proof.
         """
         prover = self.get_prover()
         return self.prover.simulate_proof()
 
+    def check_statement(self, statement):
+        """ 
+        try:
+            identifier = encode(self.proof.get_proof_id(), encoding)
+        except TypeError:
+            raise Exception("If your proof contains pairings, please commit with encoding=enc_GXpt")
+        return sha256(identifier).digest(), self.internal_commit(randomizers_dict) """
+        if statement != self.hash_statement():
+            raise Exception("Proof statements mismatch, impossible to verify")
+        return True
+
+    def hash_statement(self):
+        if not isinstance(self.generators[0], EcPt):
+            encoding = enc_GXpt
+        else:
+            encoding =None
+        return sha256(encode(self.get_proof_id(), encoding)).digest()
 
 def find_residual_chal(arr, challenge, chal_length):
     """ To find c1 such that c = c1 + c2 +c3 mod k,
@@ -490,12 +507,16 @@ class AndProofVerifier(Verifier):
         self.subs = subverifiers
         self.proof = proof
 
-    def send_challenge(self, commitment):
+    def send_challenge(self, commitment, mute=False):
         """
         :param commitment: a petlib.bn.Bn number
         :return: a random challenge smaller than 2**128
         """
-        statement, self.commitment = commitment
+        if mute:
+            self.commitment = commitment
+        else:
+            statement, self.commitment = commitment
+            self.proof.check_statement(statement)
         self.challenge = chal_randbits(CHAL_LENGTH)
         return self.challenge
 
