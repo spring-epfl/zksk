@@ -159,9 +159,10 @@ class OrProof(Proof):
         """
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
-            return self.get_simulator()
-        bigset = set(secrets_dict.keys())
+            arr = [subp.get_prover() for subp in self.subproofs]
 
+            return OrProver(self, arr, {})
+        bigset = set(secrets_dict.keys())
         # We sort them but we need to keep track of their initial index
         ordered_proofs = dict(enumerate(self.subproofs))
         candidates = {}
@@ -185,7 +186,7 @@ class OrProof(Proof):
         # Now we get the simulators
         sims.update(candidates)
         for to_sim in sims.keys():
-            sims[to_sim] = sims[to_sim].get_simulator()
+            sims[to_sim] = sims[to_sim].get_prover()
 
         # We add the legit prover
         sims[chosen_idx] = elem.get_prover(subdict)
@@ -193,11 +194,6 @@ class OrProof(Proof):
         # Return a list of provers in the correct order
         return OrProver(self, [sims[index] for index in sorted(sims)], secrets_dict)
 
-    def get_simulator(self):
-        """ Returns an empty prover which can only simulate (via simulate_proof)
-        """
-        arr = [subp.get_simulator() for subp in self.subproofs]
-        return OrProver(self, arr, {})
 
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
@@ -378,7 +374,8 @@ class AndProof(Proof):
         """
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
-            return self.get_simulator()
+            arr = [subp.get_prover() for subp in self.subproofs]
+            return AndProofProver(self, arr, {})
 
         def sub_proof_prover(sub_proof):
             keys = set(sub_proof.secret_names)
@@ -397,12 +394,6 @@ class AndProof(Proof):
 
     def get_verifier(self):
         return AndProofVerifier(self, [subp.get_verifier() for subp in self.subproofs])
-
-    def get_simulator(self):
-        """ Returns an empty prover which can only simulate (via simulate_proof)
-        """
-        arr = [subp.get_simulator() for subp in self.subproofs]
-        return AndProofProver(self, arr, {})
 
     def get_proof_id(self):
         return ["And", [sub.get_proof_id() for sub in self.subproofs]]

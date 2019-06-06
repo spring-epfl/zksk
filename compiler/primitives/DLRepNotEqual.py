@@ -65,9 +65,6 @@ class DLRepNotEqualProof(Proof):
         """
         return self.constructed_proof.recompute_commitment(challenge, responses)
 
-    def get_simulator(self):
-        return DLRepNotEqualProver(self, {})
-
 
 class DLRepNotEqualProver(Prover):
     def __init__(self, proof, secret_values):

@@ -356,7 +356,7 @@ def test_simulate_andproof1():
     subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
-    andsim = andp.get_simulator()
+    andsim = andp.get_prover({})
     tr = andsim.simulate_proof()
     tr.statement = andsim.proof.hash_statement()
     assert not andv.verify_NI(tr)
