@@ -1041,10 +1041,8 @@ def test_sim_DLRNE():
 
     pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
     secret_dict = {x: 3}
-    prover = pr.get_prover()
-    ver = pr.get_verifier()
-    tr = prover.simulate_proof()
-    assert ver.verify(tr)
+    tr = pr.simulate()
+    assert pr.verify_simulation_consistency(tr) and not pr.verify(tr)
 
 
 def test_sim_multiDLRNE():
@@ -1072,10 +1070,8 @@ def test_sim_multiDLRNE():
     )
 
     andp = pr1 & pr2 & pr3 & pr4
-    prover = andp.get_prover()
-    ver = andp.get_verifier()
-    tr = prover.simulate_proof()
-    assert ver.verify(tr)
+    tr = andp.simulate()
+    assert andp.verify_simulation_consistency(tr) and not andp.verify(tr)
 
 
 def test_DLRNE_sim_binding():
@@ -1092,11 +1088,8 @@ def test_DLRNE_sim_binding():
         [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]]
     )
     andp = pr1 & pr2
-    prov = andp.get_prover()
-    ver = andp.get_verifier()
-    sim = prov.simulate_proof()
-    assert ver.verify(sim)
-
+    tr = andp.simulate()
+    assert andp.verify_simulation_consistency(tr) and not andp.verify(tr)
 
 def test_or_DLRNE():
     lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]

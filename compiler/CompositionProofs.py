@@ -167,11 +167,10 @@ class OrProof(Proof):
         candidates = {}
         sims = {}
         for key, value in ordered_proofs.items():
-            if value.simulate:
+            if value.simulation:
                 sims[key] = value
             else:
                 candidates[key] = value
-
         # We need to choose one subproof to be actually computed among all which can be computed
         # If the available secrets do not match the ones required in the chosen subproof, choose another
         possible = list(candidates.keys())
@@ -211,7 +210,7 @@ Important :
 
 
 class OrProver(Prover):
-    # This prover is built on two subprovers, max one of them being a simulator
+    # This prover is built on subprovers, max one of them being a simulator
     def __init__(self, proof, subprovers, secret_values):
         self.subs = subprovers
         self.proof = proof
