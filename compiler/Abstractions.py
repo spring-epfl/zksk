@@ -34,11 +34,12 @@ class NITranscript:
 
 
 class SimulationTranscript:
-    def __init__(self, commitment, challenge, responses, precommitment=None):
+    def __init__(self, commitment, challenge, responses, precommitment=None, statement=None):
         self.commitment = commitment
         self.challenge = challenge
         self.responses = responses
         self.precommitment = precommitment
+        self.statement = statement
 
 
 class Prover:
@@ -110,27 +111,11 @@ class Verifier:
         :param response: the response given by the prover
         :return: a boolean telling whether or not the commitment given by the prover matches the one we obtain by recomputing a commitment from the given challenge and response
         """
-        commitment = None
-        challenge = None
-        if isinstance(arg, SimulationTranscript):
-            # We were passed a full transcript (i.e a specific challenge and commitment to use), unpack it
-            response = arg.responses
-            precommitment = arg.precommitment
-            commitment = arg.commitment
-            challenge = arg.challenge
-            if precommitment is not None:
-                self.process_precommitment(precommitment)
-        else:
-            response = arg
-        if commitment is None:
-            commitment = self.commitment
-        if challenge is None:
-            challenge = self.challenge
         if not self.check_adequate_lhs():
             return False
-        if not self.check_responses_consistency(response, {}):
+        if not self.check_responses_consistency(arg, {}):
             raise Exception("Responses for a same secret name do not match!")
-        return commitment == self.proof.recompute_commitment(challenge, response)
+        return self.commitment == self.proof.recompute_commitment(self.challenge, arg)
 
     def verify_NI(self, transcript, message="", encoding=None):
         """

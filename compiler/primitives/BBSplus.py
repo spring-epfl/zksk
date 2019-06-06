@@ -144,7 +144,7 @@ class SignatureProof(Proof):
         self.signature = signature
         self.secret_names = secret_names
         self.constructed_proof = None
-        self.simulate = False
+        self.simulation = False
 
     def build_constructed_proof(self, precommitment):
         """
@@ -189,7 +189,7 @@ class SignatureProof(Proof):
         return self.constructed_proof
 
     def get_prover(self, secret_values={}):
-        if self.simulate:
+        if self.simulation:
             secret_values = {}
         return SignatureProver(self, secret_values)
 
@@ -251,6 +251,9 @@ class SignatureProver(Prover):
         self.constructed_prover.challenge = challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
+    
+    def simulate_proof(self, challenge=None):
+        pass
 
 
 class SignatureVerifier(AndProofVerifier):

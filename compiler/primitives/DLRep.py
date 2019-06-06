@@ -103,7 +103,6 @@ class DLRepProver(Prover):
         :return: a list of valid commitments for each secret value given responses_dict and a challenge
         The function will misbehave if passed a non-empty but incomplete responses_dict.
         """
-        # Set the recompute_commitment
         if responses_dict is None or responses_dict == {}:
             responses_dict = self.get_randomizers()
         if challenge is None:
@@ -178,14 +177,14 @@ class DLRepProof(Proof):
         self.generators = generators
         self.secret_names = secret_names
         self.lhs = lhs
-        self.simulate = False
+        self.simulation = False
 
     def get_prover(self, secrets_dict={}):
         """
         :param secrets_dict: a dictionnary mapping secret names to petlib.bn.Bn numbers
         :return: an instance of DLRepProver
         """
-        if self.simulate == True or secrets_dict == {}:
+        if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             return self.get_simulator()
         if len(set(self.secret_names)) != len(secrets_dict):

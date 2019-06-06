@@ -56,7 +56,7 @@ class Proof:
         pass
 
     def set_simulate(self):
-        self.simulate = True
+        self.simulation = True
 
     def prove(self, secret_dict, message="", encoding=None):
         """
@@ -72,20 +72,16 @@ class Proof:
         verifier = self.get_verifier()
         return verifier.verify_NI(transcript, message, encoding)
 
-    def simulate(self):
+    def simulate(self, challenge=None):
         """
         Generate the transcript of a simulated non-interactive proof.
         """
         prover = self.get_prover()
-        return self.prover.simulate_proof()
+        transcript = prover.simulate_proof(challenge=challenge)
+        transcript.statement = self.hash_statement()
+        return transcript
 
     def check_statement(self, statement):
-        """ 
-        try:
-            identifier = encode(self.proof.get_proof_id(), encoding)
-        except TypeError:
-            raise Exception("If your proof contains pairings, please commit with encoding=enc_GXpt")
-        return sha256(identifier).digest(), self.internal_commit(randomizers_dict) """
         if statement != self.hash_statement():
             raise Exception("Proof statements mismatch, impossible to verify")
         return True
@@ -96,6 +92,17 @@ class Proof:
         else:
             encoding =None
         return sha256(encode(self.get_proof_id(), encoding)).digest()
+
+    def verify_simulation_consistency(self, transcript):
+        """
+        Tool function useful for debugging. Checks if a the fields of a transcript satisfy the verification equation.
+        Should NOT be used instead of proof.verify() since it would accept simulations !
+        """
+        verifier = self.get_verifier()
+        verifier.process_precommitment(transcript.precommitment)
+        self.check_statement(transcript.statement)
+        verifier.commitment, verifier.challenge = transcript.commitment, transcript.challenge
+        return verifier.verify(transcript.responses)
 
 def find_residual_chal(arr, challenge, chal_length):
     """ To find c1 such that c = c1 + c2 +c3 mod k,
@@ -122,7 +129,7 @@ class OrProof(Proof):
 
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
-        self.simulate = False
+        self.simulation = False
         check_groups(self.secret_names, self.generators)
         # For now we consider the same constraints as in the And Proof
 
@@ -150,7 +157,7 @@ class OrProof(Proof):
     def get_prover(self, secrets_dict={}):
         """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
         """
-        if self.simulate == True or secrets_dict == {}:
+        if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             return self.get_simulator()
         bigset = set(secrets_dict.keys())
@@ -352,7 +359,7 @@ class AndProof(Proof):
 
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
-        self.simulate = False
+        self.simulation = False
         check_groups(self.secret_names, self.generators)
         self.check_or_flaw()
 
@@ -370,7 +377,7 @@ class AndProof(Proof):
         """ Returns an AndProver, which contains the whole Proof information but also a list of instantiated subprovers, one for each term of the Proof.
         Has access to the secret values.
         """
-        if self.simulate == True or secrets_dict == {}:
+        if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             return self.get_simulator()
 

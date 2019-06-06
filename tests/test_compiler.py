@@ -138,10 +138,8 @@ def test_dlrep_wrongNI():
 
 def test_dlrep_simulation():
     ped_proof = DLRepProof(lhs, rhs1)
-    sim_prover = ped_proof.get_simulator()
-    sim_verif = ped_proof.get_verifier()
-    tr = sim_prover.simulate_proof()
-    assert sim_verif.verify(tr) == True
+    tr = ped_proof.simulate()
+    assert (not ped_proof.verify(tr)) and ped_proof.verify_simulation_consistency(tr)
 
 
 def test_diff_groups_dlrep():
@@ -353,14 +351,23 @@ def test_compose_and_proofs2():
     assert_verify_proof(verifier, prover)
 
 
-def test_simulate_andproof():
+def test_simulate_andproof1():
     subproof1 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
     subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     andsim = andp.get_simulator()
     tr = andsim.simulate_proof()
-    assert andv.verify(tr) == True
+    tr.statement = andsim.proof.hash_statement()
+    assert not andv.verify_NI(tr)
+
+
+def test_simulate_andproof2():
+    subproof1 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
+    subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
+    andp = AndProof(subproof1, subproof2)
+    tr = andp.simulate()
+    assert andp.verify_simulation_consistency(tr) and not andp.verify(tr)
 
 
 def test_and_NI():
@@ -517,10 +524,8 @@ def test_or_or():
 def test_or_sim():
     pp1, pp2, secrets = setup_and_proofs()
     first_or = OrProof(pp1, pp2)
-    sim = first_or.get_simulator()
-    ver = first_or.get_verifier()
-    tr = sim.simulate_proof()
-    assert ver.verify(tr)
+    tr = first_or.simulate()
+    assert first_or.verify_simulation_consistency(tr) and not first_or.verify(tr)
 
 
 def verify_proof(proof, secrets):
