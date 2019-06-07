@@ -58,7 +58,7 @@ class Proof:
     def set_simulate(self):
         self.simulation = True
 
-    def prove(self, secret_dict, message="", encoding=None):
+    def prove(self, secret_dict={}, message="", encoding=None):
         """
         Generate the transcript of a non-interactive proof.
         """
@@ -76,6 +76,7 @@ class Proof:
         """
         Generate the transcript of a simulated non-interactive proof.
         """
+        self.set_simulate()
         prover = self.get_prover()
         transcript = prover.simulate_proof(challenge=challenge)
         transcript.statement = self.hash_statement()
@@ -129,6 +130,11 @@ class OrProof(Proof):
 
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
+        # Construct a dictionary with the secret values we already know
+        self.secret_values={}
+        for sec in self.secret_names:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         self.simulation = False
         check_groups(self.secret_names, self.generators)
         # For now we consider the same constraints as in the And Proof
@@ -157,6 +163,9 @@ class OrProof(Proof):
     def get_prover(self, secrets_dict={}):
         """Gets an OrProver which contains a list of the N subProvers, N-1 of which will be simulators.
         """
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
+        secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             arr = [subp.get_prover() for subp in self.subproofs]
@@ -354,6 +363,11 @@ class AndProof(Proof):
 
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
+        # Construct a dictionary with the secret values we already know
+        self.secret_values={}
+        for sec in self.secret_names:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         self.simulation = False
         check_groups(self.secret_names, self.generators)
         self.check_or_flaw()
@@ -372,6 +386,9 @@ class AndProof(Proof):
         """ Returns an AndProver, which contains the whole Proof information but also a list of instantiated subprovers, one for each term of the Proof.
         Has access to the secret values.
         """
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
+        secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             arr = [subp.get_prover() for subp in self.subproofs]

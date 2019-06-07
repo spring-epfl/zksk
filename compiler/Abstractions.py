@@ -288,12 +288,13 @@ class RightSide:
 
 
 class Secret:
-    def __init__(self, alias=""):
+    def __init__(self, alias="", value=None ) :
         """
         :param name: a string equal to the name of this secret 
         :param value: an optional petlib.bn.Bn number equal to the secret value. This can be left for later at the creation of the prover.
         """
         self.name = str(hash(self)) if alias == "" else alias
+        self.value = value
 
     def __mul__(self, ecPt):
         """

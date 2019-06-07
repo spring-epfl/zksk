@@ -173,9 +173,13 @@ class DLRepProof(Proof):
                 raise Exception(
                     "All generators should come from the same group", g.group
                 )
-
         self.generators = generators
         self.secret_names = secret_names
+        # Construct a dictionary with the secret values we already know
+        self.secret_values={}
+        for sec in self.secret_names:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         self.lhs = lhs
         self.simulation = False
 
@@ -184,6 +188,10 @@ class DLRepProof(Proof):
         :param secrets_dict: a dictionnary mapping secret names to petlib.bn.Bn numbers
         :return: an instance of DLRepProver
         """
+
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
+        secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             return DLRepProver(self, {})
@@ -195,7 +203,6 @@ class DLRepProof(Proof):
 
         for secret in self.secret_names:
             if secret not in secrets_dict.keys():
-                pdb.set_trace()
                 raise Exception(
                     "secrets do not match: those secrets should be checked {0} {1}".format(
                         self.secret_names, secrets_dict.keys()

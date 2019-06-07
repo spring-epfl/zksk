@@ -143,6 +143,11 @@ class SignatureProof(Proof):
         self.aliases = [Secret("r1"), Secret("r2"), Secret("delta1"), Secret("delta2")]
         self.signature = signature
         self.secret_names = secret_names
+        # Construct a dictionary with the secret values we already know
+        self.secret_values={}
+        for sec in self.secret_names:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         self.constructed_proof = None
         self.simulation = False
 
@@ -188,10 +193,14 @@ class SignatureProof(Proof):
         self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
         return self.constructed_proof
 
-    def get_prover(self, secret_values={}):
+    def get_prover(self, secrets_dict={}):
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
         if self.simulation:
-            secret_values = {}
-        return SignatureProver(self, secret_values)
+            resdict = {}
+        else:
+            resdict = self.secret_values
+        return SignatureProver(self, resdict)
 
     def get_proof_id(self):
         return ["SignatureProof", self.generators, self.A1, self.A2, self.pair_lhs]

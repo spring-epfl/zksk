@@ -19,14 +19,23 @@ class DLRepNotEqualProof(Proof):
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.secret_names = secret_names
+        # Construct a dictionary with the secret values we already know
+        self.secret_values={}
+        for sec in self.secret_names:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         self.simulation = False
         self.binding = binding
         self.constructed_proof = None
 
-    def get_prover(self, secret_values={}):
+    def get_prover(self, secrets_dict={}):
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
         if self.simulation:
-            secret_values = {}
-        return DLRepNotEqualProver(self, secret_values)
+            resdict = {}
+        else:
+            resdict = self.secret_values
+        return DLRepNotEqualProver(self, resdict)
 
     def get_verifier(self):
         return DLRepNotEqualVerifier(self)
