@@ -4,12 +4,12 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
+from Abstractions import *
 from primitives.DLRep import *
 from CompositionProofs import *
 from BilinearPairings import *
 from primitives.BBSplus import *
 from primitives.DLRepNotEqual import *
-from Abstractions import *
 import pytest
 import pdb
 
@@ -1256,9 +1256,9 @@ def test_signature_proofNI():
     }
 
     sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
-    tr = sigproof.prove(secret_dict, encoding=enc_GXpt)
+    tr = sigproof.prove(secret_dict)
     sigproof1 = SignatureProof(signature, [Secret() for _ in range(5)], pk)
-    assert sigproof1.verify(tr, encoding=enc_GXpt)
+    assert sigproof1.verify(tr)
 
 def test_and_sig():
     mG = BilinearGroupPair()
@@ -1493,11 +1493,9 @@ def test_and_NI_sig():
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
-    nip = andp.prove(secret_dict, encoding=enc_GXpt)
-    assert andp.verify(nip, encoding=enc_GXpt)
+    nip = andp.prove(secret_dict)
+    assert andp.verify(nip)
 
-def test_bm_signatureproof(benchmark):
-    result = benchmark(test_signature_proofNI)
 
 def test_bm_gmap(benchmark):
     G = BpGroup()
@@ -1531,3 +1529,37 @@ def test_bm_gtexp(benchmark):
     rt = G.pair(t1,t2)
     result = benchmark(rt.exp, r1)
     assert result == rt**r1
+
+
+def test_bm_signatureproof(benchmark):
+    mG = BilinearGroupPair()
+    keypair = KeyPair(mG, 15)
+    messages = [mG.G1.order().random() for _ in range(10)]
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs.commitment_message)
+    signature = creator.obtain_signature(presignature)
+    tr = signature_proofNI(messages, signature, pk)
+
+    sigproof1 = SignatureProof(signature, [Secret() for _ in range(len(messages)+2)], pk)
+
+    result = benchmark(signature_verifyNI, *(sigproof1, tr))
+    assert result
+
+def signature_proofNI(messages,signature, pk):
+    e, s = Secret(), Secret()
+    mess = [Secret() for _ in range(len(messages))]
+    secret_dict = {
+        e: signature.e,
+        s: signature.s}
+    secret_dict.update(dict(zip(mess, messages)))
+    sigproof = SignatureProof(signature, [e, s, *mess], pk)
+    tr = sigproof.prove(secret_dict)
+    return tr
+
+def signature_verifyNI(proof, tr):
+    return proof.verify(tr)

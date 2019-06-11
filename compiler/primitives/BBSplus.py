@@ -44,7 +44,7 @@ class UserCommitmentMessage:
             Secret("m" + str(i + 1)) for i in range(nb_messages)
         ]
         proof = DLRepProof(lhs, wsum_secrets(secret_names, generators))
-        return proof.verify(self.NIproof, encoding=enc_GXpt)
+        return proof.verify(self.NIproof)
 
 
 class SignatureCreator:
@@ -72,7 +72,7 @@ class SignatureCreator:
             secrets = [self.s1] + messages
             rhs = wsum_secrets(names, self.pk.generators[1 : len(messages) + 2])
             pedersen_proof = DLRepProof(lhs, rhs)
-            NIproof = pedersen_proof.prove(dict(zip(names, secrets)), encoding=enc_GXpt)
+            NIproof = pedersen_proof.prove(dict(zip(names, secrets)))
         return UserCommitmentMessage(lhs, NIproof)
 
     def obtain_signature(self, presignature):
@@ -140,7 +140,7 @@ class SignatureProof(Proof):
         self.pk = pk
         # We need L+1 generators for L messages. secret_names are messages plus 'e' and 's'
         self.generators = pk.generators[: len(secret_names)]
-        self.aliases = [Secret("r1"), Secret("r2"), Secret("delta1"), Secret("delta2")]
+        self.aliases = [Secret(), Secret(), Secret(), Secret()]
         self.signature = signature
         self.secret_names = secret_names
         # Construct a dictionary with the secret values we already know

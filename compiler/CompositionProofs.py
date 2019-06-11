@@ -58,17 +58,27 @@ class Proof:
     def set_simulate(self):
         self.simulation = True
 
-    def prove(self, secret_dict={}, message="", encoding=None):
+    def prove(self, secret_dict={}, message=""):
         """
         Generate the transcript of a non-interactive proof.
+        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
+        if not isinstance(self.generators[0], EcPt):
+            encoding = enc_GXpt
+        else:
+            encoding =None
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message, encoding)
 
-    def verify(self, transcript, message="", encoding=None):
+    def verify(self, transcript, message=""):
         """
         Verify the transcript of a non-interactive proof.
+        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
+        if not isinstance(self.generators[0], EcPt):
+            encoding = enc_GXpt
+        else:
+            encoding =None
         verifier = self.get_verifier()
         return verifier.verify_NI(transcript, message, encoding)
 
@@ -88,6 +98,10 @@ class Proof:
         return True
 
     def hash_statement(self):
+        """
+        Returns a hash of the proof's descriptor.
+        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
+        """
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
