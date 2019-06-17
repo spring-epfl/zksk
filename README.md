@@ -4,35 +4,41 @@ A python toolkit to build zero-knowledge proofs along sigma protocols.
 
 To use it, you should install :
   - petlib, see https://petlib.readthedocs.io/en/latest/ 
-      Warning : petlib has not released a version compatible with OpenSSL 1.1 or newer yet. 
+  - bplib, see https://bplib.readthedocs.io/en/latest/
   - msgpack
   - hashlib
-  - python 3 or newer
+  - python >= 3.5
 
 
 ## How to use :
-> This section is about code examples and practice.If you want to understand what is going on, you can read the [How it works](#how-it-works) section first.
+> This section is about code examples and practice. If you want to read about what is going on, you can read the [How it works](#how-it-works) section first.
 
-> Important : the computations are done within cyclic groups induced by elliptic curves.  Points of those groups are written in uppercase, scalar number in lowercase.
-> What we refer as *secrets* are integers. We advise you to read [petlib's documentation page](https://petlib.readthedocs.io/en/latest/).
+> Important : the computations are done within cyclic groups induced by elliptic curves.  Points of those groups are written in uppercase, scalar number in lowercase. We advise you to read [petlib's documentation page](https://petlib.readthedocs.io/en/latest/).
+> What we refer as *secrets* are a custom hashable objects embedding integers.
 
 #### What you want to do
 
-Build expressions using the following blocks (classes which all inherit from a `Proof` primitive and thus can be composed ) :
+Build expressions using the following blocks (classes which all inherit from a `Proof` primitive and thus can be composed) :
 
-	- Discrete Logarithm Representation
-	- And conjunctions
-	- Or conjunctions
+- **Discrete Logarithm Representation (DLRep)** primitive to prove knowledge of integers `x`i such that a base `Y` can be written as the product of `Gi`^`xi` with `Gi` known bases.
+- **DLRepNotEqual** primitive, to prove inequality of two discrete logarithms, one of which must be known
+  - this protocol is drawn from the BLAC scheme [2].
+- **SignatureProof** primitive, to prove knowledge of a BBS+ signature over a set of credentials. 
+  - This protocol is drawn from the BBS+ scheme [3].
+- **And** conjunctions
+- **Or** conjunctions
 
 Choose a proof mode among :
 
-	- Interactive proof (local)
-	- Non-interactive proof
-	- Simulation
+- Interactive proof (local)
+- Non-interactive proof
+- Simulation
 
+And output a proof transcript or in the case of an interactive proof a couple Prover/Verifier which will execute a sigma protocol for your proof.
 
 ### Syntax and setup examples
-#### An elementary proof
+
+#### An elementary interactive proof
 
 We want to build a proof for the following statement (using [Camenisch-Stadler][1] notation) :
 
@@ -61,53 +67,66 @@ This is the syntax we will use from now on, to ensure compatibility with the *pe
 
 
 
-Let's build the proof environment : we set the ECpts (elliptic curve points, the `Gi`) and the secrets `xi`.
+Let's build the proof environment : we set the group elements (elliptic curve points, the `Gi`) and the secrets `xi`.
 
+```python
+G = EcGroup()
+g = G.generator()    # This sets up the group and a first generator	
+g1 = G.hash_to_point("An") 		# Collecting various points in the group for the example 
+g2 = G.hash_to_point("Elementary")	
+g2 = G.hash_to_point("Proof")	
+g2 = 5 * g	    
+g3 = 10 * g			
 
-	g = EcGroup().generator()	# This sets up the group and a first generator
-	g1 = 2 * g			
-	g2 = 5 * g		# Collecting various points in the group for the example 
-	g3 = 10 * g			
-
-	x1 = 10			# Preparing the secrets. This is a dummy setup, typically they
-	x2 = 35			# are large integers or petlib.bn.Bn instances
-
+x1 = Secret(value = 21)      # Preparing the secrets,
+x2 = Secret(value = 35)      # typically large petlib.bn.Bn 
+```
 
 Then creating a proof requires the following syntax:
+```python
+from DLRep import *
+from Abstractions import * 
 
-	from DLRep import *
-	from Subproof import Secret
+y = x1.value * g1 + x2.value * g2	
+			# Building the left-hand-side of the claim
 
-	y = x1 * g1 + x2 * g2			# Building the left-hand-side of the claim
-	
-	my_proof = DLRepProof(y, Secret("x1") * g1 + Secret("x2") * g2)
+my_proof = DLRepProof(y, x1 * g1 + x2 * g2)
+			# Statement mimics the proof mathematical expression
+```
 
-		# Which mimics the proof mathematical expression
+That's almost it for the setup ! Since we want an interactive proof, we are going to instantiate a Verifier and a Prover objects from this proof.  In a realistic setup, one would not get both from the same proof object (typically the prover and the verifier side would not even be running on the same machine), but the result is the same.
 
-		# Or, alternatively :
-	
-	my_proof = DLRepProof([g1, g2], ["x1", x2"], y)
-
-		# Which can be simpler to integrate in code. Be careful, the lists are ordered !
-
-
-That's almost it for the setup ! We want to instantiate a Verifier and a Prover objects from this proof.  
-To do that we feed the prover with the secret values, identified by their names :
-
-	prover = proof.get_prover({"x1": x1, "x2": x2}) # Python dictionary
-	verifier = proof.get_verifier()
+To do that we just call :
+```python
+prover = proof.get_prover()
+verifier = proof.get_verifier()
+```
+The secret values (here 21 and 35) can also be specified at this step instead of earlier. See [Secrets](#Secrets) section.
 
 ##### And now the fun begins
-These two are going to interact along the **Sigma Protocol**, returning (with the *verify* method) a boolean telling whether the proof is verified or not.
-
-
-	commitment = prover.commit()
-	challenge = verifier.send_challenge(commitment)
-	response = prover.compute_response(challenge)
-	verifier.verify(response)
-
+The Prover and Verifier are going to interact along a **sigma protocol**, ending by the verifier accepting or rejecting the proof.
+```python
+commitment = prover.commit()
+challenge = verifier.send_challenge(commitment)
+response = prover.compute_response(challenge)
+verifier.verify(response)
+```
 Done ! 
+Caution: for more complicated proofs (DLRepNotEqual, SignatureProof), one more step is necessary at the beginning of the exchange. See the dedicated section.
 
+#### Secrets
+We use a `Secret( )` class constructor which will optonally embed a value. The idea is to **declare** unique secrets and then use them. If the secret contains a value the proof will be able to use it, otherwise it will wait for a dictionary to get a prover object.
+```python
+x = Secret(value=4)
+proof = DLRepProof(Y, x * G)
+prover = proof.get_prover()
+
+# Is equivalent to
+
+x = Secret()
+proof = DLRepProof(Y, x * G)
+prover = proof.get_prover({x:4})
+```
 
 #### A first composed proof
  We want to build the "And" of two Discrete Logarithms proofs:  
@@ -123,37 +142,51 @@ Done !
 
 As before, we set the points `Gi` and the secrets `xi`.
 
+```python
+from DLRep import *
+from Abstractions import *
 
-	g = EcGroup().generator()	# This sets up the group and a first generator
-	g1 = 3 * g			
-	g2 = 12 * g		# Collecting various points in the group for the example 
-	g3 = 10 * g			
+G = EcGroup()			# Setup the group
+g1 = G.generator()				
+g2 = G.hash_to_point("2")	# Collecting various points for the example 
+g3 = G.hash_to_point("bananas")			
 
-	x1 = 10			
-	x2 = 15			# Preparing the secrets. This is a dummy setup, typically they
-	x3 = 40			# are large integers or petlib.bn.Bn instances
-	x4 = 11
-
+x1 = Secret(value = 3)		
+x2 = Secret(value = 40)		# Declaring the secrets
+x3 = Secret(value = 12)
+x4 = Secret(value = 7)
+```
 Then creating the proof :
 
-	from DLRep import *
-	from Subproof import Secret
+```python
+y1 = x1.value * g1 + x2.value * g2 # Building left-hand-sides of the claims
+y2 = x1.value * g3 + x3.value * g4
 
-	y1 = x1 * g1 + x2 * g2			# Building the left-hand-side of the claims
-	y2 = x1 * g3 + x3 * g4
-	
-	and_proof = DLRepProof(y1, Secret("x1") * g1 + Secret("x2") * g2) & DLRepProof(y2, Secret("x1") * g3 + Secret("x3") * g4)
+and_proof = DLRepProof(y1, x1 * g1 + x2 * g2) 
+		& DLRepProof(y2, x1 * g3 + x3 * g4)
+```
+ This syntax allows you to almost copy the mathematical expression of the proof in the Camenisch-Stadler notation.
+ You can also instantiate subproofs separately and pass them to the `AndProof()` constructor, which the above syntax calls in fact for you :
 
- Again, this syntax allows you to almost copy the mathematical expression of the proof in the Camenisch-Stadler notation.
- You can also instantiate subproofs separately and pass them (possibly as a list) to the AndProof() constructor, which the above syntax calls in fact for you :
+```python
+proof_1 = DLRepProof(y1, x1 * g1 + x2 * g2)
+proof_2 = DLRepProof(y2, x1 * g3 + x3 * g4)
 
-	proof_1 = DLRepProof(y1, Secret("x1") * g1 + Secret("x2") * g2)
-	proof_2 = DLRepProof(y2, Secret("x1") * g3 + Secret("x3") * g4)
+and_proof = AndProof(proof1, proof2)
+```
+The two ways to construct the AndProof are equivalent and work with an arbitrary number of parameters.  
 
-	and_proof = AndProof(proof1, proof2) # OR
-	and_proof = AndProof([proof1, proof2])
-
-In the first example, the infix operator `&` calls a binary AndProof().  
+Note that composing proofs takes into consideration the reoccuring secrets i.e 
+```python
+x1 = Secret(value = 4)
+x2 = Secret(value = 4)
+and_proof1 = DLRepProof(y1, x1 * g1) & DLRepProof(y2, x2 * g2)
+```
+and
+```python
+and_proof2 = DLRepProof(y1, x1 * g1) & DLRepProof(y2, x1 * g2)	
+```
+are **not** equivalent since the second one will run verifications to assert the same secret value (in fact, even the same `Secret` object !) was used.
 
 Our setup is done, the rest is the same protocol [as in the first proof](#and-now-the-fun-begins). 
 
@@ -174,29 +207,25 @@ This time we want to create an Or Proof of two discrete logarithms proofs:
 
 you would do the following to setup the proof (say the `xi` and `Gi` have been setup already similarly as above):
 
-	y1 = x1 * g1
-	y2 = x2 * g2
-	proof = DLRepProof(y1, Secret("x1") * g1) | DLRepProof(y2, Secret("x2") * g2)
+```python
+y1 = x1.value * g1
+y2 = x2.value * g2
+proof = DLRepProof(y1, x1 * g1) | DLRepProof(y2, x2 * g2)
+```
+Or use an `OrProof()` constructor exactly as for the And statement seen above.
 
-	# Or, again
-
-	first_subproof = DLRepProof(y1, Secret("x1") * g1)
-	second_subproof = DLRepProof(g2, "x2", y2)		# Remember this other syntax ?
-	proof = first_subproof | second_subproof
-	
-	proof = OrProof(first_subproof, second_subproof)	# And these ones ?
-	proof = OrProof([first_subproof, second_subproof])
 
 The rest is the same as above, that is you still have to create a Prover and a Verifier by calling the `get_prover()` and `get_verifier()` methods of the Proof object.
-The Or Prover will in fact be composed of one legit subprovers and  the rest will be simulators.
+The OrProver will in fact be composed of one legit subprovers and  the rest will be simulators.
 
-> Tip : You don't need to provide all the secrets for the Or Proof. The compiler will draw at random which subproof to compute, but first eliminates those you did not provide secrets for.
+> Tip : You don't need to provide all the secret values for the Or Proof. The compiler will draw at random which subproof to compute, but first will chose only among those you provided all secrets for.
 
 You might want to set yourself which subproofs you want to simulate, for this just do
 
-		first_subproof.set_simulate()
-
-Which will give this subproof probability 0 to be picked for legit computation.
+```python
+first_subproof.set_simulate()
+```
+Which will give this subproof probability 0 to be picked for the legit computation.
 
 #### Of course you can also compose Or and And !
 Say you want to write the following proof : 
@@ -206,21 +235,22 @@ Say you want to write the following proof :
 &nbsp;&nbsp; &nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2, x3): Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2 &nbsp;&nbsp; &&&nbsp;&nbsp; Y3 = x3 * G3 }
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2, x3): (Y1 = x1 * G1 &nbsp;&nbsp; ||&nbsp;&nbsp; Y2 = x2 * G2) &nbsp;&nbsp; &&&nbsp;&nbsp; Y3 = x3 * G3 }
 
 
 The setup would be 
 
-	y1 = x1 * g1
-	y2 = x2 * g2
-	y3 = x3 * g3
-	proof = DLRepProof(y1, Secret("x1") * g1) | DLRepProof(y2, Secret("x2") * g2) & DLRepProof(y3, Secret("x3") * g3)
-
-> `&` and `|` have the same precedence as native `&` and `|` in Python. Therefore you can rely on your usual boolean logic to write your proofs.
+```python
+y1 = x1.value * g1
+y2 = x2.value * g2
+y3 = x3.value * g3
+proof = (DLRepProof(y1, x1 * g1) | DLRepProof(y2, x2 * g2)) 
+		& DLRepProof(y3, x3 * g3)
+```
 
 #### Some special cases are forbidden ! 
 
-1. You want the group operation to have meaning, for that you are not allowed to operate between elements of different groups.
+1. You are not allowed to operate between elements of different group orders for now.
 
 2. You want to ensure some properties about identical secrets. It implies that when reusing a secret $x$ with two different group points `Ga`, `Gb`, the groups induced by `Ga` and `Gb`$ must have the same order. This could cause [this proof](#a-first-composed-proof) to fail !
 
@@ -229,69 +259,94 @@ The setup would be
 ###
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PK{ (x1, x2): Y1 = x1 * G1 &nbsp;&nbsp; &&&nbsp;&nbsp;( Y2 = x2 * G2 &nbsp;&nbsp; ||&nbsp;&nbsp; Y3 = x1 * G3 ) }
 
-&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. This is a subtlety we'll go through in [the next part](#how-it-works).
+&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;because x1 appears in two incompatible places. See more in [the theory part](#how-it-works).
 
-#### Two more nuggets
-
-- You can also create proofs this way with more concrete Secret objects, where `rhs` stands for "right-hand side":
-
-		rhs = Secret("x1", value = 3) * g1 + Secret("x2", value = 15) * g2
-		proof = DLRepProof(rhs.eval(), rhs)
-
-- If you want to automate the `commitment`, `challenge`, `response`, `verify` steps, you can do the following after building your `Prover` and `Verifier` objects :
-
-		protocool = SigmaProtocol(my_verifier, my_prover)
-		protocool.run()		# returns the verify() result
+> Don't mess with the syntax !   
+> Proving non-interactively { Y = x1 * G1 + x2 * G2 }  and verifying { Y = x2 * G2 + x1 * G1 } will fail as proofs generate and compare hashes of their string identifier, and are not clever enough to understand commutativity.  
 
 #### Using Non-interactive Proofs and Simulations
 ##### NI proofs
-Once you have built your proof and your Prover and Verifier objects, just call
+Once you have built your proof with fully constructed Secret objects (see [Secrets](#secrets))
 
-		prover.get_NI_proof()
-Which returns a (challenge, response) tuple you can plug into
+```python
+transcript = proof.prove()
+```
+If the secrets are not completely built at the proof instantiation, add the dictionary as parameter.
+The returned object will be a `NonInteractiveTranscript`, embedding a challenge, a list of responses, a hash of the proof statement and optionnaly a precommitment. It fits into
 
-		verifier.verify_NI(challenge, response)
+```python
+proof.verify(transcript) # Typically called from a separate instance of Proof
+```
+Which will verify the proof transcripts are the same, process the precommitment if there is one, and verify the challenge and response are consistent.
+The hash contains the proof statement and all the bases including (if it applies) the precommitments. In particular, it embeds the left-hand-side of the proof statement for security reasons [4].
 
-> Don't mess with the syntax !   
-> Proving non-interactively { Y = x1 * G1 + x2 * G2 }  and verifying { Y = x2 * G2 + x1 * G1 } will fail as the non-interactive proof generates a string identifier for the statement, and is not clever enough to understand commutativity.  
-> Don't worry : using only the high-level functions we presented should never trigger this behaviour.
 ##### Simulations
-When you have your proof, instead of calling `proof.get_prover( ... )`, just call
+Just like for non-interactive proofs (except now you don't need the secret values!), just call
 
-		sim = proof.get_simulator()
+```python
+sim = proof.simulate() 	# Optional argument: challenge to enforce
+```
 
-		# Or (equivalent)
-
-		proof.set_simulate()
-		sim = proof.get_prover()
-
-which returns a dummy Prover object from which you can only run
-
-		sim.simulate_proof()
-
-(you can obviously also run this function from a correctly built Prover object)
-which returns commitment, challenge, response you can feed to
-
-		verifier.verify(response, commitment, challenge)	
-		# The ordering is unpractical because the latter are optional arguments
+which returns a `SimulationTranscript` very much similar to a `NonInteractiveTranscript`, but which will not be accepted by the canonic verification method seen above.
 
 
+#### An other primitive: Inequality of two discrete logarithms
+To prove knowledge of `x` such that Y1 = x * G1 and Y2 != x * G2.
 
-##### Launching the tests
-We built the tests using pytest. To launch the tests you can simply run
+The associated class is `DLRepNotEqual` and is constructed as follows, for x = 12 for example:
+```python
+x = Secret(value = 12)
+proof = DLRepNotEqual([Y1, G1], [Y2, G2], x)
+```
+> Due to the internal proof construction, this proof does not bind the secret value `x` by default. To enable this feature, the proof constructor has to be called with the optional parameter `binding` set to `True`).
 
-		python -m pytest
+Once the proof is constructed, the same methods as before (`get_prover()`, `get_verifier()`, `prove()`, `verify()`, etc.) apply.
 
-from the root directory of the project.
+#### A complete protocol: the BBS+ scheme
+We provide a way to obtain blind signatures over a set of messages/credentials, along with a `SignatureProof` primitive (to use much like the `DLRep` seen before).
+> This protocol uses group pairings as defined in bplib. The interface has been wrapped so the pairings behave as usual EcPt (additive points)
+##### Obtaining a signature
+The idea is to request an issuer -- identified by a public key `pk` and a secret key `sk` -- to blindly sign a list of messages `m_i`. The user will blind these attributes by a secret attribute `s1`.
 
-##### Generating the documentation
+The resulting number is sent to the issuer along with a proof of correct construction (a `DLRepProof`).
 
-		bash create_pydoc.bash
+```python
+# NMAX is an upperbound on the number of generators to be used
+mG = BilinearGroupPair()
+keypair = KeyPair(mG, NMAX) 
 
-Will create the directory ./documentation and generate all the documentation in html format of the source code in ./compiler
+# Construct a UserCommitment object embedding the blinded block and the proof of correct construction.
+creator = SignatureCreator(pk)
+usr_commitment = creator.commit(messages)
 
-#### Example of use : the AMAC scheme
-We provide a template for Algebraic MAC schemes, both GGM and DDH which are described in [this paper][2]. We encapsulate And blocks along with DLRep proofs to derive a fairly straigthforward implementation of a rather complicated expression. (See part 4.2 - 4.3 of the cited paper)
+# Get the blinded block signed by the issuer (through its secret key). It returns a (A, e, s) signature we then update by adding to s the value s1 drawn before.
+presignature = sk.sign(lhs.commitment_message)
+signature = creator.obtain_signature(presignature)
+```
+The final signature validity can be verified by calling
+```python
+signature.verify(pk, messages)
+```
+and the issuer can verify the correct construction (step 2) with
+```python
+usr_commitment.verify_blinding(pk)
+```
+
+##### Proving knowledge of a signature
+Once the user has the final signature, it can prove knowledge of it by calling
+
+```python
+e, s = Secret(value=signature.e), Secret(value=signature.s)
+messages = [Secret(value=m1)..., Secret(value=mn)]
+proof = SignatureProof([e, s, *messages], pk, signature)
+```
+The `e` and `s` Secret instances are necessary so the proof can bind them to an other proof, e.g. in an `And` conjunction. The `signature` argument is required for the proving side. Of course, the verifying side would call
+```python
+e, s = Secret(), Secret()
+messages = [Secret()..., Secret()]
+proof = SignatureProof([e, s, *messages], pk)
+```
+From this Proof objects, one can run the usual methods `get_prover()`, `get_verifier()`, `prove()`, `verify()`, etc.
 
 ## How it works : 
 
@@ -299,7 +354,7 @@ The ZKC will basically help you instantiate a *Prover* and a *Verifier* object a
 The sigma protocol (interactive) is the following : 
 
 **Initial state** : the Prover and the Verifier share some "public information", namely
- - an ECGroup (elliptic curve group, see petlib) along with a set of generators of this group
+ - an EcGroup (elliptic curve group, see petlib) along with a set of generators of this group
  - the left-hand-side value of the claim i.e the value for which we want to prove knowledge of certain properties/decomposition
  - the syntax of the claim including the pseudonyms of the secrets
  
@@ -326,31 +381,62 @@ The sigma protocol (interactive) is the following :
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Prover ------ response -----> Verifier
 
-After which the Verifier locally *verifies* i.e locally recomputes a pseudo-commitment from the challenge and the responses, and compares it to the actual commitment.
+After which the Verifier locally *verifies* i.e recomputes a pseudo-commitment from the challenge and the responses, and compares it to the received commitment.
 
 
 In the case of a **non-interactive (NI) proof** the Prover 
 - commits
 - generates a deterministic challenge by hashing the commitment and all the public information
 - responds as if this challenge had been sent by a Verifier
--  outputs the challenge and the response.
+- outputs the challenge and the response.
   
  A verifier can then compute the pseudo-commitment, hash it with the public information and assert he indeed obtains the challenge.
 Note that this verification relies on cryptographic hash function properties : it is very unlikely to find R' such that hash(R' + *fixed_string* ) is equal to hash(R + *fixed_string*), i.e if a pseudo-commitment is indeed a pre-image of the challenge, it is the actual commitment almost surely.
 
+If the proof uses a precommitment, it is generated and processed as a preliminary round before generating and processing the commitment.
 
 #### A look at the variables
 - The `challenge` is common to a whole protocol. In the case of the Or Proof, subchallenges are drawn i.e each subproof runs (simulated or not) with its own challenge.
 > This explains the constraint about reoccuring secrets in and out of an Or statement : we know a malicious Verifier can retrieve a secret which appear under several challenges and a unique commitment. A solution is to change the statement syntax into a canonical form, where the Or are on top of the tree.
 - The `randomizers` are the random values used to produce commitments. They are paired with the secrets, to ensure that a reoccuring secret will produce identical responses. If there are N secrets of M distinct values, there are M distinct randomizers.
-- The `responses` mimic the proof statement and are ordered as the secrets were ordered : If there are N secrets, there are N responses.
+- The `responses` are ordered as the secrets were ordered : for N secrets, there are N responses. 
 
+#### Precommitments
+In the case of the `DLRepNotEqualProof` and `SignatureProof`, we make use of precommitments i.e parameters which are not known at the proof instantiation and are computed by the proving side. Therefore, they have to be sent explicitly in a preliminary round for interactive protocols, and as an additional attribute in non-interactive or simulation transcripts.
+
+The internal structure of these two proof classes is as follows:
+- The proof is built and its attributes set, but cannot run most methods
+- Upon processing of the precommitment, a separate and complete proof is constructed inside the main proof
+- All usual methods are redirected to this internal constructed proof.
+ 
+The `Prover` and `Verifier` work in the same way, embedding a `constructed_prover` (resp `constructed_verifier`).
+
+#### Tests and documentation
+We built the tests using pytest. To launch the tests you can simply run
+
+	python -m pytest
+
+from the root directory of the project.
+
+	bash create_pydoc.bash
+
+Will create the directory ./documentation and generate all the documentation in html format of the source code in ./compiler.
 
 
 [1] :  J. Camenisch and M. Stadler, “Proof systems for general statements about discrete logarithms,”
 Tech. rep. 260
 , Mar. 1997
-[2] :  M. Chase, S. Meiklejohn, and G. Zaverucha, “Algebraic macs and keyed-verification anonymous credentials,” in
-Proceedings of the 2014
-ACM SIGSAC Conference on Computer and Communications Security
-.    ACM, 2014, pp. 1205–1216.
+
+[2] :  R. Henry and I. Goldberg, “Thinking inside the BLAC box: smarter
+protocols for faster anonymous blacklisting,” in Proceedings of the
+12th ACM workshop on Workshop on privacy in the electronic soci-
+ety. ACM, 2013, pp. 71–82.
+
+[3] : M. H. Au, W. Susilo, and Y. Mu, “Constant-size dynamic k-TAA,” in
+International Conference on Security and Cryptography for Networks.
+Springer, 2006, pp. 111–125.
+
+[4] D. Bernhard, O. Pereira, and B. Warinschi, “How not to prove yourself:
+Pitfalls of the Fiat-Shamir heuristic and applications to Helios,” in
+International Conference on the Theory and Application of Cryptology
+and Information Security. Springer, 2012, pp. 626–643.
