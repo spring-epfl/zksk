@@ -31,18 +31,16 @@ class UserCommitmentMessage:
         self.commitment_message = commitment
         self.NIproof = pedersen_NIproof
 
-    def verify_blinding(self, pk, nb_messages):
+    def verify_blinding(self, pk):
         """
         Prototypes a ZK proof for the Pedersen commitment to messages and uses it to
         verify the non-interactive proof passed as argument.
         """
         if self.NIproof is None:
             raise Exception("No proof to verify")
-        generators = pk.generators[1 : nb_messages + 2]
+        generators = pk.generators[1 : len(self.NIproof.responses) + 1]
         lhs = self.commitment_message
-        secret_names = [Secret("s'")] + [
-            Secret("m" + str(i + 1)) for i in range(nb_messages)
-        ]
+        secret_names = [Secret() for i in range(len(self.NIproof.responses))]
         proof = DLRepProof(lhs, wsum_secrets(secret_names, generators))
         return proof.verify(self.NIproof)
 
@@ -132,10 +130,11 @@ class SignatureProof(Proof):
     Proof of knowledge of a (A,e,s) signature over a set of messages.
     """
 
-    def __init__(self, signature, secret_names, pk):
+    def __init__(self, secret_names, pk, signature=None):
         """
         Instantiates a Signature Proof which is an enhanced version of AndProof allowing to access additional parameters
         secret_names should be the alias for signature.e, the alias for signature.s, and the aliases for the messages.
+        If the object is used for proving, it requires a signature argument.
         """
         self.pk = pk
         # We need L+1 generators for L messages. secret_names are messages plus 'e' and 's'
@@ -144,7 +143,7 @@ class SignatureProof(Proof):
         self.signature = signature
         self.secret_names = secret_names
         # Construct a dictionary with the secret values we already know
-        self.secret_values={}
+        self.secret_values = {}
         for sec in self.secret_names:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
@@ -234,6 +233,8 @@ class SignatureProver(Prover):
         After this function returns, the current prover is able to commit.
         Returned value is to be processed on the verifier side by verifier.process_precommitment( )
         """
+        if self.proof.signature is None:
+            raise Exception("No signature given!")
         # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
         r1, r2 = (
             self.proof.generators[0].group.order().random(),
@@ -260,7 +261,7 @@ class SignatureProver(Prover):
         self.constructed_prover.challenge = challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
-    
+
     def simulate_proof(self, challenge=None):
         pass
 

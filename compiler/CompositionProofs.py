@@ -66,7 +66,7 @@ class Proof:
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
-            encoding =None
+            encoding = None
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message, encoding)
 
@@ -78,7 +78,7 @@ class Proof:
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
-            encoding =None
+            encoding = None
         verifier = self.get_verifier()
         return verifier.verify_NI(transcript, message, encoding)
 
@@ -105,7 +105,7 @@ class Proof:
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
-            encoding =None
+            encoding = None
         return sha256(encode(self.get_proof_id(), encoding)).digest()
 
     def verify_simulation_consistency(self, transcript):
@@ -116,8 +116,12 @@ class Proof:
         verifier = self.get_verifier()
         verifier.process_precommitment(transcript.precommitment)
         self.check_statement(transcript.statement)
-        verifier.commitment, verifier.challenge = transcript.commitment, transcript.challenge
+        verifier.commitment, verifier.challenge = (
+            transcript.commitment,
+            transcript.challenge,
+        )
         return verifier.verify(transcript.responses)
+
 
 def find_residual_chal(arr, challenge, chal_length):
     """ To find c1 such that c = c1 + c2 +c3 mod k,
@@ -145,7 +149,7 @@ class OrProof(Proof):
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
         # Construct a dictionary with the secret values we already know
-        self.secret_values={}
+        self.secret_values = {}
         for sec in self.secret_names:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
@@ -216,7 +220,6 @@ class OrProof(Proof):
 
         # Return a list of provers in the correct order
         return OrProver(self, [sims[index] for index in sorted(sims)], secrets_dict)
-
 
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
@@ -378,7 +381,7 @@ class AndProof(Proof):
         self.generators = get_generators(self.subproofs)
         self.secret_names = get_secret_names(self.subproofs)
         # Construct a dictionary with the secret values we already know
-        self.secret_values={}
+        self.secret_values = {}
         for sec in self.secret_names:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
@@ -496,7 +499,9 @@ class AndProofProver(Prover):
 
         self.commitment = []
         for subp in self.subs:
-            self.commitment.append(subp.internal_commit(randomizers_dict=randomizers_dict))
+            self.commitment.append(
+                subp.internal_commit(randomizers_dict=randomizers_dict)
+            )
         return self.commitment
 
     def compute_response(self, challenge: AndProofChallenge) -> AndProofResponse:

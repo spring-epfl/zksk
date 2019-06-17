@@ -34,7 +34,9 @@ class NITranscript:
 
 
 class SimulationTranscript:
-    def __init__(self, commitment, challenge, responses, precommitment=None, statement=None):
+    def __init__(
+        self, commitment, challenge, responses, precommitment=None, statement=None
+    ):
         self.commitment = commitment
         self.challenge = challenge
         self.responses = responses
@@ -56,7 +58,6 @@ class Prover:
         :return: a single commitment (of type petlib.bn.Bn) for the whole proof
         """
         return self.proof.hash_statement(), self.internal_commit(randomizers_dict)
-
 
     def compute_response(self, challenge):
         pass
@@ -288,7 +289,7 @@ class RightSide:
 
 
 class Secret:
-    def __init__(self, alias="", value=None ) :
+    def __init__(self, alias="", value=None):
         """
         :param name: a string equal to the name of this secret 
         :param value: an optional petlib.bn.Bn number equal to the secret value. This can be left for later at the creation of the prover.

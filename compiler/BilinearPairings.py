@@ -219,7 +219,7 @@ class G1Group:
     A wrapper for the G1 (behaving like an EcGroup) group. Group ID is 1 for G1.
     """
 
-    def __init__(self, bp: BilinearGroupPair):
+    def __init__(self, bp):
         self.bp = bp
         self.gen = None
         self.inf = None
@@ -255,7 +255,7 @@ class G2Group:
     A wrapper for the G2 group. Group ID is 2.
     """
 
-    def __init__(self, bp: BilinearGroupPair):
+    def __init__(self, bp):
         self.bp = bp
         self.gen = None
         self.inf = None

@@ -3,6 +3,7 @@ A module containing multiple classes used to create discrete logarithms proofs.
 An example of DL proof would be PK{(x1,x2): y1 = x1 * g1 + x2 * g2} where g1 and g2 are points on a same elliptic curve
 over a chosen finite field. 
 """
+import os, sys
 
 import random, string
 from petlib.ec import EcGroup, EcPt
@@ -176,7 +177,7 @@ class DLRepProof(Proof):
         self.generators = generators
         self.secret_names = secret_names
         # Construct a dictionary with the secret values we already know
-        self.secret_values={}
+        self.secret_values = {}
         for sec in self.secret_names:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value

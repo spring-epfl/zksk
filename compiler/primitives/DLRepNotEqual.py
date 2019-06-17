@@ -20,7 +20,7 @@ class DLRepNotEqualProof(Proof):
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.secret_names = secret_names
         # Construct a dictionary with the secret values we already know
-        self.secret_values={}
+        self.secret_values = {}
         for sec in self.secret_names:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
@@ -140,7 +140,9 @@ class DLRepNotEqualVerifier(Verifier):
     def send_challenge(self, com):
         statement, self.commitment = com
         self.proof.check_statement(statement)
-        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
+        self.challenge = self.constructed_verifier.send_challenge(
+            self.commitment, mute=True
+        )
 
         return self.challenge
 

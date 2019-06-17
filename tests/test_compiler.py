@@ -5,8 +5,8 @@ src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
 from Abstractions import *
-from primitives.DLRep import *
 from CompositionProofs import *
+from primitives.DLRep import *
 from BilinearPairings import *
 from primitives.BBSplus import *
 from primitives.DLRepNotEqual import *
@@ -1187,7 +1187,7 @@ def test_or_NI_DLRNE():
 def test_signature_setup():
     mG = BilinearGroupPair()
     keypair = KeyPair(mG, 9)
-    messages = [Bn(30), Bn(31), Bn(32)]
+    messages = [Bn(30), Bn(31), Bn(32), Bn(12)]
 
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
@@ -1198,8 +1198,7 @@ def test_signature_setup():
     signature = creator.obtain_signature(presignature)
 
     assert usr_commitment.verify_blinding(
-        pk, len(messages)
-    ) and signature.verify_signature(pk, messages)
+        pk) and signature.verify_signature(pk, messages)
 
 
 def test_signature_proof():
@@ -1223,9 +1222,9 @@ def test_signature_proof():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     prov = sigproof.get_prover(secret_dict)
-    sigproof1 = SignatureProof(signature, [Secret() for _ in range(5)], pk)
+    sigproof1 = SignatureProof([Secret() for _ in range(5)], pk)
     ver = sigproof1.get_verifier()
     ver.process_precommitment(prov.precommit())
     comm = prov.commit()
@@ -1255,9 +1254,9 @@ def test_signature_proofNI():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     tr = sigproof.prove(secret_dict)
-    sigproof1 = SignatureProof(signature, [Secret() for _ in range(5)], pk)
+    sigproof1 = SignatureProof([Secret() for _ in range(5)], pk)
     assert sigproof1.verify(tr)
 
 def test_and_sig():
@@ -1281,7 +1280,7 @@ def test_and_sig():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1295,7 +1294,7 @@ def test_and_sig():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureProof(signature2, [e1, s1, m1, m2, m3], pk)
+    sigproof1 = SignatureProof([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
@@ -1329,7 +1328,7 @@ def test_signature_and_DLRNE():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
@@ -1337,7 +1336,7 @@ def test_signature_and_DLRNE():
     andp = sigproof & dneq
 
     sec = [Secret() for _ in range(5)]
-    sigproof1 = SignatureProof(signature, sec, pk)
+    sigproof1 = SignatureProof(sec, pk)
     dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
     andp1 = sigproof1 & dneq1
     prov = andp.get_prover(secret_dict)
@@ -1375,7 +1374,7 @@ def test_wrong_signature_and_DLRNE1():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof( [e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
@@ -1383,7 +1382,7 @@ def test_wrong_signature_and_DLRNE1():
     dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
 
     sec = [Secret() for _ in range(5)]
-    sigproof1 = SignatureProof(signature, sec, pk)
+    sigproof1 = SignatureProof(sec, pk, signature)
     dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
 
     andp = sigproof & dneq
@@ -1428,7 +1427,7 @@ def test_wrong_signature_and_DLRNE():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1 + g1
@@ -1436,7 +1435,7 @@ def test_wrong_signature_and_DLRNE():
     dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=False)
 
     sec = [Secret() for _ in range(5)]
-    sigproof1 = SignatureProof(signature, sec, pk)
+    sigproof1 = SignatureProof(sec, pk, signature)
     dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]])
 
     andp = sigproof & dneq
@@ -1474,7 +1473,7 @@ def test_and_NI_sig():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof(signature, [e, s, m1, m2, m3], pk)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk,signature)
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1489,7 +1488,7 @@ def test_and_NI_sig():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureProof(signature2, [e1, s1, m1, m2, m3], pk)
+    sigproof1 = SignatureProof( [e1, s1, m1, m2, m3], pk,signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
@@ -1545,7 +1544,7 @@ def test_bm_signatureproof(benchmark):
     signature = creator.obtain_signature(presignature)
     tr = signature_proofNI(messages, signature, pk)
 
-    sigproof1 = SignatureProof(signature, [Secret() for _ in range(len(messages)+2)], pk)
+    sigproof1 = SignatureProof( [Secret() for _ in range(len(messages)+2)], pk, signature)
 
     result = benchmark(signature_verifyNI, *(sigproof1, tr))
     assert result
@@ -1557,7 +1556,7 @@ def signature_proofNI(messages,signature, pk):
         e: signature.e,
         s: signature.s}
     secret_dict.update(dict(zip(mess, messages)))
-    sigproof = SignatureProof(signature, [e, s, *mess], pk)
+    sigproof = SignatureProof([e, s, *mess], pk, signature=signature)
     tr = sigproof.prove(secret_dict)
     return tr
 
