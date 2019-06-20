@@ -124,6 +124,24 @@ class DLRepProof(Proof):
         )
         return leftside
 
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        """
+        Returns a transcript of a proof simulation. Responses and challenge can be enforced.
+        The function will misbehave if passed a non-empty but incomplete responses_dict.
+        :param responses_dict: a dictionary from secret names (strings) to responses (petlib.bn.Bn numbers)
+        :param challenge: the challenge to enforce in the simulation
+        """
+        if responses_dict is None or responses_dict == {}:
+            responses_dict = self.get_randomizers()
+        if challenge is None:
+            challenge = chal_randbits(CHAL_LENGTH)
+
+        response = [responses_dict[m] for m in self.secret_vars]
+        # Random responses, the same for shared secrets
+        commitment = self.recompute_commitment(challenge, response)
+
+        return SimulationTranscript(commitment, challenge, response)
+
 
 class DLRepProver(Prover):
     """
@@ -167,24 +185,6 @@ class DLRepProver(Prover):
             for i in range(len(self.ks))
         ]
         return resps
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        """
-        Returns a transcript of a proof simulation. Responses and challenge can be enforced.
-        The function will misbehave if passed a non-empty but incomplete responses_dict.
-        :param responses_dict: a dictionnary from secret names (strings) to responses (petlib.bn.Bn numbers)
-        :param challenge: the challenge to enforce in the simulation
-        """
-        if responses_dict is None or responses_dict == {}:
-            responses_dict = self.proof.get_randomizers()
-        if challenge is None:
-            challenge = chal_randbits(CHAL_LENGTH)
-
-        response = [responses_dict[m] for m in self.proof.secret_vars]
-        # Random responses, the same for shared secrets
-        commitment = self.proof.recompute_commitment(challenge, response)
-
-        return SimulationTranscript(commitment, challenge, response)
 
 
 class DLRepVerifier(Verifier):

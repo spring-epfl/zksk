@@ -78,6 +78,14 @@ class DLRepNotEqualProof(Proof):
         """
         return self.constructed_proof.recompute_commitment(challenge, responses)
 
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        group = self.generators[0].group
+        lhs = [group.order().random() * group.generator()]
+        self.build_constructed_proof(lhs)
+        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
+        tr.precommitment = lhs
+        return tr
+
 
 class DLRepNotEqualProver(Prover):
     def internal_commit(self, randomizers_dict=None):
@@ -115,15 +123,6 @@ class DLRepNotEqualProver(Prover):
         self.constructed_prover.challenge = challenge
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        group = self.proof.generators[0].group
-        lhs = [group.order().random() * group.generator()]
-        self.proof.build_constructed_proof(lhs)
-        self.constructed_prover = self.proof.constructed_proof.get_prover()
-        tr = self.constructed_prover.simulate_proof(responses_dict, challenge)
-        tr.precommitment = lhs
-        return tr
 
 
 class DLRepNotEqualVerifier(Verifier):

@@ -74,8 +74,7 @@ class Proof:
         Generate the transcript of a simulated non-interactive proof.
         """
         self.set_simulate()
-        prover = self.get_prover()
-        transcript = prover.simulate_proof(challenge=challenge)
+        transcript = self.simulate_proof(challenge=challenge)
         transcript.statement = self.prehash_statement().digest()
         return transcript
 
@@ -228,6 +227,36 @@ class OrProof(Proof):
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        if responses_dict is None or any(
+            [x not in responses_dict.keys() for x in self.secret_vars]
+        ):
+            responses_dict = self.get_randomizers()
+        if challenge is None:
+            challenge = chal_randbits(CHAL_LENGTH)
+        com = []
+        resp = []
+        or_chals = []
+        precom = []
+        for index in range(len(self.subproofs) - 1):
+            subdict = {
+                key: responses_dict[key] for key in self.subproofs[index].secret_vars
+            }
+            transcript = self.subproofs[index].simulate_proof(subdict)
+            com.append(transcript.commitment)
+            resp.append(transcript.responses)
+            or_chals.append(transcript.challenge)
+            precom.append(transcript.precommitment)
+
+        final_chal = find_residual_chal(or_chals, challenge, CHAL_LENGTH)
+        or_chals.append(final_chal)
+        trfinal = self.subproofs[index + 1].simulate_proof(responses_dict, final_chal)
+        com.append(trfinal.commitment)
+        resp.append(trfinal.responses)
+        precom.append(trfinal.precommitment)
+
+        return SimulationTranscript(com, challenge, (or_chals, resp), precom)
+
 
 """
 Important :
@@ -256,7 +285,7 @@ class OrProver(Prover):
     def setup_simulations(self):
         for index in range(len(self.subs)):
             if index != self.true_prover_idx:
-                cur = self.subs[index].simulate_proof()
+                cur = self.subs[index].proof.simulate_proof()
                 self.simulations.append(cur)
 
     def precommit(self):
@@ -311,36 +340,6 @@ class OrProver(Prover):
 
         # We carry the or challenges in a tuple so everything works fine with the interface
         return (challenges, response)
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        if responses_dict is None or any(
-            [x not in responses_dict.keys() for x in self.proof.secret_vars]
-        ):
-            responses_dict = self.proof.get_randomizers()
-        if challenge is None:
-            challenge = chal_randbits(CHAL_LENGTH)
-        com = []
-        resp = []
-        or_chals = []
-        precom = []
-        for index in range(len(self.subs) - 1):
-            subdict = {
-                key: responses_dict[key] for key in self.subs[index].proof.secret_vars
-            }
-            transcript = self.subs[index].simulate_proof(subdict)
-            com.append(transcript.commitment)
-            resp.append(transcript.responses)
-            or_chals.append(transcript.challenge)
-            precom.append(transcript.precommitment)
-
-        final_chal = find_residual_chal(or_chals, challenge, CHAL_LENGTH)
-        or_chals.append(final_chal)
-        trfinal = self.subs[index + 1].simulate_proof(responses_dict, final_chal)
-        com.append(trfinal.commitment)
-        resp.append(trfinal.responses)
-        precom.append(trfinal.precommitment)
-
-        return SimulationTranscript(com, challenge, (or_chals, resp), precom)
 
 
 class OrVerifier(Verifier):
@@ -438,6 +437,28 @@ class AndProof(Proof):
             random_vals[u] = dict_name_gen[u].group.order().random()
         return random_vals
 
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        if responses_dict is None:
+            responses_dict = self.get_randomizers()
+        elif any([x not in responses_dict.keys() for x in self.secret_vars]):
+            # We were passed an incomplete dictionary, fill it
+            new_dict = self.get_randomizers()
+            new_dict.update(responses_dict)
+            responses_dict = new_dict
+        if challenge is None:
+            challenge = chal_randbits(CHAL_LENGTH)
+        com = []
+        resp = []
+        precom = []
+        for subp in self.subproofs:
+            filtered = list(set(subp.secret_vars) & set(responses_dict.keys()))
+            subdict = {key: responses_dict[key] for key in filtered}
+            simulation = subp.simulate_proof(subdict, challenge)
+            com.append(simulation.commitment)
+            resp.append(simulation.responses)
+            precom.append(simulation.precommitment)
+        return SimulationTranscript(com, challenge, resp, precom)
+
     def check_or_flaw(self, forbidden_secrets=None):
         """ Checks for appearance of reoccuring secrets inside and outside an Or Proof
             Raises an error if finds any."""
@@ -504,28 +525,6 @@ class AndProver(Prover):
     def compute_response(self, challenge):
         """:return: the list (of type AndProofResponse) containing the subproofs responses"""  # r = secret*challenge + k
         return [subp.compute_response(challenge) for subp in self.subs]
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        if responses_dict is None:
-            responses_dict = self.proof.get_randomizers()
-        elif any([x not in responses_dict.keys() for x in self.proof.secret_vars]):
-            # We were passed an incomplete dictionary, fill it
-            new_dict = self.proof.get_randomizers()
-            new_dict.update(responses_dict)
-            responses_dict = new_dict
-        if challenge is None:
-            challenge = chal_randbits(CHAL_LENGTH)
-        com = []
-        resp = []
-        precom = []
-        for subp in self.subs:
-            filtered = list(set(subp.proof.secret_vars) & set(responses_dict.keys()))
-            subdict = {key: responses_dict[key] for key in filtered}
-            simulation = subp.simulate_proof(subdict, challenge)
-            com.append(simulation.commitment)
-            resp.append(simulation.responses)
-            precom.append(simulation.precommitment)
-        return SimulationTranscript(com, challenge, resp, precom)
 
 
 class AndVerifier(Verifier):
