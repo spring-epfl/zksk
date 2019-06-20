@@ -5,6 +5,11 @@ over a chosen finite field.
 """
 import os, sys
 
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_code_path = os.path.join(root_dir, "")
+if src_code_path not in sys.path:
+    sys.path.append(src_code_path)
+
 import random, string
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
@@ -13,172 +18,40 @@ from hashlib import sha256
 import binascii
 from CompositionProofs import Proof
 
-
-def randomword(length):
-    letters = string.ascii_lowercase
-    return "".join(random.choice(letters) for i in range(length))
-
-
-class DLRepProver(Prover):
-    """
-    The prover in a discrete logarithm proof.
-    """
-
-    def __init__(self, proof, secret_values):
-        """
-        :param generators: a list of elliptic curve points of type petlib.ec.EcPt
-        :param secret_names: a list of strings equal to the names of the secrets.
-        :param secret_values: the values of the secrets as a dict.
-        :param lhs: the left hand side of the equation of the proof of knowledge. If the proof is PK{(x1,x2): y = x1 * g1 + x2 * g2}, lhs is y. 
-        """
-        self.secret_values = secret_values
-        self.proof = proof
-
-    def get_secret_values(self):
-        return self.secret_values
-
-    def get_randomizers(self) -> dict:
-        """
-        :return: random values to compute the response of the proof of knowledge for each of the secrets. 
-        We enforce that if secret are repeated in x1 * g1 + x2 * g2 + ... + xn * gn (that is if xi and xj have the same name) then they will get
-        the same random value. 
-        """
-        output = {}
-        for idx, sec in enumerate(self.proof.secret_names):
-            # This overwrites if shared secrets but allows to access the appropriate group order
-            key = sec
-            to_append = self.proof.generators[idx].group.order().random()
-            output.update({key: to_append})
-        return output
-
-    def internal_commit(self, randomizers_dict=None):
-        """
-        :param randomizers_dict: an optional dictionnary of random values. Each random values is assigned to each secret name
-        :return: a single commitment (of type petlib.ec.EcPt) for the whole proof
-        The function will misbehave if passed a non-empty but incomplete randomizers_dict.
-        """
-
-        if self.secret_values == {}:
-            # We check we are not a strawman prover
-            raise Exception(
-                "Trying to do a legit proof without the secrets. Can only simulate"
-            )
-        tab_g = self.proof.generators
-        G = tab_g[0].group
-        self.group_order = G.order()
-        # Will be useful for all the protocol
-
-        if randomizers_dict == None or randomizers_dict == {}:
-            # If we are not provided a randomizer dict from above, we compute it.
-            secret_to_random_value = self.get_randomizers()
-        else:
-            secret_to_random_value = randomizers_dict
-
-        self.ks = [secret_to_random_value[sec] for sec in self.proof.secret_names]
-        commits = [a * b for a, b in zip(self.ks, tab_g)]
-
-        # We build the commitment doing the product g1^k1 g2^k2...
-        sum_ = G.infinite()
-        for com in commits:
-            sum_ = sum_ + com
-
-        return sum_
-
-    def compute_response(self, challenge):
-        """
-        :param challenge: a number of type petlib.bn.Bn
-        :return: a list of responses: for each secret we have a response
-        for a given secret x and a challenge c and a random value k (associated to x). We have the response equal to k + c * x
-        """
-        resps = [
-            (self.secret_values[self.proof.secret_names[i]] * challenge + self.ks[i])
-            % self.group_order
-            for i in range(len(self.ks))
-        ]
-        return resps
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        """
-        :param responses_dict: a dictionnary from secret names (strings) to responses (petlib.bn.Bn numbers)
-        :param challenge: a petlib.bn.Bn equal to the challenge
-        :return: a list of valid commitments for each secret value given responses_dict and a challenge
-        The function will misbehave if passed a non-empty but incomplete responses_dict.
-        """
-        if responses_dict is None or responses_dict == {}:
-            responses_dict = self.get_randomizers()
-        if challenge is None:
-            challenge = chal_randbits(CHAL_LENGTH)
-
-        response = [responses_dict[m] for m in self.proof.secret_names]
-        # random responses, the same for shared secrets
-        commitment = self.proof.recompute_commitment(challenge, response)
-
-        return SimulationTranscript(commitment, challenge, response)
-
-
-class DLRepVerifier(Verifier):
-    def __init__(self, proof):
-        self.proof = proof
-
-    def check_responses_consistency(self, response, responses_dict={}):
-        """Goes through the secret names of the current DLRepProof and checks consistency with respect to a response dictionary.
-        Updates the dictionary if the entry doesn't exist yet.
-        """
-        for i in range(len(self.proof.secret_names)):
-            s = self.proof.secret_names[i]
-            if s in responses_dict.keys():
-                if response[i] != responses_dict[s]:
-                    print(
-                        "names are",
-                        self.proof.secret_names,
-                        "incorrect for",
-                        self.proof.secret_names[i],
-                    )
-                    print("values are", response[i], "should be", responses_dict[s])
-                    return False
-            else:
-                responses_dict.update({s: response[i]})
-        return True
-
+"""
+This file gives a framework to build the lowest building block of the compiler i.e a discrete logarithm representation of a base.
+All classes inherit from generic classes defined in Abstractions or CompositionProofs.
+"""
 
 class DLRepProof(Proof):
-    """The class is used to model a discrete logarithm proof
-    for the sake of having an example say we want to create the proof PK{(x1, x2): y = x1 * g1 + x2 * g2}
+    """
+    This class is used to model a discrete logarithm proof e.g. PK{(x1, x2): y = x1 * g1 + x2 * g2}.
+    Generic class is defined in CompositionProofs
     """
 
     def __init__(self, lhs, rightSide):
         """
-        :param rightSide: an instance of the 'RightSide' class. For the previous example 'rightSide' would be: Secret("x1") * g1 + Secret("x2") * g2. Here gi-s are instances of petlib.ec.EcPt
-        :param lhs: an instance of petlib.ec.EcPt. The prover has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
+        Parses the constructor arguments to separate Secret objects and generators. Will fail if generators from different groups are combined.
+        :param rightSide: An instance of the 'RightSide' class e.g composed of Secret objects and group generators. For the previous example 'rightSide' would be: Secret("x1") * g1 + Secret("x2") * g2.
+        :param lhs: The group generator to prove correct construction/factorization of. The prover has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
+        
         """
-
         if isinstance(rightSide, RightSide):
-            self.initialize(rightSide.pts, rightSide.secrets, lhs)
+            self.generators = rightSide.pts
+            self.secret_vars = rightSide.secrets
         else:
-            raise Exception("undefined behaviour for this input")
-
-    def initialize(self, generators, secret_names, lhs):
-        """
-        this method exists for historical reasons. It is used in __init__ of this class.
-        :param generators: a list of petlib.ec.EcPt
-        :secret_names: a list of strings equal to the names of the secrets
-        """
-
-        if len(secret_names) != len(generators):
-            raise Exception("secret_names and generators must be of the same length")
+            raise Exception("Undefined behaviour for this input")
 
         # Check all the generators live in the same group
-        test_group = generators[0].group
-        for g in generators:
+        test_group = self.generators[0].group
+        for g in self.generators:
             if g.group != test_group:
                 raise Exception(
                     "All generators should come from the same group", g.group
                 )
-        self.generators = generators
-        self.secret_names = secret_names
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
-        for sec in self.secret_names:
+        for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.lhs = lhs
@@ -186,31 +59,28 @@ class DLRepProof(Proof):
 
     def get_prover(self, secrets_dict={}):
         """
-        :param secrets_dict: a dictionnary mapping secret names to petlib.bn.Bn numbers
-        :return: an instance of DLRepProver
+        Draws a DLRepProver from the current Proof. Will fail if any secret value is unknown.
+        :param secrets_dict: A dictionnary mapping secret names to petlib.bn.Bn numbers, to update/overwrite the existent complete secrets (of which the values is available).
+        :return: An instance of DLRepProver
         """
 
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
+        # Forget the secrets if told so. If no secrets, return now
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             return DLRepProver(self, {})
-        if len(set(self.secret_names)) != len(secrets_dict):
-            raise Exception("We expect as many secrets as different aliases")
-
-        if not isinstance(secrets_dict, dict):
-            raise Exception("secrets_dict should be a dictionary")
-
-        for secret in self.secret_names:
+        # Check that all the secret values we need are indeed available
+        if len(set(self.secret_vars)) > len(secrets_dict):
+            raise Exception("We expect as many values as different Secret objects")
+        for secret in self.secret_vars:
             if secret not in secrets_dict.keys():
                 raise Exception(
                     "secrets do not match: those secrets should be checked {0} {1}".format(
-                        self.secret_names, secrets_dict.keys()
+                        self.secret_vars, secrets_dict.keys()
                     )
                 )
-        # Check that the secret names and the keys of the secret values actually match.
-
         # We check everything is indeed a BigNumber, else we cast it
         for name, sec in secrets_dict.items():
             if not isinstance(sec, Bn):
@@ -220,21 +90,129 @@ class DLRepProof(Proof):
 
     def get_verifier(self):
         """
-        :return: a DLRepVerifier for this proof
+        Draws a DLRepVerifier from the current Proof. 
         """
         return DLRepVerifier(self)
 
     def get_proof_id(self):
+        """
+        Generates a list identifier for the proof. Syntax is ["DLRep", left-hand-side base, [list of other bases]].
+        This identifier is used to check the proof statements on the prover and verifier sides are consistent, and to generate a challenge in non-interactive proofs.
+        """
         return ["DLRep", self.lhs, self.generators]
 
     def recompute_commitment(self, challenge, responses):
         """
-        :param challenge: the petlib.bn.Bn representing the challenge
-        :param responses: a list of petlib.bn.Bn
-        :return: the commitment from the parameters
+        Applies an equivalent verification equation for the current proof model: computes the commitment which would match the challenge and responses.
+        This commitment is to be compared to the actual one in the generic Verifier.verify() method.
+        :param challenge: A petlib.bn.Bn representing the challenge
+        :param responses: A list of petlib.bn.Bn
+        :return: The required commitment matching the parameters
         """
 
         leftside = (
             self.lhs.group.wsum(responses, self.generators) + (-challenge) * self.lhs
         )
         return leftside
+
+
+class DLRepProver(Prover):
+    """
+    The prover in a discrete logarithm proof. See Abstractions file for details on the super class Prover.
+    """
+
+    def get_randomizers(self) -> dict:
+        """
+        Initializes randomizers for each Secret in the associated DLRepProof. Each are drawn at random between 0 and the order of the associated group.
+        By using a dict, we enforce that if secret are repeated in x1 * g1 + x2 * g2 + ... + xn * gn (that is if xi and xj have the same name) then they will get
+        the same random value. Identical secret values and identical randomizers will yield identical responses, and this identity will be checked by the Verifier.
+        :return: Random values to compute the responses of the proof of knowledge for each of the secrets. 
+        """
+        output = {}
+        order = self.proof.generators[0].group.order()
+        for sec in set(self.proof.secret_vars):
+            output.update({sec: order.random()})
+        return output
+
+    def internal_commit(self, randomizers_dict=None):
+        """
+        Computes the commitment using the randomizers and returns it. The function will misbehave if passed a non-empty but incomplete randomizers_dict. 
+        :param randomizers_dict: Optional dictionary of random values for the Secret objects. Every value not enforced will be generated at random.
+        :return: A single commitment (base for the group), sum of bases (each weighted by the corresponding randomizer).
+        """
+        # We check we are not a strawman prover
+        if self.secret_values == {}:
+            raise Exception(
+                "Trying to do a legit proof without the secrets. Can only simulate"
+            )
+        # If we are not provided a randomizer dict from above, we compute it.
+        if randomizers_dict == None or randomizers_dict == {}:
+            randomizers_dict = self.get_randomizers()
+        # Compute an ordered list of randomizers mirroring the Secret objects
+        self.ks = [randomizers_dict[sec] for sec in self.proof.secret_vars]
+        subcommits = [a * b for a, b in zip(self.ks, self.proof.generators)]
+        # We build the commitment doing the product g1^k1 g2^k2...
+        sum_ = self.proof.generators[0].group.infinite()
+        for com in subcommits:
+            sum_ = sum_ + com
+
+        return sum_
+
+    def compute_response(self, challenge):
+        """
+        Constructs an (ordered) list of N response mirroring the N secrets/generators
+        :param challenge: A number of type petlib.bn.Bn
+        :return: A list of responses, for each secret x and a random value k (associated to x), the response is equal to k + challenge * x
+        """
+        order = self.proof.generators[0].group.order()
+        resps = [
+            (self.secret_values[self.proof.secret_vars[i]] * challenge + self.ks[i])
+            % order
+            for i in range(len(self.ks))
+        ]
+        return resps
+
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        """
+        Returns a transcript of a proof simulation. Responses and challenge can be enforced.
+        The function will misbehave if passed a non-empty but incomplete responses_dict.
+        :param responses_dict: a dictionnary from secret names (strings) to responses (petlib.bn.Bn numbers)
+        :param challenge: the challenge to enforce in the simulation
+        """
+        if responses_dict is None or responses_dict == {}:
+            responses_dict = self.get_randomizers()
+        if challenge is None:
+            challenge = chal_randbits(CHAL_LENGTH)
+
+        response = [responses_dict[m] for m in self.proof.secret_vars]
+        # Random responses, the same for shared secrets
+        commitment = self.proof.recompute_commitment(challenge, response)
+
+        return SimulationTranscript(commitment, challenge, response)
+
+
+class DLRepVerifier(Verifier):
+    """
+    The prover in a discrete logarithm proof. See Abstractions file for details on the super class Prover.
+    """
+
+    def check_responses_consistency(self, response, responses_dict={}):
+        """Goes through the secret names of the current DLRepProof and checks if reoccuring secrets indeed yield the same responses.
+        To do so, constructs a map (dict) between secrets and responses.
+        """
+        for i in range(len(self.proof.secret_vars)):
+            s = self.proof.secret_vars[i]
+            if s in responses_dict.keys():
+                if response[i] != responses_dict[s]:
+                    print(
+                        "names are",
+                        self.proof.secret_vars,
+                        "incorrect for",
+                        self.proof.secret_vars[i],
+                    )
+                    print("values are", response[i], "should be", responses_dict[s])
+                    return False
+            else:
+                responses_dict.update({s: response[i]})
+        return True
+

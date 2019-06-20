@@ -1,6 +1,12 @@
 """
 see https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
+import os, sys
+
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_code_path = os.path.join(root_dir, "")
+if src_code_path not in sys.path:
+    sys.path.append(src_code_path)
 from Abstractions import *
 from CompositionProofs import *
 from primitives.DLRep import *
@@ -8,7 +14,7 @@ import pdb
 
 
 class DLRepNotEqualProof(Proof):
-    def __init__(self, valid_tuple, invalid_tuple, secret_names, binding=False):
+    def __init__(self, valid_tuple, invalid_tuple, secret_vars, binding=False):
         """
         Takes (H0,h0), (H1,h1), ["x"] such that H0 = x*h0 and H1 != x*h1.
         All these arguments should be iterable.
@@ -18,10 +24,10 @@ class DLRepNotEqualProof(Proof):
         self.aliases = [Secret("alpha"), Secret("beta")]
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
-        self.secret_names = secret_names
+        self.secret_vars = secret_vars
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
-        for sec in self.secret_names:
+        for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.simulation = False
@@ -53,7 +59,7 @@ class DLRepNotEqualProof(Proof):
                 )
             )
         if self.binding:
-            p.append(DLRepProof(self.lhs[0], self.secret_names[0] * self.generators[0]))
+            p.append(DLRepProof(self.lhs[0], self.secret_vars[0] * self.generators[0]))
         self.constructed_proof = AndProof(*p)
         self.constructed_proof.lhs = new_lhs
         return self.constructed_proof
@@ -76,9 +82,6 @@ class DLRepNotEqualProof(Proof):
 
 
 class DLRepNotEqualProver(Prover):
-    def __init__(self, proof, secret_values):
-        self.proof = proof
-        self.secret_values = secret_values
 
     def internal_commit(self, randomizers_dict=None):
         """
@@ -92,7 +95,7 @@ class DLRepNotEqualProver(Prover):
         return self.constructed_prover.internal_commit(randomizers_dict)
 
     def precommit(self):
-        cur_secret = self.secret_values[self.proof.secret_names[0]]
+        cur_secret = self.secret_values[self.proof.secret_vars[0]]
         self.blinder = self.proof.generators[0].group.order().random()
         new_secrets = (
             cur_secret * self.blinder % self.proof.generators[0].group.order(),
@@ -129,10 +132,6 @@ class DLRepNotEqualProver(Prover):
 class DLRepNotEqualVerifier(Verifier):
     """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
     """
-
-    def __init__(self, proof):
-        self.proof = proof
-
     def process_precommitment(self, precommitment):
         self.proof.build_constructed_proof(precommitment)
         self.constructed_verifier = self.proof.constructed_proof.get_verifier()

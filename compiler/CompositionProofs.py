@@ -63,24 +63,16 @@ class Proof:
         Generate the transcript of a non-interactive proof.
         Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
-        if not isinstance(self.generators[0], EcPt):
-            encoding = enc_GXpt
-        else:
-            encoding = None
         prover = self.get_prover(secret_dict)
-        return prover.get_NI_proof(message, encoding)
+        return prover.get_NI_proof(message)
 
     def verify(self, transcript, message=""):
         """
         Verify the transcript of a non-interactive proof.
         Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
-        if not isinstance(self.generators[0], EcPt):
-            encoding = enc_GXpt
-        else:
-            encoding = None
         verifier = self.get_verifier()
-        return verifier.verify_NI(transcript, message, encoding)
+        return verifier.verify_NI(transcript, message)
 
     def simulate(self, challenge=None):
         """
@@ -89,24 +81,34 @@ class Proof:
         self.set_simulate()
         prover = self.get_prover()
         transcript = prover.simulate_proof(challenge=challenge)
-        transcript.statement = self.hash_statement()
+        transcript.statement = self.prehash_statement().digest()
         return transcript
 
     def check_statement(self, statement):
-        if statement != self.hash_statement():
+        """
+        Verifies the current proof corresponds to the hash passed as a parameter.
+        Returns a preshash of the current proof, e.g to be used to verify NI proofs
+        """
+        cur_statement = self.prehash_statement()
+        if statement != cur_statement.digest():
             raise Exception("Proof statements mismatch, impossible to verify")
-        return True
+        return cur_statement
 
-    def hash_statement(self):
-        """
-        Returns a hash of the proof's descriptor.
-        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
-        """
+    def ec_encode(self, data):
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
             encoding = None
-        return sha256(encode(self.get_proof_id(), encoding)).digest()
+        return encode(data, custom_encoder=encoding)
+
+    def prehash_statement(self, other=None):
+        """
+        Returns a hash of the proof's descriptor.
+        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode with the petlib.pack function.
+        :arg other: An optional other object to pack, e.g a commitment (for non-interactive proofs). Avoids having to figure out the encoding mode multiple times.
+        """
+        ppp = sha256(self.ec_encode(self.get_proof_id()))
+        return ppp
 
     def verify_simulation_consistency(self, transcript):
         """
@@ -147,14 +149,14 @@ class OrProof(Proof):
         self.subproofs = list(subproofs)
 
         self.generators = get_generators(self.subproofs)
-        self.secret_names = get_secret_names(self.subproofs)
+        self.secret_vars = get_secret_vars(self.subproofs)
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
-        for sec in self.secret_names:
+        for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.simulation = False
-        check_groups(self.secret_names, self.generators)
+        check_groups(self.secret_vars, self.generators)
         # For now we consider the same constraints as in the And Proof
 
     def get_proof_id(self):
@@ -204,11 +206,11 @@ class OrProof(Proof):
         possible = list(candidates.keys())
         rd = random.SystemRandom()
         chosen_idx = rd.choice(possible)
-        while any(x not in bigset for x in (candidates[chosen_idx].secret_names)):
+        while any(x not in bigset for x in (candidates[chosen_idx].secret_vars)):
             chosen_idx = rd.choice(possible)
 
         elem = candidates.pop(chosen_idx)
-        subdict = dict((k, secrets_dict[k]) for k in set(elem.secret_names))
+        subdict = dict((k, secrets_dict[k]) for k in set(elem.secret_vars))
 
         # Now we get the simulators
         sims.update(candidates)
@@ -317,7 +319,7 @@ class OrProver(Prover):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         if responses_dict is None or any(
-            [x not in responses_dict.keys() for x in self.proof.secret_names]
+            [x not in responses_dict.keys() for x in self.proof.secret_vars]
         ):
             responses_dict = self.get_randomizers()
         if challenge is None:
@@ -328,7 +330,7 @@ class OrProver(Prover):
         precom = []
         for index in range(len(self.subs) - 1):
             subdict = {
-                key: responses_dict[key] for key in self.subs[index].proof.secret_names
+                key: responses_dict[key] for key in self.subs[index].proof.secret_vars
             }
             transcript = self.subs[index].simulate_proof(subdict)
             com.append(transcript.commitment)
@@ -379,14 +381,14 @@ class AndProof(Proof):
         self.subproofs = list(subproofs)
 
         self.generators = get_generators(self.subproofs)
-        self.secret_names = get_secret_names(self.subproofs)
+        self.secret_vars = get_secret_vars(self.subproofs)
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
-        for sec in self.secret_names:
+        for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.simulation = False
-        check_groups(self.secret_names, self.generators)
+        check_groups(self.secret_vars, self.generators)
         self.check_or_flaw()
 
     def recompute_commitment(self, challenge, andresp: AndProofResponse):
@@ -409,17 +411,17 @@ class AndProof(Proof):
         if self.simulation == True or secrets_dict == {}:
             print("Can only simulate")
             arr = [subp.get_prover() for subp in self.subproofs]
-            return AndProofProver(self, arr, {})
+            return AndProver(self, arr, {})
 
         def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secret_names)
+            keys = set(sub_proof.secret_vars)
             secrets_for_prover = []
             for s_name in secrets_dict:
                 if s_name in keys:
                     secrets_for_prover.append((s_name, secrets_dict[s_name]))
             return sub_proof.get_prover(dict(secrets_for_prover))
 
-        andp = AndProofProver(
+        andp = AndProver(
             self,
             [sub_proof_prover(sub_proof) for sub_proof in self.subproofs],
             secrets_dict,
@@ -427,7 +429,7 @@ class AndProof(Proof):
         return andp
 
     def get_verifier(self):
-        return AndProofVerifier(self, [subp.get_verifier() for subp in self.subproofs])
+        return AndVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
     def get_proof_id(self):
         return ["And", [sub.get_proof_id() for sub in self.subproofs]]
@@ -439,26 +441,26 @@ class AndProof(Proof):
             forbidden_secrets = []
         for subp in self.subproofs:
             if "Or" in subp.__class__.__name__:
-                if any(x in subp.secret_names for x in forbidden_secrets):
+                if any(x in subp.secret_vars for x in forbidden_secrets):
                     raise Exception(
                         "Or flaw detected. Aborting. Try to flatten the proof to  \
                         avoid shared secrets inside and outside an Or"
                     )
                 for other_sub in self.subproofs:
                     if other_sub != subp and any(
-                        set(subp.secret_names) & set(other_sub.secret_names)
+                        set(subp.secret_vars) & set(other_sub.secret_vars)
                     ):
                         raise Exception(
                             "Or flaw detected (same_level). Aborting. Try to flatten the proof to  \
                         avoid shared secrets inside and outside an Or"
                         )
             elif "And" in subp.__class__.__name__:
-                fb = subp.secret_names.copy()
+                fb = subp.secret_vars.copy()
                 forbidden_secrets.extend(fb)
                 subp.check_or_flaw(forbidden_secrets)
 
 
-class AndProofProver(Prover):
+class AndProver(Prover):
     """:param subprovers: instances of Prover"""
 
     def __init__(self, proof, subprovers, secret_values):
@@ -469,8 +471,8 @@ class AndProofProver(Prover):
     def get_randomizers(self) -> dict:
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
         random_vals = {}
-        dict_name_gen = dict(zip(self.proof.secret_names, self.proof.generators))
-        name_set = set(self.proof.secret_names)
+        dict_name_gen = dict(zip(self.proof.secret_vars, self.proof.generators))
+        name_set = set(self.proof.secret_vars)
         for u in name_set:
             random_vals[u] = dict_name_gen[u].group.order().random()
         return random_vals
@@ -490,7 +492,7 @@ class AndProofProver(Prover):
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
         elif any(
-            [sec not in randomizers_dict.keys() for sec in self.proof.secret_names]
+            [sec not in randomizers_dict.keys() for sec in self.proof.secret_vars]
         ):
             # We were passed an incomplete dict, fill the empty slots but keep the existing ones
             secret_to_random_value = self.get_randomizers()
@@ -511,7 +513,7 @@ class AndProofProver(Prover):
     def simulate_proof(self, responses_dict=None, challenge=None):
         if responses_dict is None:
             responses_dict = self.get_randomizers()
-        elif any([x not in responses_dict.keys() for x in self.proof.secret_names]):
+        elif any([x not in responses_dict.keys() for x in self.proof.secret_vars]):
             # We were passed an incomplete dictionary, fill it
             new_dict = self.get_randomizers()
             new_dict.update(responses_dict)
@@ -522,7 +524,7 @@ class AndProofProver(Prover):
         resp = []
         precom = []
         for subp in self.subs:
-            filtered = list(set(subp.proof.secret_names) & set(responses_dict.keys()))
+            filtered = list(set(subp.proof.secret_vars) & set(responses_dict.keys()))
             subdict = {key: responses_dict[key] for key in filtered}
             simulation = subp.simulate_proof(subdict, challenge)
             com.append(simulation.commitment)
@@ -531,7 +533,7 @@ class AndProofProver(Prover):
         return SimulationTranscript(com, challenge, resp, precom)
 
 
-class AndProofVerifier(Verifier):
+class AndVerifier(Verifier):
     def __init__(self, proof, subverifiers):
         """
         :param subverifiers: instances of subtypes of Verifier

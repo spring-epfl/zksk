@@ -1,8 +1,14 @@
+import os, sys
+
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_code_path = os.path.join(root_dir, "")
+if src_code_path not in sys.path:
+    sys.path.append(src_code_path)
+import pdb
 from primitives.DLRep import *
 from CompositionProofs import *
 from Abstractions import *
 from BilinearPairings import *
-import pdb
 import random, string
 
 RD_LENGTH = 30
@@ -40,8 +46,8 @@ class UserCommitmentMessage:
             raise Exception("No proof to verify")
         generators = pk.generators[1 : len(self.NIproof.responses) + 1]
         lhs = self.commitment_message
-        secret_names = [Secret() for i in range(len(self.NIproof.responses))]
-        proof = DLRepProof(lhs, wsum_secrets(secret_names, generators))
+        secret_vars = [Secret() for i in range(len(self.NIproof.responses))]
+        proof = DLRepProof(lhs, wsum_secrets(secret_vars, generators))
         return proof.verify(self.NIproof)
 
 
@@ -130,21 +136,21 @@ class SignatureProof(Proof):
     Proof of knowledge of a (A,e,s) signature over a set of messages.
     """
 
-    def __init__(self, secret_names, pk, signature=None):
+    def __init__(self, secret_vars, pk, signature=None):
         """
         Instantiates a Signature Proof which is an enhanced version of AndProof allowing to access additional parameters
-        secret_names should be the alias for signature.e, the alias for signature.s, and the aliases for the messages.
+        secret_vars should be the alias for signature.e, the alias for signature.s, and the aliases for the messages.
         If the object is used for proving, it requires a signature argument.
         """
         self.pk = pk
-        # We need L+1 generators for L messages. secret_names are messages plus 'e' and 's'
-        self.generators = pk.generators[: len(secret_names)]
+        # We need L+1 generators for L messages. secret_vars are messages plus 'e' and 's'
+        self.generators = pk.generators[: len(secret_vars)]
         self.aliases = [Secret(), Secret(), Secret(), Secret()]
         self.signature = signature
-        self.secret_names = secret_names
+        self.secret_vars = secret_vars
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
-        for sec in self.secret_names:
+        for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.constructed_proof = None
@@ -167,7 +173,7 @@ class SignatureProof(Proof):
             g0.group.infinite(),
             self.aliases[2] * g1
             + self.aliases[3] * g2
-            + self.secret_names[0] * (-1 * self.A1),
+            + self.secret_vars[0] * (-1 * self.A1),
         )
 
         gen_pairs = [g.pair(self.pk.h0) for g in self.generators]
@@ -180,13 +186,13 @@ class SignatureProof(Proof):
         generators.extend(gen_pairs[1:])
 
         # Build secret names [e, r1, delta1, s, m_i]
-        new_secret_names = (
-            self.secret_names[:1]
+        new_secret_vars = (
+            self.secret_vars[:1]
             + [self.aliases[0], self.aliases[2]]
-            + self.secret_names[1:]
+            + self.secret_vars[1:]
         )
         pairings_proof = DLRepProof(
-            self.pair_lhs, wsum_secrets(new_secret_names, generators)
+            self.pair_lhs, wsum_secrets(new_secret_vars, generators)
         )
 
         self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
@@ -212,10 +218,6 @@ class SignatureProof(Proof):
 
 
 class SignatureProver(Prover):
-    def __init__(self, proof, secret_values):
-        self.proof = proof
-        self.secret_values = secret_values
-
     def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above.
@@ -266,9 +268,7 @@ class SignatureProver(Prover):
         pass
 
 
-class SignatureVerifier(AndProofVerifier):
-    def __init__(self, proof):
-        self.proof = proof
+class SignatureVerifier(Verifier):
 
     def process_precommitment(self, precommitment):
         self.precommitment = precommitment
@@ -281,13 +281,6 @@ class SignatureVerifier(AndProofVerifier):
         self.challenge = self.constructed_verifier.send_challenge(com, mute=True)
         return self.challenge
 
-    def check_adequate_lhs(self):
-        required_lhs = self.precommitment[1].pair(self.proof.pk.w) + (
-            -1 * self.proof.generators[0]
-        ).pair(self.proof.pk.h0)
-        if self.proof.constructed_proof.subproofs[2].lhs != required_lhs:
-            return False
-        return True
 
     def check_responses_consistency(self, response, response_dict):
         return self.constructed_verifier.check_responses_consistency(

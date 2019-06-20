@@ -18,6 +18,11 @@ TODO: add test for signature simulation and or signature, when or with DLRNE is 
 """
 
 
+def randomword(length):
+    letters = string.ascii_lowercase
+    return "".join(random.choice(letters) for i in range(length))
+
+
 class SigmaProtocol:
     """
     an interface for sigma protocols.
@@ -85,24 +90,33 @@ def test_dlrep_true():
     assert proof.run() == True
 
 
+def test_dlrep_noprovarg():
+    rs = Secret(value=3) * tab_g[0] + Secret(value=4) * tab_g[1]
+    pedersen = DLRepProof(rs.eval(), rs)
+    pp = pedersen.prove()
+    prover = pedersen.get_prover()
+    assert pedersen.verify(pp)
+
 
 def test_dlrep_true_direct():
     # Legit run
     x = Secret(value=4)
-    pedersen_true = DLRepProof(4*tab_g[0], x*tab_g[0])
+    pedersen_true = DLRepProof(4 * tab_g[0], x * tab_g[0])
     tr = pedersen_true.prove()
     assert pedersen_true.verify(tr)
 
+
 def test_dlrep_bad_hash():
     g, h = tab_g[0], tab_g[1]
-    x, y = Secret(),Secret()
-    dic = {x:2, y:3}
-    pp1 = DLRepProof(2*g+3*h, x*g+y*h)
+    x, y = Secret(), Secret()
+    dic = {x: 2, y: 3}
+    pp1 = DLRepProof(2 * g + 3 * h, x * g + y * h)
 
-    pp2 = DLRepProof(2*g+3*h, y*h+x*g)
+    pp2 = DLRepProof(2 * g + 3 * h, y * h + x * g)
     tr = pp1.prove(dic)
     with pytest.raises(Exception):
         pp2.verify(tr)
+
 
 def test_dlrep_true2():
     # Legit run
@@ -133,7 +147,7 @@ def test_dlrep_NI():
     # We request a non_interactive proof from the prover
     niproof = DLRepProof(lhs, rhs1)
     tr = niproof.prove(secrets_values, message="mymessage")
-    assert DLRepProof(lhs, rhs1).verify(tr, message="mymessage") 
+    assert DLRepProof(lhs, rhs1).verify(tr, message="mymessage")
 
 
 def test_dlrep_wrongNI():
@@ -302,14 +316,16 @@ def test_and_proofs():
 
     assert_verify_proof(and_verifier, and_prover)
 
+
 def test_and_direct():
     x = Secret(value=4)
     x2 = Secret()
-    pp1 = DLRepProof(4*tab_g[0], x*tab_g[0])
-    pp2 = DLRepProof(3*tab_g[1], x2*tab_g[1])
-    andp=pp1&pp2
-    tr = andp.prove({x2:3})
+    pp1 = DLRepProof(4 * tab_g[0], x * tab_g[0])
+    pp2 = DLRepProof(3 * tab_g[1], x2 * tab_g[1])
+    andp = pp1 & pp2
+    tr = andp.prove({x2: 3})
     assert andp.verify(tr)
+
 
 def test_crosslibs_and_proofs():
     x = Secret()
@@ -373,7 +389,7 @@ def test_simulate_andproof1():
     andv = andp.get_verifier()
     andsim = andp.get_prover({})
     tr = andsim.simulate_proof()
-    tr.statement = andsim.proof.hash_statement()
+    tr.statement = andsim.proof.prehash_statement().digest()
     assert not andv.verify_NI(tr)
 
 
@@ -1011,7 +1027,6 @@ def test_BLAC_NI():
     assert pr2.verify(nip)
 
 
-
 def test_BLAC_NI_direct():
     G = EcGroup()
     g = G.generator()
@@ -1026,7 +1041,6 @@ def test_BLAC_NI_direct():
     assert pr2.verify(nip)
 
 
-
 def test_and_BLAC_NI_direct():
     G = EcGroup()
     g = G.generator()
@@ -1036,10 +1050,11 @@ def test_and_BLAC_NI_direct():
     g2 = 1397 * g
 
     pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
-    pr2 = DLRepNotEqualProof([2*y, 2*g], [y2, g2], [x], binding=True)
-    andp = pr & pr2 & DLRepProof(y, x*g)
+    pr2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], [x], binding=True)
+    andp = pr & pr2 & DLRepProof(y, x * g)
     nip = andp.prove()
     assert andp.verify(nip)
+
 
 def test_BLAC_NI2():
     lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
@@ -1136,6 +1151,7 @@ def test_DLRNE_sim_binding():
     tr = andp.simulate()
     assert andp.verify_simulation_consistency(tr) and not andp.verify(tr)
 
+
 def test_or_DLRNE():
     lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
     y3 = secret_tab[2] * tab_g[3]
@@ -1197,8 +1213,9 @@ def test_signature_setup():
     presignature = sk.sign(usr_commitment.commitment_message)
     signature = creator.obtain_signature(presignature)
 
-    assert usr_commitment.verify_blinding(
-        pk) and signature.verify_signature(pk, messages)
+    assert usr_commitment.verify_blinding(pk) and signature.verify_signature(
+        pk, messages
+    )
 
 
 def test_signature_proof():
@@ -1258,6 +1275,7 @@ def test_signature_proofNI():
     tr = sigproof.prove(secret_dict)
     sigproof1 = SignatureProof([Secret() for _ in range(5)], pk)
     assert sigproof1.verify(tr)
+
 
 def test_and_sig():
     mG = BilinearGroupPair()
@@ -1374,7 +1392,7 @@ def test_wrong_signature_and_DLRNE1():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof( [e, s, m1, m2, m3], pk, signature)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
@@ -1473,7 +1491,7 @@ def test_and_NI_sig():
         m3: messages[2],
     }
 
-    sigproof = SignatureProof([e, s, m1, m2, m3], pk,signature)
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
 
     creator = SignatureCreator(pk)
     lhs = creator.commit(messages)
@@ -1488,7 +1506,7 @@ def test_and_NI_sig():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureProof( [e1, s1, m1, m2, m3], pk,signature2)
+    sigproof1 = SignatureProof([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
@@ -1499,35 +1517,38 @@ def test_and_NI_sig():
 def test_bm_gmap(benchmark):
     G = BpGroup()
     g1, g2 = G.gen1(), G.gen2()
-    r1,r2 = G.order().random(), G.order().random()
-    t1, t2 = r1*g1, r2*g2
+    r1, r2 = G.order().random(), G.order().random()
+    t1, t2 = r1 * g1, r2 * g2
     result = benchmark(G.pair, *(t1, t2))
-    assert result == G.pair(g1,g2)**(r1*r2)
+    assert result == G.pair(g1, g2) ** (r1 * r2)
+
 
 def test_bm_g1mul(benchmark):
     G = BpGroup()
     g1 = G.gen1()
     r1 = G.order().random()
-    t1 = r1*g1
+    t1 = r1 * g1
     result = benchmark(t1.mul, r1)
-    assert result == r1*t1
+    assert result == r1 * t1
+
 
 def test_bm_g2mul(benchmark):
     G = BpGroup()
     g1 = G.gen2()
     r1 = G.order().random()
-    t1 = r1*g1
+    t1 = r1 * g1
     result = benchmark(t1.mul, r1)
-    assert result == r1*t1
+    assert result == r1 * t1
+
 
 def test_bm_gtexp(benchmark):
     G = BpGroup()
     g1, g2 = G.gen1(), G.gen2()
-    r1,r2 = G.order().random(), G.order().random()
-    t1, t2 = r1*g1, r2*g2
-    rt = G.pair(t1,t2)
+    r1, r2 = G.order().random(), G.order().random()
+    t1, t2 = r1 * g1, r2 * g2
+    rt = G.pair(t1, t2)
     result = benchmark(rt.exp, r1)
-    assert result == rt**r1
+    assert result == rt ** r1
 
 
 def test_bm_signatureproof(benchmark):
@@ -1544,21 +1565,23 @@ def test_bm_signatureproof(benchmark):
     signature = creator.obtain_signature(presignature)
     tr = signature_proofNI(messages, signature, pk)
 
-    sigproof1 = SignatureProof( [Secret() for _ in range(len(messages)+2)], pk, signature)
+    sigproof1 = SignatureProof(
+        [Secret() for _ in range(len(messages) + 2)], pk, signature
+    )
 
     result = benchmark(signature_verifyNI, *(sigproof1, tr))
     assert result
 
-def signature_proofNI(messages,signature, pk):
+
+def signature_proofNI(messages, signature, pk):
     e, s = Secret(), Secret()
     mess = [Secret() for _ in range(len(messages))]
-    secret_dict = {
-        e: signature.e,
-        s: signature.s}
+    secret_dict = {e: signature.e, s: signature.s}
     secret_dict.update(dict(zip(mess, messages)))
     sigproof = SignatureProof([e, s, *mess], pk, signature=signature)
     tr = sigproof.prove(secret_dict)
     return tr
+
 
 def signature_verifyNI(proof, tr):
     return proof.verify(tr)
