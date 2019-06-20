@@ -80,7 +80,6 @@ class DLRepNotEqualProof(Proof):
 
 
 class DLRepNotEqualProver(Prover):
-
     def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
@@ -130,6 +129,7 @@ class DLRepNotEqualProver(Prover):
 class DLRepNotEqualVerifier(Verifier):
     """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
     """
+
     def process_precommitment(self, precommitment):
         self.proof.build_constructed_proof(precommitment)
         self.constructed_verifier = self.proof.constructed_proof.get_verifier()

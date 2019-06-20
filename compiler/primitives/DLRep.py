@@ -18,6 +18,7 @@ This file gives a framework to build the lowest building block of the compiler i
 All classes inherit from generic classes defined in Abstractions or CompositionProofs.
 """
 
+
 class DLRepProof(Proof):
     """
     This class is used to model a discrete logarithm proof e.g. PK{(x1, x2): y = x1 * g1 + x2 * g2}.
@@ -96,6 +97,19 @@ class DLRepProof(Proof):
         """
         return ["DLRep", self.lhs, self.generators]
 
+    def get_randomizers(self) -> dict:
+        """
+        Initializes randomizers for each Secret in the associated DLRepProof. Each are drawn at random between 0 and the order of the associated group.
+        By using a dict, we enforce that if secret are repeated in x1 * g1 + x2 * g2 + ... + xn * gn (that is if xi and xj have the same name) then they will get
+        the same random value. Identical secret values and identical randomizers will yield identical responses, and this identity will be checked by the Verifier.
+        :return: Random values to compute the responses of the proof of knowledge for each of the secrets. 
+        """
+        output = {}
+        order = self.generators[0].group.order()
+        for sec in set(self.secret_vars):
+            output.update({sec: order.random()})
+        return output
+
     def recompute_commitment(self, challenge, responses):
         """
         Applies an equivalent verification equation for the current proof model: computes the commitment which would match the challenge and responses.
@@ -116,19 +130,6 @@ class DLRepProver(Prover):
     The prover in a discrete logarithm proof. See Abstractions file for details on the super class Prover.
     """
 
-    def get_randomizers(self) -> dict:
-        """
-        Initializes randomizers for each Secret in the associated DLRepProof. Each are drawn at random between 0 and the order of the associated group.
-        By using a dict, we enforce that if secret are repeated in x1 * g1 + x2 * g2 + ... + xn * gn (that is if xi and xj have the same name) then they will get
-        the same random value. Identical secret values and identical randomizers will yield identical responses, and this identity will be checked by the Verifier.
-        :return: Random values to compute the responses of the proof of knowledge for each of the secrets. 
-        """
-        output = {}
-        order = self.proof.generators[0].group.order()
-        for sec in set(self.proof.secret_vars):
-            output.update({sec: order.random()})
-        return output
-
     def internal_commit(self, randomizers_dict=None):
         """
         Computes the commitment using the randomizers and returns it. The function will misbehave if passed a non-empty but incomplete randomizers_dict. 
@@ -142,7 +143,7 @@ class DLRepProver(Prover):
             )
         # If we are not provided a randomizer dict from above, we compute it.
         if randomizers_dict == None or randomizers_dict == {}:
-            randomizers_dict = self.get_randomizers()
+            randomizers_dict = self.proof.get_randomizers()
         # Compute an ordered list of randomizers mirroring the Secret objects
         self.ks = [randomizers_dict[sec] for sec in self.proof.secret_vars]
         subcommits = [a * b for a, b in zip(self.ks, self.proof.generators)]
@@ -175,7 +176,7 @@ class DLRepProver(Prover):
         :param challenge: the challenge to enforce in the simulation
         """
         if responses_dict is None or responses_dict == {}:
-            responses_dict = self.get_randomizers()
+            responses_dict = self.proof.get_randomizers()
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
 
@@ -210,4 +211,3 @@ class DLRepVerifier(Verifier):
             else:
                 responses_dict.update({s: response[i]})
         return True
-

@@ -1,5 +1,6 @@
 from Abstractions import *
 
+
 class Proof:
     """An abstraction of a sigma protocol proof"""
 
@@ -156,6 +157,13 @@ class OrProof(Proof):
     def get_proof_id(self):
         return ["Or", [sub.get_proof_id() for sub in self.subproofs]]
 
+    def get_randomizers(self) -> dict:
+        """Creates a dictionary of randomizers by querying the subproofs dicts and merging them
+        """
+        random_vals = {}
+        {random_vals.update(subp.get_randomizers().copy()) for subp in self.subproofs}
+        return random_vals
+
     def recompute_commitment(self, challenge, responses):
         """ Recomputes the commitments, sets them to None if the challenge is inconsistent.
         """
@@ -251,13 +259,6 @@ class OrProver(Prover):
                 cur = self.subs[index].simulate_proof()
                 self.simulations.append(cur)
 
-    def get_randomizers(self) -> dict:
-        """Creates a dictionary of randomizers by querying the subproofs dicts and merging them
-        """
-        random_vals = {}
-        {random_vals.update(subp.get_randomizers().copy()) for subp in self.subs}
-        return random_vals
-
     def precommit(self):
         precommitment = []
         for index in range(len(self.subs)):
@@ -315,7 +316,7 @@ class OrProver(Prover):
         if responses_dict is None or any(
             [x not in responses_dict.keys() for x in self.proof.secret_vars]
         ):
-            responses_dict = self.get_randomizers()
+            responses_dict = self.proof.get_randomizers()
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         com = []
@@ -428,6 +429,15 @@ class AndProof(Proof):
     def get_proof_id(self):
         return ["And", [sub.get_proof_id() for sub in self.subproofs]]
 
+    def get_randomizers(self) -> dict:
+        """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
+        random_vals = {}
+        dict_name_gen = dict(zip(self.secret_vars, self.generators))
+        name_set = set(self.secret_vars)
+        for u in name_set:
+            random_vals[u] = dict_name_gen[u].group.order().random()
+        return random_vals
+
     def check_or_flaw(self, forbidden_secrets=None):
         """ Checks for appearance of reoccuring secrets inside and outside an Or Proof
             Raises an error if finds any."""
@@ -462,15 +472,6 @@ class AndProver(Prover):
         self.secret_values = secret_values
         self.proof = proof
 
-    def get_randomizers(self) -> dict:
-        """Creates a dictionary of randomizers by querying the subproofs dicts and merging them"""
-        random_vals = {}
-        dict_name_gen = dict(zip(self.proof.secret_vars, self.proof.generators))
-        name_set = set(self.proof.secret_vars)
-        for u in name_set:
-            random_vals[u] = dict_name_gen[u].group.order().random()
-        return random_vals
-
     def precommit(self):
         precommitment = []
         for idx in range(len(self.subs)):
@@ -484,12 +485,12 @@ class AndProver(Prover):
     def internal_commit(self, randomizers_dict=None):
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
-            randomizers_dict = self.get_randomizers()
+            randomizers_dict = self.proof.get_randomizers()
         elif any(
             [sec not in randomizers_dict.keys() for sec in self.proof.secret_vars]
         ):
             # We were passed an incomplete dict, fill the empty slots but keep the existing ones
-            secret_to_random_value = self.get_randomizers()
+            secret_to_random_value = self.proof.get_randomizers()
             secret_to_random_value.update(randomizers_dict)
             randomizers_dict = secret_to_random_value
 
@@ -506,10 +507,10 @@ class AndProver(Prover):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         if responses_dict is None:
-            responses_dict = self.get_randomizers()
+            responses_dict = self.proof.get_randomizers()
         elif any([x not in responses_dict.keys() for x in self.proof.secret_vars]):
             # We were passed an incomplete dictionary, fill it
-            new_dict = self.get_randomizers()
+            new_dict = self.proof.get_randomizers()
             new_dict.update(responses_dict)
             responses_dict = new_dict
         if challenge is None:

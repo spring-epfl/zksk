@@ -4,7 +4,7 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "")
 if src_code_path not in sys.path:
     sys.path.append(src_code_path)
-    
+
 from primitives.DLRep import *
 from CompositionProofs import *
 from BilinearPairings import *
@@ -265,7 +265,6 @@ class SignatureProver(Prover):
 
 
 class SignatureVerifier(Verifier):
-
     def process_precommitment(self, precommitment):
         self.precommitment = precommitment
         self.proof.build_constructed_proof(precommitment)
@@ -276,7 +275,6 @@ class SignatureVerifier(Verifier):
         self.proof.check_statement(statement)
         self.challenge = self.constructed_verifier.send_challenge(com, mute=True)
         return self.challenge
-
 
     def check_responses_consistency(self, response, response_dict):
         return self.constructed_verifier.check_responses_consistency(
