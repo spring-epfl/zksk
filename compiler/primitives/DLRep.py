@@ -10,12 +10,7 @@ src_code_path = os.path.join(root_dir, "")
 if src_code_path not in sys.path:
     sys.path.append(src_code_path)
 
-import random, string
-from petlib.ec import EcGroup, EcPt
-from petlib.bn import Bn
 from Abstractions import *
-from hashlib import sha256
-import binascii
 from CompositionProofs import Proof
 
 """

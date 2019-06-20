@@ -1,10 +1,4 @@
-from petlib.bn import Bn
 from Abstractions import *
-
-AndProofCommitment = list
-AndProofResponse = list
-AndProofChallenge = Bn
-
 
 class Proof:
     """An abstraction of a sigma protocol proof"""
@@ -391,7 +385,7 @@ class AndProof(Proof):
         check_groups(self.secret_vars, self.generators)
         self.check_or_flaw()
 
-    def recompute_commitment(self, challenge, andresp: AndProofResponse):
+    def recompute_commitment(self, challenge, andresp):
         """
         This function allows to retrieve the commitment generically. 
         """
@@ -487,7 +481,7 @@ class AndProver(Prover):
                 precommitment[idx] = subprecom
         return precommitment if len(precommitment) != 0 else None
 
-    def internal_commit(self, randomizers_dict=None) -> AndProofCommitment:
+    def internal_commit(self, randomizers_dict=None):
         """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
@@ -506,7 +500,7 @@ class AndProver(Prover):
             )
         return self.commitment
 
-    def compute_response(self, challenge: AndProofChallenge) -> AndProofResponse:
+    def compute_response(self, challenge):
         """:return: the list (of type AndProofResponse) containing the subproofs responses"""  # r = secret*challenge + k
         return [subp.compute_response(challenge) for subp in self.subs]
 

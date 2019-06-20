@@ -4,14 +4,10 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "")
 if src_code_path not in sys.path:
     sys.path.append(src_code_path)
-import pdb
+    
 from primitives.DLRep import *
 from CompositionProofs import *
-from Abstractions import *
 from BilinearPairings import *
-import random, string
-
-RD_LENGTH = 30
 
 
 class Signature:

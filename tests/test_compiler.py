@@ -4,7 +4,6 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
-from Abstractions import *
 from CompositionProofs import *
 from primitives.DLRep import *
 from BilinearPairings import *

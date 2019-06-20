@@ -1,15 +1,12 @@
 import random, string
-from functools import reduce
-from collections import namedtuple
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from petlib.pack import *
 import binascii
+import msgpack
 import pdb
 from hashlib import sha256
 from collections import defaultdict
-from BilinearPairings import *
-import msgpack
 
 
 CHAL_LENGTH = Bn(128)

@@ -7,10 +7,8 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "")
 if src_code_path not in sys.path:
     sys.path.append(src_code_path)
-from Abstractions import *
 from CompositionProofs import *
 from primitives.DLRep import *
-import pdb
 
 
 class DLRepNotEqualProof(Proof):
