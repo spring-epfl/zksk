@@ -57,26 +57,21 @@ class DLRepProof(Proof):
         """
         Draws a DLRepProver from the current Proof. Will fail if any secret value is unknown.
         :param secrets_dict: A dictionnary mapping secret names to petlib.bn.Bn numbers, to update/overwrite the existent complete secrets (of which the values is available).
-        :return: An instance of DLRepProver
+        :return: An instance of DLRepProver, or None if some secrets values are missing.
         """
 
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
-        # Forget the secrets if told so. If no secrets, return now
-        if self.simulation == True or secrets_dict == {}:
-            print("Can only simulate")
-            return DLRepProver(self, {})
-        # Check that all the secret values we need are indeed available
-        if len(set(self.secret_vars)) > len(secrets_dict):
-            raise Exception("We expect as many values as different Secret objects")
-        for secret in self.secret_vars:
-            if secret not in secrets_dict.keys():
-                raise Exception(
-                    "secrets do not match: those secrets should be checked {0} {1}".format(
-                        self.secret_vars, secrets_dict.keys()
-                    )
-                )
+        # Forget the secrets if told so. If missing secrets, return now
+        if (
+            self.simulation == True
+            or secrets_dict == {}
+            or any(sec not in secrets_dict.keys() for sec in set(self.secret_vars))
+        ):
+            print("Missing secrets in DLRep with secrets objects", self.secret_vars)
+            return None
+
         # We check everything is indeed a BigNumber, else we cast it
         for name, sec in secrets_dict.items():
             if not isinstance(sec, Bn):

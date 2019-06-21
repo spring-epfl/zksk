@@ -2,11 +2,14 @@ from Abstractions import *
 
 
 class Proof:
-    """An abstraction of a sigma protocol proof"""
+    """An abstraction of a sigma protocol proof.
+    Is in this file because of And/Or operations defined here.
+    """
 
     def __and__(self, other):
         """
-        :return: an AndProof from this proof and the other proof using the infix '&' operator
+        Returns an AndProof from this proof and the other proof using the infix '&' operator. 
+        If called again, subproofs are merged so only one AndProof remains in the end. 
         """
         if isinstance(other, AndProof):
             if isinstance(self, AndProof):
@@ -19,7 +22,8 @@ class Proof:
 
     def __or__(self, other):
         """
-        :return: an OrProof from this proof and the other proof using the infix '|' operator
+        :return: an OrProof from this proof and the other proof using the infix '|' operator.
+        If called again, subproofs are merged so only one OrProof remains in the end. 
         """
         if isinstance(other, OrProof):
             if isinstance(self, OrProof):
@@ -32,22 +36,25 @@ class Proof:
 
     def get_prover(self, secrets_dict={}):
         """
-        :param: secrets_dict: a mapping from secret names to secret values
-        :return: an instance of Prover"""
+        Returns a Prover for the current proof.
+        """
         pass
 
     def get_verifier(self):
-        """:return: an instance of Verifier"""
+        """
+        Returns a Verifier for the current proof.
+        """
         pass
 
     def recompute_commitment(self, challenge, response):
 
         """
-        :param challenge: the 128 bits challenge used in the proof
+        Computes a pseudo-commitment (literally, the commitment you should have received 
+        if the proof was correct. To compare to the actual commitment.
+        :param challenge: the challenge used in the proof
         :param response: an list of responses, ordered as the list of secret names i.e with as many elements as secrets in the proof claim.
         Reoccuring secrets should yield identical responses.
-        :return: a pseudo-commitment (literally, the commitment you should have received 
-        if the proof was correct. To compare to the actual commitment"""
+        """
         pass
 
     def set_simulate(self):
@@ -56,7 +63,6 @@ class Proof:
     def prove(self, secret_dict={}, message=""):
         """
         Generate the transcript of a non-interactive proof.
-        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message)
@@ -64,14 +70,13 @@ class Proof:
     def verify(self, transcript, message=""):
         """
         Verify the transcript of a non-interactive proof.
-        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode for the petlib.pack function.
         """
         verifier = self.get_verifier()
         return verifier.verify_NI(transcript, message)
 
     def simulate(self, challenge=None):
         """
-        Generate the transcript of a simulated non-interactive proof.
+        Generate the transcript of a simulated non-interactive proof. 
         """
         self.set_simulate()
         transcript = self.simulate_proof(challenge=challenge)
@@ -89,6 +94,10 @@ class Proof:
         return cur_statement
 
     def ec_encode(self, data):
+        """
+        Figures out which encoder to use in the petlib.pack function encode() and uses it.
+        Can break if both petlib.ec.EcPt points and custom BilinearPairings points are used in the same proof.
+        """
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
         else:
@@ -129,6 +138,15 @@ def find_residual_chal(arr, challenge, chal_length):
     return -add_Bn_array(temp_arr, modulus)
 
 
+def sub_proof_prover(sub_proof, secrets_dict):
+    keys = set(sub_proof.secret_vars)
+    secrets_for_prover = {}
+    for s_name in secrets_dict.keys():
+        if s_name in keys:
+            secrets_for_prover[s_name] = secrets_dict[s_name]
+    return sub_proof.get_prover(secrets_for_prover)
+
+
 class OrProof(Proof):
     def __init__(self, *subproofs):
         """
@@ -160,7 +178,7 @@ class OrProof(Proof):
         """Creates a dictionary of randomizers by querying the subproofs dicts and merging them
         """
         random_vals = {}
-        {random_vals.update(subp.get_randomizers().copy()) for subp in self.subproofs}
+        {random_vals.update(subp.get_randomizers()) for subp in self.subproofs}
         return random_vals
 
     def recompute_commitment(self, challenge, responses):
@@ -188,50 +206,39 @@ class OrProof(Proof):
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
-            print("Can only simulate")
-            arr = [subp.get_prover() for subp in self.subproofs]
-
-            return OrProver(self, arr, {})
-        bigset = set(secrets_dict.keys())
-        # We sort them but we need to keep track of their initial index
-        ordered_proofs = dict(enumerate(self.subproofs))
+            return None
+        # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
-        sims = {}
-        for key, value in ordered_proofs.items():
-            if value.simulation:
-                sims[key] = value
-            else:
-                candidates[key] = value
-        # We need to choose one subproof to be actually computed among all which can be computed
-        # If the available secrets do not match the ones required in the chosen subproof, choose another
-        possible = list(candidates.keys())
+        for idx in range(len(self.subproofs)):
+            if not self.subproofs[idx].simulation:
+                candidates[idx] = self.subproofs[idx]
+        if len(candidates) == 0:
+            print("Cannot run an Or Proof if all elements are simulated")
+            return None
+        # Now choose a proof among the possible ones and try to get a prover from it.
+        # If for some reason it does not work (e.g some secrets are missing), remove it
+        # from the list of possible proofs and try again
         rd = random.SystemRandom()
-        chosen_idx = rd.choice(possible)
-        while any(x not in bigset for x in (candidates[chosen_idx].secret_vars)):
-            chosen_idx = rd.choice(possible)
-
-        elem = candidates.pop(chosen_idx)
-        subdict = dict((k, secrets_dict[k]) for k in set(elem.secret_vars))
-
-        # Now we get the simulators
-        sims.update(candidates)
-        for to_sim in sims.keys():
-            sims[to_sim] = sims[to_sim].get_prover()
-
-        # We add the legit prover
-        sims[chosen_idx] = elem.get_prover(subdict)
-
-        # Return a list of provers in the correct order
-        return OrProver(self, [sims[index] for index in sorted(sims)], secrets_dict)
+        # We would appreciate a do...while here >:(
+        possible = list(candidates.keys())
+        self.chosen_idx = rd.choice(possible)
+        # Feed the selected proof the secrets it needs if we have them, and try to get_prover
+        valid_prover = sub_proof_prover(self.subproofs[self.chosen_idx], secrets_dict)
+        while valid_prover is None:
+            possible.remove(self.chosen_idx)
+            # If there is no proof left, abort and say we cannot get a prover
+            if len(possible) == 0:
+                return None
+            self.chosen_idx = rd.choice(possible)
+            valid_prover = sub_proof_prover(
+                self.subproofs[self.chosen_idx], secrets_dict
+            )
+        return OrProver(self, valid_prover)
 
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
     def simulate_proof(self, responses_dict=None, challenge=None):
-        if responses_dict is None or any(
-            [x not in responses_dict.keys() for x in self.secret_vars]
-        ):
-            responses_dict = self.get_randomizers()
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         com = []
@@ -239,10 +246,7 @@ class OrProof(Proof):
         or_chals = []
         precom = []
         for index in range(len(self.subproofs) - 1):
-            subdict = {
-                key: responses_dict[key] for key in self.subproofs[index].secret_vars
-            }
-            transcript = self.subproofs[index].simulate_proof(subdict)
+            transcript = self.subproofs[index].simulate_proof()
             com.append(transcript.commitment)
             resp.append(transcript.responses)
             or_chals.append(transcript.challenge)
@@ -265,34 +269,25 @@ Important :
 
 
 class OrProver(Prover):
-    # This prover is built on subprovers, max one of them being a simulator
-    def __init__(self, proof, subprovers, secret_values):
-        self.subs = subprovers
+    def __init__(self, proof, subprover):
+        self.subprover = subprover
         self.proof = proof
-        self.secret_values = secret_values
-        self.true_prover_idx = self.find_legit_prover()
+        self.true_prover_idx = self.proof.chosen_idx
+        # Create a list to store the SimulationTranscripts
         self.simulations = []
         self.setup_simulations()
 
-    def find_legit_prover(self):
-        for index in range(len(self.subs)):
-            # In order to test this we need the OrProver and AndProver to also have a secrets_dict
-            if self.subs[index].secret_values != {}:
-                return index
-        print("No legit prover found, can only simulate the Or Proof")
-        return None
-
     def setup_simulations(self):
-        for index in range(len(self.subs)):
+        for index in range(len(self.proof.subproofs)):
             if index != self.true_prover_idx:
-                cur = self.subs[index].proof.simulate_proof()
+                cur = self.proof.subproofs[index].simulate_proof()
                 self.simulations.append(cur)
 
     def precommit(self):
         precommitment = []
-        for index in range(len(self.subs)):
+        for index in range(len(self.proof.subproofs)):
             if index == self.true_prover_idx:
-                precommitment.append(self.subs[index].precommit())
+                precommitment.append(self.subprover.precommit())
             else:
                 if index > self.true_prover_idx:
                     index1 = index - 1
@@ -308,9 +303,9 @@ class OrProver(Prover):
         if self.true_prover_idx == None:
             raise Exception("cannot commit in a simulator")
         commitment = []
-        for index in range(len(self.subs)):
+        for index in range(len(self.proof.subproofs)):
             if index == self.true_prover_idx:
-                commitment.append(self.subs[index].internal_commit(randomizers_dict))
+                commitment.append(self.subprover.internal_commit(randomizers_dict))
             else:
                 if index > self.true_prover_idx:
                     index1 = index - 1
@@ -324,10 +319,10 @@ class OrProver(Prover):
         residual_chal = find_residual_chal(chals, challenge, CHAL_LENGTH)
         response = []
         challenges = []
-        for index in range(len(self.subs)):
+        for index in range(len(self.proof.subproofs)):
             if index == self.true_prover_idx:
                 challenges.append(residual_chal)
-                response.append(self.subs[index].compute_response(residual_chal))
+                response.append(self.subprover.compute_response(residual_chal))
             else:
                 # Note len(simulations) = len(subproofs) - 1 !
                 if index > self.true_prover_idx:
@@ -403,24 +398,14 @@ class AndProof(Proof):
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
-            print("Can only simulate")
-            arr = [subp.get_prover() for subp in self.subproofs]
-            return AndProver(self, arr, {})
+            return None
 
-        def sub_proof_prover(sub_proof):
-            keys = set(sub_proof.secret_vars)
-            secrets_for_prover = []
-            for s_name in secrets_dict:
-                if s_name in keys:
-                    secrets_for_prover.append((s_name, secrets_dict[s_name]))
-            return sub_proof.get_prover(dict(secrets_for_prover))
-
-        andp = AndProver(
-            self,
-            [sub_proof_prover(sub_proof) for sub_proof in self.subproofs],
-            secrets_dict,
-        )
-        return andp
+        subs = [
+            sub_proof_prover(sub_proof, secrets_dict) for sub_proof in self.subproofs
+        ]
+        if None in subs:
+            return None
+        return AndProver(self, subs)
 
     def get_verifier(self):
         return AndVerifier(self, [subp.get_verifier() for subp in self.subproofs])
@@ -488,9 +473,8 @@ class AndProof(Proof):
 class AndProver(Prover):
     """:param subprovers: instances of Prover"""
 
-    def __init__(self, proof, subprovers, secret_values):
+    def __init__(self, proof, subprovers):
         self.subs = subprovers
-        self.secret_values = secret_values
         self.proof = proof
 
     def precommit(self):

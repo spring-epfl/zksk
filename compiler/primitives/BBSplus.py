@@ -197,11 +197,9 @@ class SignatureProof(Proof):
     def get_prover(self, secrets_dict={}):
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
-        if self.simulation:
-            resdict = {}
-        else:
-            resdict = self.secret_values
-        return SignatureProver(self, resdict)
+        if self.simulation or self.secret_values == {}:
+            return None
+        return SignatureProver(self, self.secret_values)
 
     def get_proof_id(self):
         return ["SignatureProof", self.generators, self.A1, self.A2, self.pair_lhs]

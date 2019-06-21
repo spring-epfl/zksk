@@ -18,7 +18,7 @@ def test():
     We define the G1Point class which overrides G1 and G2 points in such a way that pt.group actually returns the G1/G2 groups and not the GT
     Also, these points allow internal pair
 
-    >>> g=G.pair(G.gen1(), G.gen2())
+    >>> g = G.pair(G.gen1(), G.gen2())
     >>> gmg  = mG.generator()
     >>> g == gmg.pt
     True
@@ -64,10 +64,15 @@ def test():
     >>> g2*0 == g2*G.order()
     True
     """
-    return 1
+    return
 
 
 class BilinearGroupPair:
+    """
+    Abtracts a bilinear group pair containing two origin groups G1,G2 and the image group GT.
+    The underlying bplib.bp.BpGroup object is also embedded.
+    """
+
     def __init__(self):
         self.bpgp = BpGroup()
         self.GT = GTGroup(self)
@@ -88,6 +93,9 @@ class GTGroup:
     """
 
     def __init__(self, bp):
+        """
+        :param bp: The BilinearGroupPair instance embedding our groups
+        """
         self.bp = bp
         self.gen = None
         self.inf = None
@@ -118,6 +126,10 @@ class AdditivePoint:
     """
 
     def __init__(self, pt, bp):
+        """
+        :param pt: A bplib.bp.GTElem
+        :param bp: The BilinearGroupPair instance embedding our groups
+        """
         self.pt = pt
         self.bp = bp
         self.group = self.bp.GT
@@ -138,6 +150,9 @@ class AdditivePoint:
         return self.pt == other.pt
 
     def __add__(self, other):
+        """
+        Replaces the multiplicative syntax between two points by an additive one.
+        """
         return AdditivePoint(self.pt * (other.pt), self.bp)
 
     __rmul__ = __mul__
@@ -185,7 +200,7 @@ class G1Point:
 
 class G2Point:
     """
-    A wrapper for G2 points
+    A wrapper for bplib.bp.G2Elem points
     """
 
     def __init__(self, ecpt, bpairing):
@@ -198,6 +213,9 @@ class G2Point:
 
     def __add__(self, other):
         return G2Point(self.pt + other.pt, self.bp)
+
+    def __sub__(self, other):
+        return self + (-1 * other)
 
     def __mul__(self, nb):
         return G2Point(self.pt * nb, self.bp)
@@ -216,7 +234,7 @@ class G2Point:
 
 class G1Group:
     """
-    A wrapper for the G1 (behaving like an EcGroup) group. Group ID is 1 for G1.
+    A wrapper for the G1 (behaving like an EcGroup) group.
     """
 
     def __init__(self, bp):
@@ -252,7 +270,7 @@ class G1Group:
 
 class G2Group:
     """
-    A wrapper for the G2 group. Group ID is 2.
+    A wrapper for the G2 group. 
     """
 
     def __init__(self, bp):

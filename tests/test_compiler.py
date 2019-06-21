@@ -4,6 +4,7 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_code_path = os.path.join(root_dir, "compiler")
 sys.path.append(src_code_path)
 
+from Abstractions import *
 from CompositionProofs import *
 from primitives.DLRep import *
 from BilinearPairings import *
@@ -386,9 +387,8 @@ def test_simulate_andproof1():
     subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
-    andsim = andp.get_prover({})
-    tr = andsim.simulate_proof()
-    tr.statement = andsim.proof.prehash_statement().digest()
+    tr = andp.simulate_proof()
+    tr.statement = andp.prehash_statement().digest()
     assert not andv.verify_NI(tr)
 
 
@@ -914,7 +914,7 @@ def test_multi_and_BLAC_binding1():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr2 = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0]) * tab_g[0])
+    pr2 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -937,7 +937,7 @@ def test_multi_and_BLAC_binding1():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr21 = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0]) * tab_g[0])
+    pr21 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -1168,17 +1168,36 @@ def test_or_DLRNE():
     prov = orp.get_prover(secrets_values)
     ver = orp.get_verifier()
     precom = prov.precommit()
-
-    # pdb.set_trace()
-    sv_cpp = prov.subs[1].constructed_prover.proof.lhs
-    sv_pp = prov.proof.subproofs[1].constructed_proof.lhs
     ver.process_precommitment(precom)
-
-    sv_pp2 = prov.proof.subproofs[1].constructed_proof.lhs
     com = prov.commit()
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
-    ver.verify(resp)
+    assert ver.verify(resp)
+
+
+def test_or_or_DLRNE():
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2] * tab_g[3]
+
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+    pr2 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+    )
+    orpp = OrProof(pr1, pr2)
+    orp = OrProof(orpp, pr1, pr2)
+    prov = orp.get_prover(secrets_values)
+    ver = orp.get_verifier()
+    precom = prov.precommit()
+    ver.process_precommitment(precom)
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)
 
 
 def test_or_NI_DLRNE():

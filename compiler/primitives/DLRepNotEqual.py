@@ -35,11 +35,9 @@ class DLRepNotEqualProof(Proof):
     def get_prover(self, secrets_dict={}):
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
-        if self.simulation:
-            resdict = {}
-        else:
-            resdict = self.secret_values
-        return DLRepNotEqualProver(self, resdict)
+        if self.simulation or self.secret_values == {}:
+            return None
+        return DLRepNotEqualProver(self, self.secret_values)
 
     def get_verifier(self):
         return DLRepNotEqualVerifier(self)
