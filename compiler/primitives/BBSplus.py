@@ -271,7 +271,7 @@ class SignatureVerifier(Verifier):
     def send_challenge(self, com):
         statement, self.commitment = com
         self.proof.check_statement(statement)
-        self.challenge = self.constructed_verifier.send_challenge(com, mute=True)
+        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
         return self.challenge
 
     def check_responses_consistency(self, response, response_dict):

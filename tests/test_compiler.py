@@ -504,6 +504,7 @@ def test_and_or_proof():
     secrets[xa] = 18
     orproof = OrProof(pp1, pp2)
     andp = AndProof(orproof, pp0)
+    andp = AndProof(andp, DLRepProof(15*pp1.generators[0], Secret(value=15)*pp1.generators[0]))
     prov = andp.get_prover(secrets)
     ver = andp.get_verifier()
     com = prov.commit()
@@ -1261,7 +1262,8 @@ def test_signature_proof():
     prov = sigproof.get_prover(secret_dict)
     sigproof1 = SignatureProof([Secret() for _ in range(5)], pk)
     ver = sigproof1.get_verifier()
-    ver.process_precommitment(prov.precommit())
+    pc = prov.precommit()
+    ver.process_precommitment(pc)
     comm = prov.commit()
     chal = ver.send_challenge(comm)
     resp = prov.compute_response(chal)
@@ -1531,7 +1533,7 @@ def test_and_NI_sig():
     nip = andp.prove(secret_dict)
     assert andp.verify(nip)
 
-
+""" 
 def test_bm_gmap(benchmark):
     G = BpGroup()
     g1, g2 = G.gen1(), G.gen2()
@@ -1603,3 +1605,4 @@ def signature_proofNI(messages, signature, pk):
 
 def signature_verifyNI(proof, tr):
     return proof.verify(tr)
+ """
