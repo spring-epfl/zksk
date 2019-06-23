@@ -127,6 +127,7 @@ class Proof:
         )
         return verifier.verify(transcript.responses)
 
+
 def find_residual_chal(arr, challenge, chal_length):
     """ 
     Tool function to determine the complement to a global challenge in a list, i.e:
@@ -275,6 +276,7 @@ class OrProof(Proof):
         # Pack everything into a SimulationTranscript, pack the or_challenges in the response field
         return SimulationTranscript(com, challenge, (or_chals, resp), precom)
 
+
 class OrProver(Prover):
     def __init__(self, proof, subprover):
         """
@@ -340,7 +342,9 @@ class OrProver(Prover):
         Returns both the complete list of subchallenges (included the auxiliary challenge) and the list of responses, both ordered.
         :param challenge: The global challenge to use. All subchallenges must add to this one.
         """
-        residual_chal = find_residual_chal([el.challenge for el in self.simulations], challenge, CHAL_LENGTH)
+        residual_chal = find_residual_chal(
+            [el.challenge for el in self.simulations], challenge, CHAL_LENGTH
+        )
         response = []
         challenges = []
         for index in range(len(self.proof.subproofs)):
@@ -394,6 +398,7 @@ class AndProof(Proof):
     """
     A Proof representing the And conjunction of several subproofs.
     """
+
     def __init__(self, *subproofs):
         """
         Constructs the Or conjunction of several subproofs.
@@ -500,27 +505,16 @@ class AndProof(Proof):
         Raises an error if finds any.
         """
         if forbidden_secrets is None:
-            forbidden_secrets = []
+            forbidden_secrets = self.secret_vars.copy()
         for subp in self.subproofs:
-            # When we see an Or Proof, look if it features a secret seen elsewhere before
             if "Or" in subp.__class__.__name__:
-                if any(x in subp.secret_vars for x in forbidden_secrets):
-                    raise Exception(
-                        "Or flaw detected. Aborting. Try to flatten the proof to  \
-                        avoid shared secrets inside and outside an Or"
-                    )
-                for other_sub in self.subproofs:
-                    # Check if a sister of the Or Proof share secrets with it
-                    if other_sub != subp and any(
-                        set(subp.secret_vars) & set(other_sub.secret_vars)
-                    ):
+                for secret in set(subp.secret_vars):
+                    if forbidden_secrets.count(secret) > subp.secret_vars.count(secret):
                         raise Exception(
-                            "Or flaw detected (same_level). Aborting. Try to flatten the proof to  \
+                            "Or flaw detected. Aborting. Try to flatten the proof to  \
                         avoid shared secrets inside and outside an Or"
                         )
             elif "And" in subp.__class__.__name__:
-                fb = subp.secret_vars.copy()
-                forbidden_secrets.extend(fb)
                 subp.check_or_flaw(forbidden_secrets)
 
 
