@@ -100,6 +100,22 @@ class Proof:
         """
         pass
 
+    def update_randomizers(self, randomizers_dict):
+        """
+        Constructs a full dictionary of randomizers (also used as responses in simulations) by copying the values of the dict passed as parameter,
+        and drawing the other values at random until all the secrets have a randomizer.
+        :param randomizers_dict: A dictionary to enforce 
+        """
+        # If we are not provided a randomizer dict from above, we compute it.
+        if randomizers_dict is None:
+            randomizers_dict = self.get_randomizers()
+        # If we were passed an incomplete dictionary, fill it
+        elif any([x not in randomizers_dict for x in self.secret_vars]):
+            tmp = self.get_randomizers()
+            tmp.update(randomizers_dict)
+            randomizers_dict = tmp
+        return randomizers_dict
+
     def ec_encode(self, data):
         """
         Figures out which encoder to use in the petlib.pack function encode() and uses it.
@@ -501,13 +517,8 @@ class AndProof(Proof):
         :param responses_dict: A dictionary of responses to enforce (could come from an upper And Proof, for example). Draw one if None.
         :param challenge: The challenge to use in the proof. Draw one if None.
         """
-        if responses_dict is None:
-            responses_dict = self.get_randomizers()
-        # If we were passed an incomplete dictionary, fill it
-        elif any([x not in responses_dict for x in self.secret_vars]):
-            tmp = self.get_randomizers()
-            tmp.update(responses_dict)
-            responses_dict = tmp
+        # Fill the missing positions of the responses dictionary
+        responses_dict = self.update_randomizers(responses_dict)
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
         com = []
@@ -534,34 +545,36 @@ class AndProof(Proof):
 
 
 class AndProver(Prover):
-    """:param subprovers: instances of Prover"""
-
     def __init__(self, proof, subprovers):
+        """
+        Constructs a Prover for an And Proof, from a list of valid subprovers.
+        """
         self.subs = subprovers
         self.proof = proof
 
     def precommit(self):
+        """
+        Computes the precommitment for an And Proof, i.e a list of the precommitments of the subprovers.
+        If not applicable (not subprover outputs a precommitment), returns None.
+        """
         precommitment = []
         for idx in range(len(self.subs)):
+            # Collects precommitments one by one
             subprecom = self.subs[idx].precommit()
             if subprecom is not None:
                 if len(precommitment) == 0:
                     precommitment = [None] * len(self.subs)
                 precommitment[idx] = subprecom
+        # If any precommitment is valid, return the list. If all were None, return None
         return precommitment if len(precommitment) != 0 else None
 
     def internal_commit(self, randomizers_dict=None):
-        """:return: a AndProofCommitment instance from the commitments of the subproofs encapsulated by this and-proof"""
-        if randomizers_dict is None:
-            randomizers_dict = self.proof.get_randomizers()
-        elif any(
-            [sec not in randomizers_dict.keys() for sec in self.proof.secret_vars]
-        ):
-            # We were passed an incomplete dict, fill the empty slots but keep the existing ones
-            secret_to_random_value = self.proof.get_randomizers()
-            secret_to_random_value.update(randomizers_dict)
-            randomizers_dict = secret_to_random_value
-
+        """
+        Computes the commitment i.e a list of the commitments of the subprovers.
+        :param randomizers_dict: Randomizers to enforce to ensure responses consistency, which every subproof must use.
+        """
+        # Fill the missing values if necessary
+        randomizers_dict = self.proof.update_randomizers(randomizers_dict)
         self.commitment = []
         for subp in self.subs:
             self.commitment.append(
@@ -570,23 +583,26 @@ class AndProver(Prover):
         return self.commitment
 
     def compute_response(self, challenge):
-        """:return: the list (of type AndProofResponse) containing the subproofs responses"""  # r = secret*challenge + k
+        """
+        Returns a list of the responses of each subprover.
+        """
         return [subp.compute_response(challenge) for subp in self.subs]
 
 
 class AndVerifier(Verifier):
     def __init__(self, proof, subverifiers):
         """
-        :param subverifiers: instances of subtypes of Verifier
+        Constructs a Verifier for the And Proof, with a list of subverifiers.
         """
-
         self.subs = subverifiers
         self.proof = proof
 
     def send_challenge(self, commitment, mute=False):
         """
-        :param commitment: a petlib.bn.Bn number
-        :return: a random challenge smaller than 2**128
+        Stores the received commitment and generates a challenge. Checks the received hashed statement matches the one of the current proof.
+        Only called at the highest level or in embedded proofs working with precommitments.
+        :param commitment: A tuple (statement, actual_commitment) with actual_commitment a list of commitments, one for each subproof.
+        :param mute: Optional parameter to deactivate the statement check. In this case, the commitment parameter is simply the actual commitment. Useful in 2-level proofs for which we don't check the inner statements.
         """
         if mute:
             self.commitment = commitment
@@ -597,9 +613,12 @@ class AndVerifier(Verifier):
         return self.challenge
 
     def check_responses_consistency(self, responses, responses_dict={}):
-        """Checks the responses are consistent for reoccurring secret names. 
+        """
+        Checks the responses are consistent for reoccurring secret names. 
         Iterates through the subverifiers, gives them the responses related to them and constructs a response dictionary (with respect to secret names).
         If an inconsistency if found during this build, an error code is returned.
+        :param responses: The received list of responses for each subproof.
+        :param responses_dict: The dictionary to construct and use for comparison.
         """
         for i in range(len(self.subs)):
             if not self.subs[i].check_responses_consistency(
@@ -609,6 +628,9 @@ class AndVerifier(Verifier):
         return True
 
     def process_precommitment(self, precommitment):
+        """
+        Receives a list of precommitments for the subproofs (or None) and distributes them to the subverifiers.
+        """
         if precommitment is None:
             return
         for idx in range(len(self.subs)):
@@ -617,9 +639,9 @@ class AndVerifier(Verifier):
     def check_adequate_lhs(self):
         """
         Check that all the left-hand sides of the proofs have a coherent value.
-        In particular, it will return False if a DLRepNotEqualProof is in the tree and
+        For instance, it will return False if a DLRepNotEqualProof is in the tree and
         if it is about to prove its components are in fact equal.
-        This allows not to waste computation time in running useless verifications.
+        This allows to not waste computation time in running useless verifications.
         """
         for sub in self.subs:
             if not sub.check_adequate_lhs():

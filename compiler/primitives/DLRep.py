@@ -126,13 +126,8 @@ class DLRepProof(Proof):
         :param responses_dict: a dictionary from secret names (strings) to responses (petlib.bn.Bn numbers)
         :param challenge: the challenge to enforce in the simulation
         """
-        if responses_dict is None :
-            responses_dict = self.get_randomizers()
-        # If we were passed an incomplete dictionary, fill it
-        elif any(key not in responses_dict for key in self.secret_vars):
-            tmp = self.get_randomizers()
-            tmp.update(responses_dict)
-            responses_dict = tmp
+        # Fill the missing positions of the responses dictionary
+        responses_dict = self.update_randomizers(responses_dict)
         if challenge is None:
             challenge = chal_randbits(CHAL_LENGTH)
 
@@ -154,9 +149,8 @@ class DLRepProver(Prover):
         :param randomizers_dict: Optional dictionary of random values for the Secret objects. Every value not enforced will be generated at random.
         :return: A single commitment (base for the group), sum of bases (each weighted by the corresponding randomizer).
         """
-        # If we are not provided a randomizer dict from above, we compute it.
-        if randomizers_dict == None or randomizers_dict == {}:
-            randomizers_dict = self.proof.get_randomizers()
+        # Fill the missing positions of the randomizers dictionary
+        randomizers_dict = self.proof.update_randomizers(randomizers_dict)
         # Compute an ordered list of randomizers mirroring the Secret objects
         self.ks = [randomizers_dict[sec] for sec in self.proof.secret_vars]
         subcommits = [a * b for a, b in zip(self.ks, self.proof.generators)]
