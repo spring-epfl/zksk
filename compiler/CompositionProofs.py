@@ -93,6 +93,13 @@ class Proof:
             raise Exception("Proof statements mismatch, impossible to verify")
         return cur_statement
 
+    
+    def check_or_flaw(self, forbidden_secrets=None):
+        """
+        Check if a secret appears both inside an outside an Or Proof. Does nothing if not overriden.
+        """
+        pass
+
     def ec_encode(self, data):
         """
         Figures out which encoder to use in the petlib.pack function encode() and uses it.
@@ -244,6 +251,21 @@ class OrProof(Proof):
 
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
+
+    def check_or_flaw(self, forbidden_secrets=None):
+        """ 
+        Checks for appearance of reoccuring secrets both inside and outside an Or Proof.
+        Raises an error if finds any. Method called from AndProof.check_or_flaw
+        :param forbidden_secrets: A list of all the secrets in the mother proof.
+        """
+        if forbidden_secrets is None:
+            return
+        for secret in set(self.secret_vars):
+            if forbidden_secrets.count(secret) > self.secret_vars.count(secret):
+                raise Exception(
+                    "Or flaw detected. Aborting. Try to flatten the proof to  \
+                avoid shared secrets inside and outside an Or"
+                )
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -502,20 +524,13 @@ class AndProof(Proof):
     def check_or_flaw(self, forbidden_secrets=None):
         """ 
         Checks for appearance of reoccuring secrets both inside and outside an Or Proof.
-        Raises an error if finds any.
+        Raises an error if finds any. This method only sets the list of all secrets in the tree and triggers a depth-search first for Or Proofs
+        :param forbidden_secrets: A list of all the secrets in the mother proof.
         """
         if forbidden_secrets is None:
             forbidden_secrets = self.secret_vars.copy()
         for subp in self.subproofs:
-            if "Or" in subp.__class__.__name__:
-                for secret in set(subp.secret_vars):
-                    if forbidden_secrets.count(secret) > subp.secret_vars.count(secret):
-                        raise Exception(
-                            "Or flaw detected. Aborting. Try to flatten the proof to  \
-                        avoid shared secrets inside and outside an Or"
-                        )
-            elif "And" in subp.__class__.__name__:
-                subp.check_or_flaw(forbidden_secrets)
+            subp.check_or_flaw(forbidden_secrets)
 
 
 class AndProver(Prover):
