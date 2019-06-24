@@ -145,7 +145,7 @@ class Verifier:
         :rtype: Boolean
         """
         # Optional verification criteria
-        if not self.check_adequate_lhs():
+        if not self.proof.check_adequate_lhs():
             return False
         if not self.check_responses_consistency(arg, {}):
             raise Exception("Responses for a same secret name do not match!")
@@ -165,7 +165,7 @@ class Verifier:
         # Check the proofs statements match, gather the local statement
         prehash = self.proof.check_statement(transcript.statement)
         # Optional verification criteria
-        if not self.check_adequate_lhs():
+        if not self.proof.check_adequate_lhs():
             return False
         if not self.check_responses_consistency(transcript.responses, {}):
             raise Exception("Responses for a same secret name do not match!")
@@ -187,11 +187,6 @@ class Verifier:
         """
         return False
 
-    def check_adequate_lhs(self):
-        """
-        Optional verification criteria to be checked at verification step. Returns True by default, to be overriden if necessary.
-        """
-        return True
 
 
 def check_groups(list_of_secret_vars, list_of_generators):

@@ -11,12 +11,18 @@ from BilinearPairings import *
 
 
 class Signature:
+    """
+    A named tuple for a (A,e,s) signature.
+    """
     def __init__(self, A, e, s_):
         self.A = A
         self.e = e
         self.s = s_
 
     def verify_signature(self, pk, messages):
+        """
+        Verifies the validity of the signature with respect to the given public key and set of messages.
+        """
         generators = pk.generators[: len(messages) + 2]
         product = generators[0] + generators[0].group.wsum(
             ([self.s] + messages), generators[1:]
@@ -28,7 +34,6 @@ class UserCommitmentMessage:
     """
     Embeds the product to be presigned by the issuer. If blinded by a user pedersen commitment, a NI proof is also specified.
     """
-
     def __init__(self, commitment, pedersen_NIproof=None):
         self.commitment_message = commitment
         self.NIproof = pedersen_NIproof
@@ -48,27 +53,28 @@ class UserCommitmentMessage:
 
 
 class SignatureCreator:
+    """
+    Constructs a UserCommitment i.e the presigned product along if blind with a proof of correct construction (non_interactive)
+    """
     def __init__(self, pk):
         self.pk = pk
         self.s1 = None
 
     def commit(self, messages, zkp=False):
         """
-        Prepare a pedersen commitment for the correct construction of the sequence to be signed.
-        Returns a non-interactive proof if zkp parameter is set to true.
+        If zkp parameter is set to True, prepares a pedersen commitment to the set of messages to be signed and a non-interactive proof of correct construction.
+        Else, simply constructs the product of the attributes.
+        Packs the product/commitment and the optional proof in a UserCommitmentMessage object.
         """
         lhs = self.pk.generators[0].group.wsum(
             messages, self.pk.generators[2 : len(messages) + 2]
         )
-        self.s1 = Bn(0)
         NIproof = None
         if zkp:
             self.s1 = self.pk.generators[0].group.order().random()
             lhs = self.s1 * self.pk.generators[1] + lhs
             # define secret names as s' m1 m2 ...mL
-            names = [Secret("s'")] + [
-                Secret("m" + str(i + 1)) for i in range(len(messages))
-            ]
+            names = [Secret() for _ in range(len(messages)+1)            ]
             secrets = [self.s1] + messages
             rhs = wsum_secrets(names, self.pk.generators[1 : len(messages) + 2])
             pedersen_proof = DLRepProof(lhs, rhs)
@@ -77,18 +83,24 @@ class SignatureCreator:
 
     def obtain_signature(self, presignature):
         """
-        S1 is the part of the signature blinding factor which is on the user side
+        Updates the received presignature into a complete signature.
+        s1 is the part of the signature blinding factor which is on the user side.
         """
-        new_s = presignature.s + self.s1
+        if self.s1 is None:
+            new_s = presignature.s
+        else:
+            new_s = presignature.s + self.s1
         return Signature(presignature.A, presignature.e, new_s)
 
-
 class KeyPair:
+    """
+    Packs a public key with its private key and a list of canonical bases to use in proofs.
+    """
     def __init__(self, bilinearpair, length):
         """
-        length should be an upperbound on the number of messages
+        :param bilinearpair: Of type BilinearGroupPair, featuring a G1 and a G2 group from which are drawn the g_is and h0.
+        :param length: An upperbound on the number of generators needed to compute the proof. Should be at least 2 + the number of messages.
         """
-
         self.generators = []
         for i in range(length + 2):
             randWord = str(i + 1)
@@ -96,18 +108,25 @@ class KeyPair:
                 bilinearpair.G1.hash_to_point(randWord.encode("UTF-8"))
             )
         self.h0 = bilinearpair.G2.generator()
-
         self.sk = SecretKey(bilinearpair.G1.order().random(), self)
         self.pk = PublicKey(self.sk.gamma * self.h0, self.generators, self.h0)
         self.sk.pk = self.pk
 
 
 class PublicKey:
+    """
+    An abstraction for a public key.
+    """
     def __init__(self, w, generators, h0):
+        """
+        Initializes the attributes and precomputes the group pairings.
+        :param w: The public key value.
+        :param generators: the G1 generators to use in proofs. Length should be at least 2 + number of messages.
+        """
         self.w = w
         self.generators = generators
         self.h0 = h0
-
+        self.gen_pairs = [g.pair(self.h0) for g in self.generators]
 
 class SecretKey:
     def __init__(self, value, keypair):
@@ -117,7 +136,8 @@ class SecretKey:
 
     def sign(self, lhs):
         """
-        Signs a committed message Cm ie returns A,e,s such that A = (g0 + s*g1 + Cm) * 1/e+gamma
+        Signs a committed message (typically a product, blind or not) ie returns A,e,s2 such that A = (g0 + s2*g1 + Cm) * 1/e+gamma
+        If the product was blinded by the user's s1 secret value, user has to update the signature.
         """
         pedersen_product = lhs
         e = self.h0.group.order().random()
@@ -127,40 +147,43 @@ class SecretKey:
         return Signature(A, e, s2)
 
 
-class SignatureProof(Proof):
+class SignatureProof(IncompleteProof):
     """
-    Proof of knowledge of a (A,e,s) signature over a set of messages.
+    Proof of knowledge of a (A,e,s) signature over a set (known length) of (hidden) messages.
     """
-
-    def __init__(self, secret_vars, pk, signature=None):
+    def __init__(self, secret_vars, pk, signature=None, binding=True):
         """
-        Instantiates a Signature Proof which is an enhanced version of AndProof allowing to access additional parameters
-        secret_vars should be the alias for signature.e, the alias for signature.s, and the aliases for the messages.
+        Instantiates a Signature Proof which is an augmented version of AndProof allowing to access additional parameters.
         If the object is used for proving, it requires a signature argument.
+        If binding keyord argument is set to True, the constructor will parse the two first elements of secret_vars as the Secret variables for the e and s attributes of the signature.
+        Else, will internally declare its own.
         """
+        self.ProverClass, self.VerifierClass = SignatureProver, SignatureVerifier
         self.pk = pk
+        if not binding:
+            # We add two Secret slots for e and s if necessary
+            secret_vars = [Secret(), Secret] + secret_vars
         # We need L+1 generators for L messages. secret_vars are messages plus 'e' and 's'
         self.generators = pk.generators[: len(secret_vars)]
         self.aliases = [Secret(), Secret(), Secret(), Secret()]
         self.signature = signature
+        self.constructed_proof = None
+        # Below is boilerplate
         self.secret_vars = secret_vars
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
+        if signature is not None:
+            # Digest the signature parameters
+            self.secret_values.update({self.secret_vars[0]:signature.e, self.secret_vars[1]:signature.s})
         for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
-        self.constructed_proof = None
         self.simulation = False
 
     def build_constructed_proof(self, precommitment):
         """
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
-        It uses group pairings, DLRep and And Proofs.
-        public info should be : 
-            - w (public key), 
-            - h0 (base of the public key), 
-            - generators (of length len(m)+2)
-
+        :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
@@ -171,16 +194,13 @@ class SignatureProof(Proof):
             + self.aliases[3] * g2
             + self.secret_vars[0] * (-1 * self.A1),
         )
-
-        gen_pairs = [g.pair(self.pk.h0) for g in self.generators]
-        self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * gen_pairs[0])
+        self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * self.pk.gen_pairs[0])
         generators = [
             -1 * (self.A2.pair(self.pk.h0)),
             self.generators[2].pair(self.pk.w),
-            gen_pairs[2],
+            self.pk.gen_pairs[2],
         ]
-        generators.extend(gen_pairs[1:])
-
+        generators.extend(self.pk.gen_pairs[1:len(self.generators)])
         # Build secret names [e, r1, delta1, s, m_i]
         new_secret_vars = (
             self.secret_vars[:1]
@@ -190,38 +210,11 @@ class SignatureProof(Proof):
         pairings_proof = DLRepProof(
             self.pair_lhs, wsum_secrets(new_secret_vars, generators)
         )
-
         self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
+        self.constructed_proof.lhs = [subp.lhs for subp in self.constructed_proof.subproofs]
         return self.constructed_proof
 
-    def get_prover(self, secrets_dict={}):
-        # First we update the dictionary we have with the additional secrets, and process it
-        self.secret_values.update(secrets_dict)
-        if self.simulation or self.secret_values == {}:
-            return None
-        return SignatureProver(self, self.secret_values)
-
-    def get_proof_id(self):
-        return ["SignatureProof", self.generators, self.A1, self.A2, self.pair_lhs]
-
-    def get_verifier(self):
-        return SignatureVerifier(self)
-
-    def recompute_commitment(self, challenge, responses):
-        return self.constructed_proof.recompute_commitment(challenge, responses)
-
-
-class SignatureProver(Prover):
-    def internal_commit(self, randomizers_dict=None):
-        """
-        Triggers the inside prover commit. Transfers the randomizer dict coming from above.
-        """
-        if self.proof.constructed_proof is None:
-            raise Exception(
-                "Please precommit before commiting, else proofs lack parameters"
-            )
-        return self.constructed_prover.internal_commit(randomizers_dict)
-
+class SignatureProver(IncompleteProver):
     def precommit(self):
         """
         Generates the lacking information to construct a complete proof and returns it.
@@ -240,41 +233,9 @@ class SignatureProver(Prover):
         new_secrets = [r1, r2, delta1, delta2]
         A1 = r1 * self.proof.generators[1] + r2 * self.proof.generators[2]
         A2 = r1 * self.proof.generators[2] + self.proof.signature.A
-
         self.precommitment = [A1, A2]
-        self.proof.build_constructed_proof(self.precommitment)
-
-        # Map the secret names to the values we just computed, and update the secrets dictionary accordingly
-        self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
-        self.constructed_dict.update(self.secret_values)
-        self.constructed_prover = self.proof.constructed_proof.get_prover(
-            self.constructed_dict
-        )
+        self.process_precommitment(new_secrets)
         return self.precommitment
 
-    def compute_response(self, challenge):
-        self.challenge = challenge
-        self.constructed_prover.challenge = challenge
-        self.response = self.constructed_prover.compute_response(challenge)
-        return self.response
-
-    def simulate_proof(self, challenge=None):
-        pass
-
-
-class SignatureVerifier(Verifier):
-    def process_precommitment(self, precommitment):
-        self.precommitment = precommitment
-        self.proof.build_constructed_proof(precommitment)
-        self.constructed_verifier = self.proof.constructed_proof.get_verifier()
-
-    def send_challenge(self, com):
-        statement, self.commitment = com
-        self.proof.check_statement(statement)
-        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
-        return self.challenge
-
-    def check_responses_consistency(self, response, response_dict):
-        return self.constructed_verifier.check_responses_consistency(
-            response, response_dict
-        )
+class SignatureVerifier(IncompleteVerifier):
+    pass

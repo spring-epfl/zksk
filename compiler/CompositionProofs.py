@@ -93,6 +93,12 @@ class Proof:
             raise Exception("Proof statements mismatch, impossible to verify")
         return cur_statement
 
+    def check_adequate_lhs(self):
+        """
+        Optional verification criteria to be checked at verification step. Returns True by default, to be overriden if necessary.
+        """
+        return True
+
     
     def check_or_flaw(self, forbidden_secrets=None):
         """
@@ -150,6 +156,103 @@ class Proof:
         )
         return verifier.verify(transcript.responses)
 
+class IncompleteProof(Proof):
+    """
+    A framework for Proofs dealing with precommitments.
+    One needs to initalize self.ProverClass and self.VerifierClass in the init.
+    The idea is to draw a Prover capable of generating a precommitment, and use it to construct a legit constructed proof.
+    """
+    def get_prover(self, secrets_dict={}):
+        # First we update the dictionary we have with the additional secrets, and process it
+        self.secret_values.update(secrets_dict)
+        if self.simulation or self.secret_values == {}:
+            return None
+        return self.ProverClass(self, self.secret_values)
+
+    def get_verifier(self):
+        return self.VerifierClass(self)
+
+    def recompute_commitment(self, challenge, responses):
+        """
+        Recomputes the commitment. 
+        """
+        return self.constructed_proof.recompute_commitment(challenge, responses)
+    
+    def get_proof_id(self):
+        """
+        Packs the proof statement as the proof name, the list of generators and the precommitment.
+        """
+        st = [
+            self.__class__.__name__,
+            self.constructed_proof.generators,
+            self.constructed_proof.lhs,
+        ]
+        return st
+
+class IncompleteProver(Prover):
+    """
+    A framework for Provers dealing with precommitments. The Prover will create a constructed Prover and wrap its methods.
+    """
+    def internal_commit(self, randomizers_dict=None):
+        """
+        Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
+        used if the binding of the proof is set True.
+        """
+        if self.proof.constructed_proof is None:
+            raise Exception(
+                "Please precommit before commiting, else proofs lack parameters"
+            )
+        return self.constructed_prover.internal_commit(randomizers_dict)
+
+    def compute_response(self, challenge):
+        """
+        Wraps the response computation for the inner proof.
+        """
+        self.challenge = challenge
+        self.constructed_prover.challenge = challenge
+        self.response = self.constructed_prover.compute_response(challenge)
+        return self.response
+
+    def process_precommitment(self, new_secrets):
+        """
+        Triggers the inner proof construction and extracts a prover from it given the secrets.
+        """
+        self.proof.build_constructed_proof(self.precommitment)
+        # Map the secret names to the values we just computed, and update the secrets dictionary accordingly
+        self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
+        self.constructed_dict.update(self.secret_values)
+        self.constructed_prover = self.proof.constructed_proof.get_prover(
+            self.constructed_dict
+        )
+
+class IncompleteVerifier(Verifier):
+    """
+    A framework for Verifiers dealing with precommitments.
+    """
+    def process_precommitment(self, precommitment):
+        """
+        Receives the precommitment and triggers the inner proof construction.
+        """
+        self.precommitment = precommitment
+        self.proof.build_constructed_proof(precommitment)
+        self.constructed_verifier = self.proof.constructed_proof.get_verifier()
+
+    def send_challenge(self, com):
+        """
+        Checks the received statement and transfers the commitment to the inner proof, without making it check any statement.
+        """
+        statement, self.commitment = com
+        self.proof.check_statement(statement)
+        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
+        return self.challenge
+
+    def check_responses_consistency(self, response, response_dict):
+        """
+        Wraps the inner proof responses consistency check.
+        """
+        return self.constructed_verifier.check_responses_consistency(
+            response, response_dict
+        )
 
 def find_residual_chal(arr, challenge, chal_length):
     """ 
@@ -282,6 +385,18 @@ class OrProof(Proof):
                     "Or flaw detected. Aborting. Try to flatten the proof to  \
                 avoid shared secrets inside and outside an Or"
                 )
+
+    def check_adequate_lhs(self):
+        """
+        Check that all the left-hand sides of the proofs have a coherent value.
+        For instance, it will return False if a DLRepNotEqualProof is in the tree and
+        if it is about to prove its components are in fact equal.
+        This allows to not waste computation time in running useless verifications.
+        """
+        for sub in self.subproofs:
+            if not sub.check_adequate_lhs():
+                return False
+        return True
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -544,6 +659,18 @@ class AndProof(Proof):
             subp.check_or_flaw(forbidden_secrets)
 
 
+    def check_adequate_lhs(self):
+        """
+        Check that all the left-hand sides of the proofs have a coherent value.
+        For instance, it will return False if a DLRepNotEqualProof is in the tree and
+        if it is about to prove its components are in fact equal.
+        This allows to not waste computation time in running useless verifications.
+        """
+        for sub in self.subproofs:
+            if not sub.check_adequate_lhs():
+                return False
+        return True
+
 class AndProver(Prover):
     def __init__(self, proof, subprovers):
         """
@@ -635,15 +762,3 @@ class AndVerifier(Verifier):
             return
         for idx in range(len(self.subs)):
             self.subs[idx].process_precommitment(precommitment[idx])
-
-    def check_adequate_lhs(self):
-        """
-        Check that all the left-hand sides of the proofs have a coherent value.
-        For instance, it will return False if a DLRepNotEqualProof is in the tree and
-        if it is about to prove its components are in fact equal.
-        This allows to not waste computation time in running useless verifications.
-        """
-        for sub in self.subs:
-            if not sub.check_adequate_lhs():
-                return False
-        return True

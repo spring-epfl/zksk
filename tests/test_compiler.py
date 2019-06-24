@@ -670,7 +670,7 @@ def test_BLAC():
     chal = ver.send_challenge(commitment)
 
     resp = prov.compute_response(chal)
-    assert ver.check_adequate_lhs() and ver.verify(resp)
+    assert ver.proof.check_adequate_lhs() and ver.verify(resp)
 
 
 def test_false_BLAC1():
