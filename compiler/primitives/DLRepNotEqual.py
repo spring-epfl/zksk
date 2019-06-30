@@ -10,14 +10,19 @@ if src_code_path not in sys.path:
 from CompositionProofs import *
 from primitives.DLRep import *
 
-class DLRepNotEqualProof(IncompleteProof):
+
+class DLRepNotEqualProof(BaseProof):
     def __init__(self, valid_tuple, invalid_tuple, secret_vars, binding=False):
         """
         Instantiates a Proof of inequal logarithms: takes (H0,h0), (H1,h1), [x=Secret(value=...)] such that H0 = x*h0 and H1 != x*h1.
         All these arguments should be iterable. The binding keyword argument allows to make the proof bind the x to an other proof.
         If not set to True, it is not possible to assert the same x was used in an other proof (even in an And conjunction)!
         """
-        self.ProverClass, self.VerifierClass = DLRepNotEqualProver, DLRepNotEqualVerifier
+        self.ProverClass, self.VerifierClass = (
+            DLRepNotEqualProver,
+            DLRepNotEqualVerifier,
+        )
+        self.precommitment_size = 1
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
         # Declare two inner secrets whicch will depend on x
@@ -26,13 +31,7 @@ class DLRepNotEqualProof(IncompleteProof):
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.binding = binding
         self.constructed_proof = None
-        # Below is boilerplate
         self.secret_vars = secret_vars
-        # Construct a dictionary with the secret values we already know
-        self.secret_values = {}
-        for sec in self.secret_vars:
-            if sec.value is not None:
-                self.secret_values[sec] = sec.value
         self.simulation = False
 
     def build_constructed_proof(self, precommitment):
@@ -64,19 +63,8 @@ class DLRepNotEqualProof(IncompleteProof):
                 return False
         return True
 
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        """
-        Simulates the DLRepProof.
-        """
-        group, lhs = self.generators[0].group, None
-        while lhs is None or lhs == group.infinite():
-            lhs = group.order().random() * group.generator()
-        self.build_constructed_proof([lhs])
-        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
-        tr.precommitment = [lhs]
-        return tr
 
-class DLRepNotEqualProver(IncompleteProver):
+class DLRepNotEqualProver(BaseProver):
     def precommit(self):
         """
         Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
@@ -94,7 +82,9 @@ class DLRepNotEqualProver(IncompleteProver):
         self.process_precommitment(new_secrets)
         return self.precommitment
 
-class DLRepNotEqualVerifier(IncompleteVerifier):
+
+class DLRepNotEqualVerifier(BaseVerifier):
     """ A wrapper for an AndVerifier such that the proof can be initialized without the full information.
     """
+
     pass

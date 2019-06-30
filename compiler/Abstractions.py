@@ -188,7 +188,6 @@ class Verifier:
         return False
 
 
-
 def check_groups(list_of_secret_vars, list_of_generators):
     """
     Tool function checking that if two secrets in the proof are the same, the generators at corresponding indices induce groups of same order.

@@ -1,4 +1,5 @@
 from Abstractions import *
+import copy
 
 
 class Proof:
@@ -99,7 +100,6 @@ class Proof:
         """
         return True
 
-    
     def check_or_flaw(self, forbidden_secrets=None):
         """
         Check if a secret appears both inside an outside an Or Proof. Does nothing if not overriden.
@@ -156,16 +156,32 @@ class Proof:
         )
         return verifier.verify(transcript.responses)
 
-class IncompleteProof(Proof):
+    def __repr__(self):
+        return "\n" + str(self.get_proof_id())
+
+
+class BaseProof(Proof):
     """
     A framework for Proofs dealing with precommitments.
     One needs to initalize self.ProverClass and self.VerifierClass in the init.
     The idea is to draw a Prover capable of generating a precommitment, and use it to construct a legit constructed proof.
     """
+
     def get_prover(self, secrets_dict={}):
+        # Construct a dictionary with the secret values we already know
+        self.secret_values = {}
+        for sec in self.secret_vars:
+            if sec.value is not None:
+                self.secret_values[sec] = sec.value
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
-        if self.simulation or self.secret_values == {}:
+        if (
+            self.simulation
+            or self.secret_values == {}
+            or any(
+                sec not in self.secret_values.keys() for sec in set(self.secret_vars)
+            )
+        ):
             return None
         return self.ProverClass(self, self.secret_values)
 
@@ -177,22 +193,43 @@ class IncompleteProof(Proof):
         Recomputes the commitment. 
         """
         return self.constructed_proof.recompute_commitment(challenge, responses)
-    
+
     def get_proof_id(self):
         """
         Packs the proof statement as the proof name, the list of generators and the precommitment.
         """
-        st = [
-            self.__class__.__name__,
-            self.constructed_proof.generators,
-            self.constructed_proof.lhs,
-        ]
+        if self.constructed_proof is not None:
+            st = [
+                self.__class__.__name__,
+                self.constructed_proof.generators,
+                self.constructed_proof.lhs,
+            ]
+        else:
+            st = [self.__class__.__name__, self.generators]
         return st
 
-class IncompleteProver(Prover):
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        """
+        Simulates the BaseProof. 
+        Assumes all precommitment elements are in the same group, and that the number of such elements is known in advance.
+        """
+        group = self.generators[0].group
+        precommitment = []
+        for _ in range(self.precommitment_size):
+            precommitment.append(
+                group.hash_to_point(group.order().random().repr().encode("UTF-8"))
+            )
+        self.build_constructed_proof(precommitment)
+        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
+        tr.precommitment = precommitment
+        return tr
+
+
+class BaseProver(Prover):
     """
     A framework for Provers dealing with precommitments. The Prover will create a constructed Prover and wrap its methods.
     """
+
     def internal_commit(self, randomizers_dict=None):
         """
         Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
@@ -225,10 +262,12 @@ class IncompleteProver(Prover):
             self.constructed_dict
         )
 
-class IncompleteVerifier(Verifier):
+
+class BaseVerifier(Verifier):
     """
     A framework for Verifiers dealing with precommitments.
     """
+
     def process_precommitment(self, precommitment):
         """
         Receives the precommitment and triggers the inner proof construction.
@@ -243,7 +282,9 @@ class IncompleteVerifier(Verifier):
         """
         statement, self.commitment = com
         self.proof.check_statement(statement)
-        self.challenge = self.constructed_verifier.send_challenge(self.commitment, mute=True)
+        self.challenge = self.constructed_verifier.send_challenge(
+            self.commitment, mute=True
+        )
         return self.challenge
 
     def check_responses_consistency(self, response, response_dict):
@@ -253,6 +294,7 @@ class IncompleteVerifier(Verifier):
         return self.constructed_verifier.check_responses_consistency(
             response, response_dict
         )
+
 
 def find_residual_chal(arr, challenge, chal_length):
     """ 
@@ -288,12 +330,14 @@ class OrProof(Proof):
     def __init__(self, *subproofs):
         """
         Constructs the Or conjunction of several subproofs.
+        Subproofs are copied at instantiation.
         :param subproofs: An arbitrary number of proofs. 
         """
         if len(subproofs) < 2:
             raise Exception("OrProof needs >1 arguments !")
-
-        self.subproofs = list(subproofs)
+        # We will make a shallow copy of each subproof so they dont mess up with each other.
+        # This step is important in Or Proof since we can have different outputs for a same proof (independent simulations or simulations/execution)
+        self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
         self.generators = get_generators(self.subproofs)
         self.secret_vars = get_secret_vars(self.subproofs)
@@ -548,19 +592,21 @@ class OrVerifier(Verifier):
 
 
 class AndProof(Proof):
-    """
-    A Proof representing the And conjunction of several subproofs.
-    """
-
     def __init__(self, *subproofs):
         """
-        Constructs the Or conjunction of several subproofs.
+        Constructs the And conjunction of several subproofs.
+        Subproofs are copied at instantiation.
         :param subproofs: An arbitrary number of proofs. 
         """
         if len(subproofs) < 2:
             raise Exception("AndProof needs >1 arguments !")
 
-        self.subproofs = list(subproofs)
+        # We will make a shallow copy of each subproof so they dont mess up with each other.
+        # This step is important in case we have proofs which locally draw random values.
+        # It ensures several occurrences of the same proof in the tree indeed have their own randomnesses
+
+        self.subproofs = [copy.copy(p) for p in list(subproofs)]
+
         self.generators = get_generators(self.subproofs)
         self.secret_vars = get_secret_vars(self.subproofs)
         # Construct a dictionary with the secret values we already know
@@ -658,7 +704,6 @@ class AndProof(Proof):
         for subp in self.subproofs:
             subp.check_or_flaw(forbidden_secrets)
 
-
     def check_adequate_lhs(self):
         """
         Check that all the left-hand sides of the proofs have a coherent value.
@@ -670,6 +715,7 @@ class AndProof(Proof):
             if not sub.check_adequate_lhs():
                 return False
         return True
+
 
 class AndProver(Prover):
     def __init__(self, proof, subprovers):

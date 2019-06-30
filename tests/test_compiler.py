@@ -504,7 +504,9 @@ def test_and_or_proof():
     secrets[xa] = 18
     orproof = OrProof(pp1, pp2)
     andp = AndProof(orproof, pp0)
-    andp = AndProof(andp, DLRepProof(15*pp1.generators[0], Secret(value=15)*pp1.generators[0]))
+    andp = AndProof(
+        andp, DLRepProof(15 * pp1.generators[0], Secret(value=15) * pp1.generators[0])
+    )
     prov = andp.get_prover(secrets)
     ver = andp.get_verifier()
     com = prov.commit()
@@ -1186,10 +1188,44 @@ def test_or_or_DLRNE():
         [secrets_aliases[0]],
         binding=True,
     )
+    pr11 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
     pr2 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
     )
+    pr3 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+    )
     orpp = OrProof(pr1, pr2)
+    orp = OrProof(orpp, pr11, pr3)
+    prov = orp.get_prover(secrets_values)
+    ver = orp.get_verifier()
+    precom = prov.precommit()
+    ver.process_precommitment(precom)
+    com = prov.commit()
+    chal = ver.send_challenge(com)
+    resp = prov.compute_response(chal)
+    assert ver.verify(resp)
+
+
+def test_or_and_DLRNE():
+    lhs_tab = [x * g for x, g in zip(secret_tab, tab_g)]
+    y3 = secret_tab[2] * tab_g[3]
+
+    pr1 = DLRepNotEqualProof(
+        [lhs_tab[0], tab_g[0]],
+        [lhs_tab[1], tab_g[1]],
+        [secrets_aliases[0]],
+        binding=True,
+    )
+    pr2 = DLRepNotEqualProof(
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]], binding=True
+    )
+    orpp = AndProof(pr1, pr2)
     orp = OrProof(orpp, pr1, pr2)
     prov = orp.get_prover(secrets_values)
     ver = orp.get_verifier()
@@ -1533,6 +1569,132 @@ def test_and_NI_sig():
     nip = andp.prove(secret_dict)
     assert andp.verify(nip)
 
+
+def test_or_NI_sig():
+    mG = BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs.commitment_message)
+    signature = creator.obtain_signature(presignature)
+    e, s, m1, m2, m3 = (Secret() for _ in range(5))
+    secret_dict = {
+        e: signature.e,
+        s: signature.s,
+        m1: messages[0],
+        m2: messages[1],
+        m3: messages[2],
+    }
+
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature2 = sk.sign(lhs.commitment_message)
+    signature2 = creator.obtain_signature(presignature2)
+
+    e1, s1 = (Secret() for _ in range(2))
+    secret_dict2 = {
+        e1: signature2.e,
+        s1: signature2.s,
+        m1: messages[0],
+        m2: messages[1],
+        m3: messages[2],
+    }
+    sigproof1 = SignatureProof([e1, s1, m1, m2, m3], pk, signature2)
+
+    secret_dict.update(secret_dict2)
+    andp = sigproof | sigproof1
+    nip = andp.prove(secret_dict)
+    assert andp.verify(nip)
+
+
+def test_or_and_NI_sig():
+    mG = BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs.commitment_message)
+    signature = creator.obtain_signature(presignature)
+    e, s, m1, m2, m3 = (Secret() for _ in range(5))
+    secret_dict = {
+        e: signature.e,
+        s: signature.s,
+        m1: messages[0],
+        m2: messages[1],
+        m3: messages[2],
+    }
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature2 = sk.sign(lhs.commitment_message)
+    signature2 = creator.obtain_signature(presignature2)
+
+    e1, s1 = (Secret() for _ in range(2))
+    secret_dict2 = {
+        e1: signature2.e,
+        s1: signature2.s,
+        m1: messages[0],
+        m2: messages[1],
+    }
+    sigproof1 = SignatureProof([e1, s1, m1, m2, m3], pk, signature2)
+
+    secret_dict.update(secret_dict2)
+    andp = sigproof | sigproof1
+    orp = OrProof(andp, sigproof)
+    nip = orp.prove(secret_dict)
+    assert orp.verify(nip)
+
+
+def test_signature_or_DLRNE():
+    """
+    Constructs a signature on a set of messages, and then pairs the proof of knowledge of this signature with
+    a proof of non-equality of two DL, one of which is the blinding exponent 's' of the signature.
+    """
+    mG = BilinearGroupPair()
+    keypair = KeyPair(mG, 9)
+    messages = [Bn(30), Bn(31), Bn(32)]
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = SignatureCreator(pk)
+    lhs = creator.commit(messages)
+    presignature = sk.sign(lhs.commitment_message)
+    signature = creator.obtain_signature(presignature)
+    e, s, m1, m2, m3 = (Secret() for _ in range(5))
+    secret_dict = {e: signature.e, s: signature.s, m2: messages[1], m3: messages[2]}
+
+    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
+    g1 = mG.G1.generator()
+    pg1 = signature.s * g1
+    pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    andp = sigproof | dneq
+
+    sec = [Secret() for _ in range(5)]
+    sigproof1 = SignatureProof(sec, pk)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
+    andp1 = sigproof1 | dneq1
+    prov = andp.get_prover(secret_dict)
+    ver = andp1.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    commitment = prov.commit()
+
+    challenge = ver.send_challenge(commitment)
+    responses = prov.compute_response(challenge)
+    assert ver.verify(responses)
+
+
 """ 
 def test_bm_gmap(benchmark):
     G = BpGroup()
@@ -1605,4 +1767,4 @@ def signature_proofNI(messages, signature, pk):
 
 def signature_verifyNI(proof, tr):
     return proof.verify(tr)
- """
+"""
