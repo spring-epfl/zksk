@@ -1,13 +1,10 @@
-import os, sys
+import os
+import sys
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_code_path = os.path.join(root_dir, "")
-if src_code_path not in sys.path:
-    sys.path.append(src_code_path)
-
-from primitives.DLRep import *
-from CompositionProofs import *
-from BilinearPairings import *
+from zkbuilder.primitives.dlrep import *
+from zkbuilder.base import *
+from zkbuilder.composition import *
+from zkbuilder.pairings import *
 
 
 class Signature:
@@ -50,7 +47,7 @@ class UserCommitmentMessage:
         generators = pk.generators[1 : len(self.NIproof.responses) + 1]
         lhs = self.commitment_message
         secret_vars = [Secret() for i in range(len(self.NIproof.responses))]
-        proof = DLRepProof(lhs, wsum_secrets(secret_vars, generators))
+        proof = DLRep(lhs, wsum_secrets(secret_vars, generators))
         return proof.verify(self.NIproof)
 
 
@@ -80,7 +77,7 @@ class SignatureCreator:
             names = [Secret() for _ in range(len(messages) + 1)]
             secrets = [self.s1] + messages
             rhs = wsum_secrets(names, self.pk.generators[1 : len(messages) + 2])
-            pedersen_proof = DLRepProof(lhs, rhs)
+            pedersen_proof = DLRep(lhs, rhs)
             NIproof = pedersen_proof.prove(dict(zip(names, secrets)))
         return UserCommitmentMessage(lhs, NIproof)
 
@@ -193,8 +190,8 @@ class SignatureProof(BaseProof):
         self.precommitment = precommitment
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
-        dl1 = DLRepProof(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)
-        dl2 = DLRepProof(
+        dl1 = DLRep(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)
+        dl2 = DLRep(
             g0.group.infinite(),
             self.aliases[2] * g1
             + self.aliases[3] * g2
@@ -213,7 +210,7 @@ class SignatureProof(BaseProof):
             + [self.aliases[0], self.aliases[2]]
             + self.secret_vars[1:]
         )
-        pairings_proof = DLRepProof(
+        pairings_proof = DLRep(
             self.pair_lhs, wsum_secrets(new_secret_vars, generators)
         )
         self.constructed_proof = AndProof(dl1, dl2, pairings_proof)

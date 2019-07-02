@@ -1,14 +1,13 @@
 """
-see https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+See https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
-import os, sys
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_code_path = os.path.join(root_dir, "")
-if src_code_path not in sys.path:
-    sys.path.append(src_code_path)
-from CompositionProofs import *
-from primitives.DLRep import *
+import os
+import sys
+
+from zkbuilder.base import *
+from zkbuilder.composition import *
+from zkbuilder.primitives.dlrep import *
 
 
 class DLRepNotEqualProof(BaseProof):
@@ -43,14 +42,14 @@ class DLRepNotEqualProof(BaseProof):
         p = []
         for i in range(len(new_lhs)):
             p.append(
-                DLRepProof(
+                DLRep(
                     new_lhs[i],
                     wsum_secrets(self.aliases, [self.generators[i], self.lhs[i]]),
                 )
             )
         if self.binding:
             # If the binding parameter is set, we add a DLRep member repeating the first member without randomizing the secret.
-            p.append(DLRepProof(self.lhs[0], self.secret_vars[0] * self.generators[0]))
+            p.append(DLRep(self.lhs[0], self.secret_vars[0] * self.generators[0]))
         self.constructed_proof = AndProof(*p)
         return self.constructed_proof
 

@@ -1,4 +1,14 @@
-import random, string
+"""
+
+Known limitations :
+        - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically
+            different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
+            distributivity and commutativity.
+"""
+
+import abc
+import random
+import string
 from petlib.ec import EcGroup, EcPt
 from petlib.bn import Bn
 from petlib.pack import *
@@ -7,45 +17,38 @@ import msgpack
 import pdb
 from hashlib import sha256
 from collections import defaultdict
+import attr
 
 
-CHAL_LENGTH = Bn(128)
-
-""" Known limitations :
-        - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
-            different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
-            distributivity and commutativity.
-"""
+CHALLENGE_LENGTH = Bn(128)
 
 
+@attr.s
 class NITranscript:
     """
-    A named tuple for non-interactive proofs transcripts.
+    Non-interactive proofs transcripts.
     """
 
-    def __init__(self, challenge, responses, precommitment=None, statement=None):
-        self.challenge = challenge
-        self.responses = responses
-        self.precommitment = precommitment
-        self.statement = statement
+    challenge = attr.ib()
+    responses = attr.ib()
+    precommitment = attr.ib(default=None)
+    statement = attr.ib(default=None)
 
 
+@attr.s
 class SimulationTranscript:
     """
-    A named tuple for simulated proofs transcripts.
+    Simulated proof transcript
     """
 
-    def __init__(
-        self, commitment, challenge, responses, precommitment=None, statement=None
-    ):
-        self.commitment = commitment
-        self.challenge = challenge
-        self.responses = responses
-        self.precommitment = precommitment
-        self.statement = statement
+    commitment = attr.ib()
+    challenge = attr.ib()
+    responses = attr.ib()
+    precommitment = attr.ib(default=None)
+    statement = attr.ib(default=None)
 
 
-class Prover:
+class Prover(metaclass=abc.ABCMeta):
     """
     An abstract interface representing Prover used in sigma protocols
     """
@@ -53,11 +56,24 @@ class Prover:
     def __init__(self, proof, secret_values):
         """
         Constructs a Prover. Called by Proof.get_prover(), either by directly the user or by a composition Prover such as AndProver, OrProver.
-        :param proof: The Proof instance from which we draw the Prover. 
+        :param proof: The Proof instance from which we draw the Prover.
         :param secret_values: The values of the secrets as a dict.
         """
         self.proof = proof
         self.secret_values = secret_values
+
+    @abc.abstractmethod
+    def compute_response(self, challenge):
+        """
+        Computes the responses associated to each Secret object in the proof, and returns the list.
+        """
+        pass
+
+    def precommit(self):
+        """
+        Generates a precommitment set to None if this function is not overriden.
+        """
+        return None
 
     def commit(self, randomizers_dict=None):
         """
@@ -69,12 +85,6 @@ class Prover:
             self.internal_commit(randomizers_dict),
         )
 
-    def compute_response(self, challenge):
-        """
-        Computes the responses associated to each Secret object in the proof, and returns the list.
-        """
-        pass
-
     def get_secret_values(self):
         """
         A simple getter for the secret dictionary. Called by an AndProver/OrProver to gather the secret values of its subproofs.
@@ -82,7 +92,7 @@ class Prover:
         return self.secret_values
 
     def get_NI_proof(self, message=""):
-        """ 
+        """
         Constructs a non-interactive proof transcript embedding only a challenge and responses, since the commitment can be recomputed (deterministic).
         The challenge is a hash of the commitment, the proof statement and all the bases in the proof (including the left-hand-side).
         :param message: An optional string message.
@@ -102,16 +112,10 @@ class Prover:
         challenge = Bn.from_hex(binascii.hexlify(prehash.digest()).decode())
 
         responses = self.compute_response(challenge)
-        return NITranscript(challenge, responses, precommitment, statement)
-
-    def precommit(self):
-        """
-        Generates a precommitment set to None if this function is not overriden.
-        """
-        return None
+        return NITranscript(challenge=challenge, responses=responses, precommitment=precommitment, statement=statement)
 
 
-class Verifier:
+class Verifier(metaclass=abc.ABCMeta):
     """
     An abstract interface representing Prover used in sigma protocols
     """
@@ -119,29 +123,36 @@ class Verifier:
     def __init__(self, proof):
         self.proof = proof
 
-    def send_challenge(self, commitment):
-        """
-        Stores the received commitment and generates a challenge. The challenge is chosen at random between 0 and CHAL_LENGTH (excluded).
-        :param commitment: A tuple containing a hash of the proof statement, to be compared against the local statement, 
-        and the commmitment as a (potentially multi-level list of) base(s) of the group. 
-        """
-        statement, self.commitment = commitment
-        self.proof.check_statement(statement)
-        self.challenge = chal_randbits(CHAL_LENGTH)
-        return self.challenge
-
     def process_precommitment(self, precommitment):
         """
         Receives a precommitment and processes it, i.e instantiates a constructed proof if necessary. If not overriden, does nothing.
         """
         pass
 
+    def send_challenge(self, commitment):
+        """
+        Stores the received commitment and generates a challenge. The challenge is chosen at random
+        between 0 and CHALLENGE_LENGTH (excluded).
+
+        Args:
+            commitment: A tuple containing a hash of the proof statement, to be compared against the local statement,
+                and the commmitment as a (potentially multi-level list of) base(s) of the group.
+        """
+        statement, self.commitment = commitment
+        self.proof.check_statement(statement)
+        self.challenge = chal_randbits(CHALLENGE_LENGTH)
+        return self.challenge
+
     def verify(self, arg):
         """
-        Verifies the responses of an interactive sigma protocol. To do so, generates a pseudo-commitment based on the stored challenge and the received responses,
+        Verifies the responses of an interactive sigma protocol. To do so, generates a
+        pseudo-commitment based on the stored challenge and the received responses,
         and compares it against the stored commitment.
-        :param response: The response given by the prover
-        :rtype: Boolean
+
+        Args:
+            response: The response given by the prover
+
+        Return: bool
         """
         # Optional verification criteria
         if not self.proof.check_adequate_lhs():
@@ -153,10 +164,14 @@ class Verifier:
 
     def verify_NI(self, transcript, message="", encoding=None):
         """
-        Verifies a non-interactive transcript. Unpacks the attributes and checks their consistency by computing a pseudo-commitment
+        Verify a non-interactive transcript. Unpacks the attributes and checks their consistency by computing a pseudo-commitment
         and drawing from it a pseudo-challenge. Compares the pseudo-challenge with the transcript challenge. (Fiat-Shamir heuristics)
-        :param transcript: A instance of NonInteractiveTranscript
-        :rtype: Boolean
+
+        Args:
+            transcript: A instance of :py:`NonInteractiveTranscript`
+            message: A message if a signature proof.
+
+        Return: bool
         """
         # Build the complete proof if necessary
         if transcript.precommitment is not None:
@@ -187,46 +202,17 @@ class Verifier:
         return False
 
 
-def check_groups(list_of_secret_vars, list_of_generators):
-    """
-    Tool function checking that if two secrets in the proof are the same, the generators at corresponding indices induce groups of same order.
-    Can be deactivated in the future since it can forbid using different groups in one proof.
-    Primary utility is to ensure same responses for same secrets will not yield false negatives of chek_responses_consistency due to 
-    different group order modular reductions.
-    :param list_of_secret_vars: a list of secrets names of type Secret. 
-    :param list_of_generators: a list of generators (bases).
-    """
-    # We map the unique secrets to the indices where they appear
-    mydict = defaultdict(list)
-    for idx, word in enumerate(list_of_secret_vars):
-        mydict[word].append(idx)
-
-    # Now we use this dictionary to check all the generators related to a particular secret live in the same group
-    for (word, gen_idx) in mydict.items():
-        # word is the key, gen_idx is the value = a list of indices
-        ref_order = list_of_generators[gen_idx[0]].group.order()
-
-        for index in gen_idx:
-            if list_of_generators[index].group.order() != ref_order:
-                raise Exception(
-                    "A shared secret has generators which yield different group orders : secret",
-                    word,
-                )
-
-    return True
-
-
-def chal_randbits(bitlength=CHAL_LENGTH):
+def chal_randbits(bitlength=CHALLENGE_LENGTH):
     """
     Draws a random number of given bitlength.
     """
-    maxi = Bn(2).pow(bitlength)
-    return maxi.random()
+    order = Bn(2).pow(bitlength)
+    return order.random()
 
 
 def get_secret_vars(sub_list):
     """
-    Gathers all Secret objects in a list of Proofs. Used in Or/And Proofs.
+    Gathers all Secret objects in a list of Proofs.
     """
     secrets = []
     [secrets.extend(elem.secret_vars) for elem in sub_list]
@@ -235,7 +221,7 @@ def get_secret_vars(sub_list):
 
 def get_generators(sub_list):
     """
-    Gathers all generators in a list of Proofs. Used in Or/And Proofs.
+    Gathers all generators in a list of Proofs.
     """
     generators = []
     [generators.extend(elem.generators) for elem in sub_list]
@@ -243,8 +229,8 @@ def get_generators(sub_list):
 
 
 def add_Bn_array(arr, modulus):
-    """ 
-    Tool to sum elements an array under a modulus. Used in OrProof.
+    """
+    Sum elements an array under a modulus. Used in OrProof.
     """
     if not isinstance(modulus, Bn):
         modulus = Bn(modulus)
@@ -264,7 +250,7 @@ def enc_GXpt(obj):
 
 
 def find_residual_chal(arr, challenge, chal_length):
-    """ 
+    """
     Tool function to determine the complement to a global challenge in a list, i.e:
     To find c1 such that c = c1 + c2 +c3 mod k,
     We compute c2 + c3 -c and take the opposite
@@ -298,34 +284,39 @@ Below are the interface methods
 """
 
 
-class RightSide:
+class Expression:
     """
-    A class that can be obtained by composing (with the addition operator) elements of type Secret with group elements.
-    It is an abstraction for x1 * g1 + x2 * g2 + ... + xn * gn where xi-s are declared Secrets.
-    Parses the sum into an ordered list of Secrets and an ordered list of generators.
+    Arithmetic expression of secrets and group elements.
+
+    It is an abstraction for x_0 * g_0 + x_1 * g_2 + ... + x_n * g_n where x_i-s are declared secrets.
+
+    Implementation-wise, parses the sum into an ordered list of Secrets and an ordered list of generators.
+
+    Args:
+        secret: of type Secret
+        base: a base of a group
     """
 
-    def __init__(self, secret, ecPt):
-        """
-        :param secret: of type Secret
-        :param ecPt: a base of a group
-        """
+    def __init__(self, secret, base):
         if not isinstance(secret, Secret):
             raise Exception(
                 "in {0} * {1}, the first parameter should be a Secret ".format(
-                    secret, ecPt
+                    secret, base
                 )
             )
         self.secrets = [secret]
-        self.pts = [ecPt]
+        self.pts = [base]
 
     def __add__(self, other):
         """
-        Merges RightSide objects along addition.
-        :param other: of type RightSide
-        :return: an extended version of the current object
+        Merges Expression objects along addition.
+
+        Args:
+            other: Another Expression
+
+        Returns: an extended version of the current Expression
         """
-        if not isinstance(other, RightSide):
+        if not isinstance(other, Expression):
             raise Exception(
                 '${0} doesn\'t correspond to something like "x1" * g1 + "x2" * g2 + ... + "xn" * gn'
             )
@@ -335,7 +326,7 @@ class RightSide:
 
     def eval(self):
         """
-        Computes the actual value of the sum using the values of the Secrets if they are all available.
+        Compute the value of the sum using the values of the secrets if they are all available.
         """
         for secret in self.secrets:
             if secret.value == None:
@@ -355,20 +346,23 @@ class RightSide:
 
 
 class Secret:
+    """
+    A secret value in a zero-knowledge proof.
+    """
     def __init__(self, alias="", value=None):
         """
         :param alias: String to enforce as name of the Secret. Mostly a debugging tool.
-        :param value: Optional petlib.bn.Bn number equal to the secret value. 
+        :param value: Optional petlib.bn.Bn number equal to the secret value.
         """
         self.name = str(hash(self)) if alias == "" else alias
         self.value = value
 
-    def __mul__(self, ecPt):
+    def __mul__(self, base):
         """
-        :param ecPt: a base of the cyclic group
-        :return: a RightSide fresh instance abstracting the multiplication between this Secret and ecPt
+        :param base: a base of the cyclic group
+        :return: a Expression fresh instance abstracting the multiplication between this Secret and base
         """
-        return RightSide(self, ecPt)
+        return Expression(self, base)
 
     __rmul__ = __mul__
 
@@ -378,7 +372,7 @@ class Secret:
 
 def wsum_secrets(secrets, generators):
     """
-    Returns a complete RightSide object when passed a list of Secret instances and a list of generators, of same length.
+    Returns a complete Expression object when passed a list of Secret instances and a list of generators, of same length.
     """
     if len(secrets) != len(generators):
         raise Exception("Bad wsum")
@@ -386,3 +380,4 @@ def wsum_secrets(secrets, generators):
     for idx in range(len(generators) - 1):
         sum_ = sum_ + secrets[idx + 1] * generators[idx + 1]
     return sum_
+

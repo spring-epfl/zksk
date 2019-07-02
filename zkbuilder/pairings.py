@@ -270,7 +270,7 @@ class G1Group:
 
 class G2Group:
     """
-    A wrapper for the G2 group. 
+    A wrapper for the G2 group.
     """
 
     def __init__(self, bp):

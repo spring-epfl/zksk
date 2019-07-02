@@ -1,21 +1,16 @@
-import os, sys
+import os
+import sys
 
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_code_path = os.path.join(root_dir, "compiler")
-sys.path.append(src_code_path)
+from zkbuilder.base import *
+from zkbuilder.composition import *
+from zkbuilder.pairings import *
+from zkbuilder.primitives.dlrep import *
+from zkbuilder.primitives.bbsplus import *
+from zkbuilder.primitives.dlrep_notequal import *
 
-from Abstractions import *
-from CompositionProofs import *
-from primitives.DLRep import *
-from BilinearPairings import *
-from primitives.BBSplus import *
-from primitives.DLRepNotEqual import *
 import pytest
-import pdb
 
-"""
-TODO: add test for signature simulation and or signature, when or with DLRNE is fixed
-"""
+# TODO: add test for signature simulation and or signature, when or with DLRNE is fixed
 
 
 def randomword(length):
@@ -83,7 +78,7 @@ rhs1 = (
 
 def test_dlrep_true():
     # Legit run
-    pedersen_true = DLRepProof(lhs, rhs1)
+    pedersen_true = DLRep(lhs, rhs1)
     true_prover = pedersen_true.get_prover(secrets_values)
     true_verifier = pedersen_true.get_verifier()
     proof = SigmaProtocol(true_verifier, true_prover)
@@ -92,7 +87,7 @@ def test_dlrep_true():
 
 def test_dlrep_noprovarg():
     rs = Secret(value=3) * tab_g[0] + Secret(value=4) * tab_g[1]
-    pedersen = DLRepProof(rs.eval(), rs)
+    pedersen = DLRep(rs.eval(), rs)
     pp = pedersen.prove()
     prover = pedersen.get_prover()
     assert pedersen.verify(pp)
@@ -101,7 +96,7 @@ def test_dlrep_noprovarg():
 def test_dlrep_true_direct():
     # Legit run
     x = Secret(value=4)
-    pedersen_true = DLRepProof(4 * tab_g[0], x * tab_g[0])
+    pedersen_true = DLRep(4 * tab_g[0], x * tab_g[0])
     tr = pedersen_true.prove()
     assert pedersen_true.verify(tr)
 
@@ -110,9 +105,9 @@ def test_dlrep_bad_hash():
     g, h = tab_g[0], tab_g[1]
     x, y = Secret(), Secret()
     dic = {x: 2, y: 3}
-    pp1 = DLRepProof(2 * g + 3 * h, x * g + y * h)
+    pp1 = DLRep(2 * g + 3 * h, x * g + y * h)
 
-    pp2 = DLRepProof(2 * g + 3 * h, y * h + x * g)
+    pp2 = DLRep(2 * g + 3 * h, y * h + x * g)
     tr = pp1.prove(dic)
     with pytest.raises(Exception):
         pp2.verify(tr)
@@ -123,10 +118,10 @@ def test_dlrep_true2():
     sk, g = G.order().random(), G.generator()
     pk = sk * g
     x = Secret()
-    pedersen_true = DLRepProof(pk, x * g)
+    pedersen_true = DLRep(pk, x * g)
     true_prover = pedersen_true.get_prover({x: sk})
 
-    ped2 = DLRepProof(pk, Secret() * g)
+    ped2 = DLRep(pk, Secret() * g)
     true_verifier = ped2.get_verifier()
     proof = SigmaProtocol(true_verifier, true_prover)
     assert proof.run()
@@ -136,7 +131,7 @@ def test_dlrep_wrong_public():
     # We use generators and secrets from previous run but random public info
     randWord = randomword(30).encode("UTF-8")
     public_wrong = G.hash_to_point(randWord)
-    pedersen_public_wrong = DLRepProof(public_wrong, rhs1)
+    pedersen_public_wrong = DLRep(public_wrong, rhs1)
     wrongprover = pedersen_public_wrong.get_prover(secrets_values)
     wrongverifier = pedersen_public_wrong.get_verifier()
     wrongpub = SigmaProtocol(wrongverifier, wrongprover)
@@ -145,21 +140,21 @@ def test_dlrep_wrong_public():
 
 def test_dlrep_NI():
     # We request a non_interactive proof from the prover
-    niproof = DLRepProof(lhs, rhs1)
+    niproof = DLRep(lhs, rhs1)
     tr = niproof.prove(secrets_values, message="mymessage")
-    assert DLRepProof(lhs, rhs1).verify(tr, message="mymessage")
+    assert DLRep(lhs, rhs1).verify(tr, message="mymessage")
 
 
 def test_dlrep_wrongNI():
     # We request a non_interactive proof from the prover
-    niproof = DLRepProof(lhs, rhs1)
+    niproof = DLRep(lhs, rhs1)
     tr = niproof.prove(secrets_values, message="mymessage")
     tr.responses[1] = tab_g[0].group.order().random()
     assert niproof.verify(tr, message="mymessage") == False
 
 
 def test_dlrep_simulation():
-    ped_proof = DLRepProof(lhs, rhs1)
+    ped_proof = DLRep(lhs, rhs1)
     tr = ped_proof.simulate()
     assert (not ped_proof.verify(tr)) and ped_proof.verify_simulation_consistency(tr)
 
@@ -168,8 +163,8 @@ def test_diff_groups_dlrep():
     tab_g1 = tab_g.copy()
     tab_g1[2] = EcGroup(706).generator()
     with pytest.raises(Exception):
-        # An exception should be raised due to different groups coexisting in a DLRepProof
-        niproof = DLRepProof(tab_g1, secrets_aliases, lhs)
+        # An exception should be raised due to different groups coexisting in a DLRep
+        niproof = DLRep(tab_g1, secrets_aliases, lhs)
 
 
 def get_generators(nb_wanted):
@@ -193,7 +188,7 @@ def test_generators_sharing_a_secret():
     for i in range(1, N):
         rhs += x1 * generators[i]
 
-    pp = DLRepProof(lhs, rhs)
+    pp = DLRep(lhs, rhs)
     prover = pp.get_prover({x1: unique_secret})
     assert type(prover) == DLRepProver
     statement, commitment = prover.commit()
@@ -207,7 +202,7 @@ def test_get_many_different_provers():
     secrets_names = [Secret(prefix + str(i)) for i in range(N)]
     secrets_vals = [Bn(i) for i in range(N)]
     secr_dict = dict(zip(secrets_names, secrets_vals))
-    pp = DLRepProof(
+    pp = DLRep(
         G.wsum(secrets_vals, generators), wsum_secrets(secrets_names, generators)
     )
     prover = pp.get_prover(secr_dict)
@@ -221,7 +216,7 @@ def test_same_random_in_commitment():
 
     pub_info = G.wsum([Bn(100), Bn(100), Bn(100)], gens)
     x1 = Secret()
-    pp = DLRepProof(pub_info, wsum_secrets([x1, x1, x1], gens))
+    pp = DLRep(pub_info, wsum_secrets([x1, x1, x1], gens))
     prover = pp.get_prover({x1: 100})
     commitments = prover.commit()
 
@@ -255,9 +250,9 @@ def setup_and_proofs():
         secrets_2.append(secrets_dict[secrets[i]])
 
     sum_2 = G.wsum(secrets_2, generators2)
-    pp1 = DLRepProof(sum_1, wsum_secrets([x0, x1, x2], generators1))
+    pp1 = DLRep(sum_1, wsum_secrets([x0, x1, x2], generators1))
 
-    pp2 = DLRepProof(sum_2, wsum_secrets([x0, x3, x4, x5], generators2))
+    pp2 = DLRep(sum_2, wsum_secrets([x0, x3, x4, x5], generators2))
     return pp1, pp2, secrets_dict
 
 
@@ -293,8 +288,8 @@ def test_wrong_and_proofs():
     secrets_2 = [secrets_dict[x0]]
 
     sum_2 = G.wsum(secrets_2, generators2)
-    pp1 = DLRepProof(sum_1, wsum_secrets([x0, x1, x2], generators1))
-    pp2 = DLRepProof(sum_2, wsum_secrets([x0], generators2))
+    pp1 = DLRep(sum_1, wsum_secrets([x0, x1, x2], generators1))
+    pp2 = DLRep(sum_2, wsum_secrets([x0], generators2))
     with pytest.raises(Exception):
         # An exception should be raised because of a shared secrets linked to two different groups
         and_proof = AndProof(pp1, pp2)
@@ -320,8 +315,8 @@ def test_and_proofs():
 def test_and_direct():
     x = Secret(value=4)
     x2 = Secret()
-    pp1 = DLRepProof(4 * tab_g[0], x * tab_g[0])
-    pp2 = DLRepProof(3 * tab_g[1], x2 * tab_g[1])
+    pp1 = DLRep(4 * tab_g[0], x * tab_g[0])
+    pp2 = DLRep(3 * tab_g[1], x2 * tab_g[1])
     andp = pp1 & pp2
     tr = andp.prove({x2: 3})
     assert andp.verify(tr)
@@ -383,8 +378,8 @@ def test_compose_and_proofs2():
 
 
 def test_simulate_andproof1():
-    subproof1 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
-    subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
+    subproof1 = DLRep(lhs, wsum_secrets(secrets_aliases, tab_g))
+    subproof2 = DLRep(lhs, wsum_secrets(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     andv = andp.get_verifier()
     tr = andp.simulate_proof()
@@ -393,8 +388,8 @@ def test_simulate_andproof1():
 
 
 def test_simulate_andproof2():
-    subproof1 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
-    subproof2 = DLRepProof(lhs, wsum_secrets(secrets_aliases, tab_g))
+    subproof1 = DLRep(lhs, wsum_secrets(secrets_aliases, tab_g))
+    subproof2 = DLRep(lhs, wsum_secrets(secrets_aliases, tab_g))
     andp = AndProof(subproof1, subproof2)
     tr = andp.simulate()
     assert andp.verify_simulation_consistency(tr) and not andp.verify(tr)
@@ -433,7 +428,7 @@ def test_DLRep_parser_proof_fails():
     g2 = 5 * g
     x1 = Secret()
     x2 = Secret()
-    proof = DLRepProof(g, x1 * g1 + x2 * g2)
+    proof = DLRep(g, x1 * g1 + x2 * g2)
     prover = proof.get_prover({x1: 10, x2: 15})
     verifier = proof.get_verifier()
     with pytest.raises(Exception):
@@ -446,7 +441,7 @@ def test_DLRep_parser_proof_succeeds():
     g2 = 5 * g
     x1 = Secret()
     x2 = Secret()
-    proof = DLRepProof(10 * g1 + 15 * g2, x1 * g1 + x2 * g2)
+    proof = DLRep(10 * g1 + 15 * g2, x1 * g1 + x2 * g2)
     prover = proof.get_prover({x1: 10, x2: 15})
     verifier = proof.get_verifier()
     assert_verify_proof(verifier, prover)
@@ -460,7 +455,7 @@ def test_DLRep_parser_with_and_proof():
     x1 = Secret()
     x2 = Secret()
     x3 = Secret()
-    proof = DLRepProof(10 * g1 + 15 * g2, x1 * g1 + x2 * g2) & DLRepProof(
+    proof = DLRep(10 * g1 + 15 * g2, x1 * g1 + x2 * g2) & DLRep(
         15 * g1 + 35 * g3, x2 * g1 + x3 * g3
     )
     prover = proof.get_prover({x1: 10, x2: 15, x3: 35})
@@ -532,13 +527,13 @@ def test_and_or_proof():
     g2 = 8 * pp1.generators[0]
     xb = Secret("xb")
     xa = Secret("xa")
-    pp0 = DLRepProof(7 * g1 + 18 * g2, xb * g1 + xa * g2)
+    pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xb] = 7
     secrets[xa] = 18
     orproof = OrProof(pp1, pp2)
     andp = AndProof(orproof, pp0)
     andp = AndProof(
-        andp, DLRepProof(15 * pp1.generators[0], Secret(value=15) * pp1.generators[0])
+        andp, DLRep(15 * pp1.generators[0], Secret(value=15) * pp1.generators[0])
     )
     prov = andp.get_prover(secrets)
     ver = andp.get_verifier()
@@ -556,7 +551,7 @@ def test_or_and_proof():
     g2 = 8 * pp1.generators[0]
     xb = Secret("xb")
     xa = Secret("xa")
-    pp0 = DLRepProof(7 * g1 + 18 * g2, xb * g1 + xa * g2)
+    pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xa] = 7
     secrets[Secret("xc")] = 18
     orproof = OrProof(pp0, andp)
@@ -575,7 +570,7 @@ def test_or_or():
     g2 = 8 * pp1.generators[0]
     xb = Secret("xb")
     xa = Secret("xa")
-    pp0 = DLRepProof(7 * g1 + 18 * g2, xb * g1 + xa * g2)
+    pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xa] = 7
     secrets[Secret()] = 18
     orproof = OrProof(pp0, first_or)
@@ -608,7 +603,7 @@ def test_multiple_or_proof():
     g = EcGroup().generator()
     x10 = Secret()
     secrets.update({x10: 13})
-    orproof = OrProof(pp1, OrProof(pp2, DLRepProof(13 * g, x10 * g)))
+    orproof = OrProof(pp1, OrProof(pp2, DLRep(13 * g, x10 * g)))
     verify_proof(orproof, secrets)
 
 
@@ -618,7 +613,7 @@ def test_multiple_or_proof_2():
     x10 = Secret()
     secrets.update({x10: 13})
     orp1 = OrProof(pp2, pp1)
-    orp2 = OrProof(pp1, DLRepProof(13 * g, x10 * g))
+    orp2 = OrProof(pp1, DLRep(13 * g, x10 * g))
     orproof = OrProof(orp1, pp2, orp2)
     verify_proof(orproof, secrets)
 
@@ -634,7 +629,7 @@ def test_multiple_or_proof_syntax():
     g = EcGroup().generator()
     x10 = Secret()
     secrets.update({x10: 13})
-    orproof = pp1 | pp2 | DLRepProof(13 * g, x10 * g)
+    orproof = pp1 | pp2 | DLRep(13 * g, x10 * g)
     verify_proof(orproof, secrets)
 
 
@@ -672,8 +667,8 @@ def test_malicious_and_proofs():
     secret_dict = {x0: 3, x2: 50, x1: 12}
     mal_secret_dict = {x0: 3, x2: 51}
     andp = AndProof(
-        DLRepProof(12 * g1 + 50 * g2, x1 * g1 + x2 * g2),
-        DLRepProof(3 * g3 + 51 * g2, x0 * g1 + x2 * g2),
+        DLRep(12 * g1 + 50 * g2, x1 * g1 + x2 * g2),
+        DLRep(3 * g3 + 51 * g2, x0 * g1 + x2 * g2),
     )
 
     prov = andp.get_prover(secret_dict)
@@ -796,7 +791,7 @@ def test_and_BLAC_binding1():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr2 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
+    pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
     andp = pr1 & pr2
 
     # Now create a twin with other instances of Secret
@@ -806,7 +801,7 @@ def test_and_BLAC_binding1():
         [Secret(secrets_aliases[0]).name],
         binding=True,
     )
-    pr2v = DLRepProof(lhs_tab[0], Secret(secrets_aliases[0].name) * tab_g[0])
+    pr2v = DLRep(lhs_tab[0], Secret(secrets_aliases[0].name) * tab_g[0])
 
     andpv = pr1v & pr2v
 
@@ -821,12 +816,12 @@ def test_and_BLAC_not_binding():
     s0 = secrets_aliases[0]
 
     pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0])
-    pr2 = DLRepProof(lhs_tab[2], s0 * tab_g[2])
+    pr2 = DLRep(lhs_tab[2], s0 * tab_g[2])
     andp = pr1 & pr2
 
     s0p = Secret(secrets_aliases[0].name)
     pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p])
-    pr2v = DLRepProof(lhs_tab[2], s0p * tab_g[2])
+    pr2v = DLRep(lhs_tab[2], s0p * tab_g[2])
     andpv = pr1v & pr2v
 
     prov = andp.get_prover(secrets_values)
@@ -847,7 +842,7 @@ def test_and_BLAC_binding2():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr2 = DLRepProof(lhs_tab[2], secrets_aliases[0] * tab_g[2])
+    pr2 = DLRep(lhs_tab[2], secrets_aliases[0] * tab_g[2])
     andp = pr1 & pr2
 
     # Twin proof
@@ -855,7 +850,7 @@ def test_and_BLAC_binding2():
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p], binding=True
     )
-    pr2v = DLRepProof(lhs_tab[2], s0p * tab_g[2])
+    pr2v = DLRep(lhs_tab[2], s0p * tab_g[2])
     andpv = pr1v & pr2v
 
     prov = andp.get_prover(secrets_values)
@@ -950,7 +945,7 @@ def test_multi_and_BLAC_binding1():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr2 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
+    pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -973,7 +968,7 @@ def test_multi_and_BLAC_binding1():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr21 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
+    pr21 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -1006,7 +1001,7 @@ def test_multi_and_BLAC_binding2():
         [secrets_aliases[0]],
         binding=False,
     )
-    pr2 = DLRepProof(lhs_tab[2], secrets_aliases[2] * tab_g[2])
+    pr2 = DLRep(lhs_tab[2], secrets_aliases[2] * tab_g[2])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -1031,7 +1026,7 @@ def test_multi_and_BLAC_binding2():
         [secrets_aliases[0]],
         binding=False,
     )
-    pr21 = DLRepProof(lhs_tab[2], s2 * tab_g[2])
+    pr21 = DLRep(lhs_tab[2], s2 * tab_g[2])
 
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], [s2], binding=True
@@ -1086,7 +1081,7 @@ def test_and_BLAC_NI_direct():
 
     pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
     pr2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], [x], binding=True)
-    andp = pr & pr2 & DLRepProof(y, x * g)
+    andp = pr & pr2 & DLRep(y, x * g)
     nip = andp.prove()
     assert andp.verify(nip)
 
@@ -1099,7 +1094,7 @@ def test_BLAC_NI2():
         [secrets_aliases[0]],
         binding=True,
     )
-    pr2 = DLRepProof(lhs_tab[0], secrets_aliases[0] * tab_g[0])
+    pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -1115,7 +1110,7 @@ def test_BLAC_NI2():
     pr11 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0], binding=True
     )
-    pr21 = DLRepProof(lhs_tab[0], s0 * tab_g[0])
+    pr21 = DLRep(lhs_tab[0], s0 * tab_g[0])
 
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], [s2], binding=True
@@ -1149,7 +1144,7 @@ def test_sim_multiDLRNE():
         [secrets_aliases[0]],
         binding=False,
     )
-    pr2 = DLRepProof(lhs_tab[2], secrets_aliases[2] * tab_g[2])
+    pr2 = DLRep(lhs_tab[2], secrets_aliases[2] * tab_g[2])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
@@ -1458,7 +1453,7 @@ def test_signature_and_DLRNE():
 
 def test_wrong_signature_and_DLRNE1():
     """
-    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the 
+    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the
     signature and in the DLRNE.
     Should be detected and raise an Exception.
     """
@@ -1511,7 +1506,7 @@ def test_wrong_signature_and_DLRNE1():
 
 def test_wrong_signature_and_DLRNE():
     """
-    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the 
+    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the
     signature and in the DLRNE.
     Should not be detected since bindings in the DLRNE are False.
     """
@@ -1728,7 +1723,7 @@ def test_signature_or_DLRNE():
     assert ver.verify(responses)
 
 
-""" 
+"""
 def test_bm_gmap(benchmark):
     G = BpGroup()
     g1, g2 = G.gen1(), G.gen2()
