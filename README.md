@@ -216,16 +216,17 @@ Or use an `OrProof()` constructor exactly as for the And statement seen above.
 
 
 The rest is the same as above, that is you still have to create a Prover and a Verifier by calling the `get_prover()` and `get_verifier()` methods of the Proof object.
-The OrProver will in fact be composed of one legit subprovers and  the rest will be simulators.
+The OrProver will in fact be composed of one legit subprover and run simulations for the other subproofs.
 
 > Tip : You don't need to provide all the secret values for the Or Proof. The compiler will draw at random which subproof to compute, but first will chose only among those you provided all secrets for.
 
-You might want to set yourself which subproofs you want to simulate, for this just do
+You might want to set yourself which subproofs you want to simulate, for this just do (before retrieving the Prover, of course!)
 
 ```python
-first_subproof.set_simulate()
+proof.subproofs[i].simulation = True
 ```
 Which will give this subproof probability 0 to be picked for the legit computation.
+> When doing `orp = pp1 | pp2`, it is copies of `pp1` and `pp2` which are used. Modifying the original objects would not do anything so you have to modify the actual subproof.
 
 #### Of course you can also compose Or and And !
 Say you want to write the following proof : 
@@ -340,9 +341,17 @@ e, s = Secret(value=signature.e), Secret(value=signature.s)
 messages = [Secret(value=m1)..., Secret(value=mn)]
 proof = SignatureProof([e, s, *messages], pk, signature)
 ```
-The `e` and `s` Secret instances are necessary so the proof can bind them to an other proof, e.g. in an `And` conjunction. The `signature` argument is required for the proving side. Of course, the verifying side would call
+The `e` and `s` Secret instances are necessary so the proof can bind them to an other proof, e.g. in an `And` conjunction. 
+If you do not care about binding `e` and `s` to other proofs you can skip them, only pass the messages and set a `binding` keyword argument to False.
 ```python
-e, s = Secret(), Secret()
+messages = [Secret(value=m1)..., Secret(value=mn)]
+proof = SignatureProof(messages, pk, signature, binding=False)
+```
+
+The `signature` argument is required for the proving side. 
+Of course, the verifying side would call
+```python
+e, s = Secret(), Secret()   # Omitted if not binding
 messages = [Secret()..., Secret()]
 proof = SignatureProof([e, s, *messages], pk)
 ```
@@ -350,7 +359,7 @@ From this Proof objects, one can run the usual methods `get_prover()`, `get_veri
 
 ## How it works : 
 
-The ZKC will basically help you instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global *challenge* and global *randomizers* are shared (i.e the subproofs are **not** run independently from each other).
+This compiler will basically help you instantiate a *Prover* and a *Verifier* object and make them talk (in the case of an interactive proof). If the proof is a conjunction of subproofs, a global *challenge* and global *randomizers* are shared (i.e the subproofs are **not** run independently from each other).
 The sigma protocol (interactive) is the following : 
 
 **Initial state** : the Prover and the Verifier share some "public information", namely
