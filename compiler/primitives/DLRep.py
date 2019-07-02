@@ -63,7 +63,7 @@ class DLRepProof(Proof):
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
-        # Forget the secrets if told so. If missing secrets, return now
+        # If missing secrets or simulation parameter set, return now
         if (
             self.simulation == True
             or secrets_dict == {}
