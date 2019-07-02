@@ -190,6 +190,7 @@ class SignatureProof(BaseProof):
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
         :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
+        self.precommitment = precommitment
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
         dl1 = DLRepProof(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)

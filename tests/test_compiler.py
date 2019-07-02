@@ -493,7 +493,6 @@ def test_or_proof_simple():
     assert verif.verify(resp)
 
 
-
 def test_or_proof_manual():
     pp1, pp2, secrets = setup_and_proofs()
     orproof = OrProof(pp1, pp2, pp1, pp2, pp1, pp2)
@@ -501,7 +500,7 @@ def test_or_proof_manual():
     ctr1 = 0
     chosen = []
     sims = [True]
-    while ctr1<10 or not any(sims):
+    while ctr1 < 10:
         print("-----")
         sims = []
         # Set some subproofs to simulation = True at random
@@ -509,20 +508,23 @@ def test_or_proof_manual():
             cur = random.choice([True, False])
             sims.append(cur)
             el.simulation = cur
+        if all(sims):
+            continue
         ctr = 0
-        while ctr<30:
+        while ctr < 30:
             # Choose a subproof, look if it was a valid choice, store the result
             prov = orproof.get_prover(secrets)
             chosen.append(sims[orproof.chosen_idx] == False)
-            ctr +=1
+            ctr += 1
         # Little visual element to convince you
         for idx, el in enumerate(flist):
             if idx == orproof.chosen_idx:
-                print(el.simulation, "<--") 
-            else :
+                print(el.simulation, "<--")
+            else:
                 print(el.simulation)
-        ctr1 +=1
+        ctr1 += 1
     assert all(chosen)
+
 
 def test_and_or_proof():
     pp1, pp2, secrets = setup_and_proofs()

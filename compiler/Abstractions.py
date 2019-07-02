@@ -15,7 +15,6 @@ CHAL_LENGTH = Bn(128)
         - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically 
             different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
             distributivity and commutativity.
-        - multiple Or Proofs are still bugged for DLRNE and signatures because of constructed_proof objects diverging 
 """
 
 
@@ -239,7 +238,7 @@ def get_generators(sub_list):
     Gathers all generators in a list of Proofs. Used in Or/And Proofs.
     """
     generators = []
-    [generators.extend(elem.generators.copy()) for elem in sub_list]
+    [generators.extend(elem.generators) for elem in sub_list]
     return generators
 
 
@@ -262,6 +261,36 @@ def enc_GXpt(obj):
     Custom encode for petlib.pack module. Used to pack points which are not instances of petlib.ec.EcPt
     """
     return msgpack.ExtType(10, obj.__repr__().encode())
+
+
+def find_residual_chal(arr, challenge, chal_length):
+    """ 
+    Tool function to determine the complement to a global challenge in a list, i.e:
+    To find c1 such that c = c1 + c2 +c3 mod k,
+    We compute c2 + c3 -c and take the opposite
+    :param arr: The array of subchallenges c2, c3...
+    :param challenge: The global challenge to reach
+    :param chal_length: the modulus to reduce to
+    """
+    modulus = Bn(2).pow(chal_length)
+    temp_arr = arr.copy()
+    temp_arr.append(-challenge)
+    return -add_Bn_array(temp_arr, modulus)
+
+
+def sub_proof_prover(sub_proof, secrets_dict):
+    """
+    Tool function used in both Or and And proofs to get a prover from a subproof
+    by giving it only the secrets it should know and not more.
+    :param sub_proof: The proof from which to get a prover
+    :param secrets_dict: The secret values to filter out before passing them to the prover
+    """
+    keys = set(sub_proof.secret_vars)
+    secrets_for_prover = {}
+    for s_name in secrets_dict.keys():
+        if s_name in keys:
+            secrets_for_prover[s_name] = secrets_dict[s_name]
+    return sub_proof.get_prover(secrets_for_prover)
 
 
 """

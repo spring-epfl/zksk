@@ -39,6 +39,7 @@ class DLRepNotEqualProof(BaseProof):
         Builds the internal AndProof associated to a DLRepNotEqualProof. See formula in Protocol 1 of the BLAC paper.
         """
         new_lhs = [self.generators[0].group.infinite()] + precommitment
+        self.precommitment = precommitment
         p = []
         for i in range(len(new_lhs)):
             p.append(
@@ -51,14 +52,13 @@ class DLRepNotEqualProof(BaseProof):
             # If the binding parameter is set, we add a DLRep member repeating the first member without randomizing the secret.
             p.append(DLRepProof(self.lhs[0], self.secret_vars[0] * self.generators[0]))
         self.constructed_proof = AndProof(*p)
-        self.constructed_proof.lhs = new_lhs
         return self.constructed_proof
 
     def check_adequate_lhs(self):
         """
-        Verifies the second part of the proof is indeed about to prove the secret is not the discrete logarithm.
+        Verifies the second part of the constructed proof is indeed about to prove the secret is not the discrete logarithm.
         """
-        for el in self.constructed_proof.lhs[1:]:
+        for el in self.precommitment:
             if el == self.generators[0].group.infinite():
                 return False
         return True

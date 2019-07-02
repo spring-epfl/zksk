@@ -201,8 +201,8 @@ class BaseProof(Proof):
         if self.constructed_proof is not None:
             st = [
                 self.__class__.__name__,
-                self.constructed_proof.generators,
-                self.constructed_proof.lhs,
+                self.precommitment,
+                self.constructed_proof.get_proof_id(),
             ]
         else:
             st = [self.__class__.__name__, self.generators]
@@ -296,36 +296,6 @@ class BaseVerifier(Verifier):
         )
 
 
-def find_residual_chal(arr, challenge, chal_length):
-    """ 
-    Tool function to determine the complement to a global challenge in a list, i.e:
-    To find c1 such that c = c1 + c2 +c3 mod k,
-    We compute c2 + c3 -c and take the opposite
-    :param arr: The array of subchallenges c2, c3...
-    :param challenge: The global challenge to reach
-    :param chal_length: the modulus to reduce to
-    """
-    modulus = Bn(2).pow(chal_length)
-    temp_arr = arr.copy()
-    temp_arr.append(-challenge)
-    return -add_Bn_array(temp_arr, modulus)
-
-
-def sub_proof_prover(sub_proof, secrets_dict):
-    """
-    Tool function used in both Or and And proofs to get a prover from a subproof
-    by giving it only the secrets it should know and not more.
-    :param sub_proof: The proof from which to get a prover
-    :param secrets_dict: The secret values to filter out before passing them to the prover
-    """
-    keys = set(sub_proof.secret_vars)
-    secrets_for_prover = {}
-    for s_name in secrets_dict.keys():
-        if s_name in keys:
-            secrets_for_prover[s_name] = secrets_dict[s_name]
-    return sub_proof.get_prover(secrets_for_prover)
-
-
 class OrProof(Proof):
     def __init__(self, *subproofs):
         """
@@ -405,6 +375,7 @@ class OrProof(Proof):
             possible.remove(self.chosen_idx)
             # If there is no proof left, abort and say we cannot get a prover
             if len(possible) == 0:
+                self.chosen_idx = None
                 return None
             self.chosen_idx = rd.choice(possible)
             valid_prover = sub_proof_prover(
