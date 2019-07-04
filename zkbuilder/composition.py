@@ -5,9 +5,7 @@ import copy
 
 
 class Proof:
-    """An abstraction of a sigma protocol proof.
-    Is in this file because of And/Or operations defined here.
-    """
+    """A composable sigma-protocol proof statement."""
 
     def __and__(self, other):
         """
@@ -51,34 +49,39 @@ class Proof:
 
     def get_prover(self, secrets_dict=None):
         """
-        Returns a Prover for the current proof.
+        Returns a :py:class:`Prover` object for the current proof.
         """
         return self.get_prover_cls()(self)
 
     def get_verifier(self):
         """
-        Returns a Verifier for the current proof.
+        Returns a :py:class:`Verifier` object for the current proof.
         """
         return self.get_verifier_cls()(self)
 
     def recompute_commitment(self, challenge, response):
-
         """
-        Computes a pseudo-commitment (literally, the commitment you should have received
-        if the proof was correct. To compare to the actual commitment.
-        :param challenge: the challenge used in the proof
-        :param response: an list of responses, ordered as the list of secret names i.e with as many elements as secrets in the proof claim.
-        Reoccuring secrets should yield identical responses.
+        Computes a pseudo-commitment: the commitment you should have received
+        if the proof was correct. It should be compared to the actual commitment.
+
+        Reoccuring secrets yield identical responses.
+
+        Args:
+            challenge: the challenge used in the proof
+            response: a list of responses, ordered as the list of secret names, i.e., with as many
+                elements as there are secrets in the proof claim.
         """
         pass
 
     def set_simulate(self):
         self.simulation = True
 
-    def prove(self, secret_dict={}, message=""):
+    def prove(self, secret_dict=None, message=""):
         """
         Generate the transcript of a non-interactive proof.
         """
+        if secret_dict is None:
+            secret_dict = {}
         prover = self.get_prover(secret_dict)
         return prover.get_NI_proof(message)
 
@@ -100,12 +103,12 @@ class Proof:
 
     def check_statement(self, statement):
         """
-        Verifies the current proof corresponds to the hash passed as a parameter.
-        Returns a preshash of the current proof, e.g to be used to verify NI proofs
+        Verify the current proof corresponds to the hash passed as a parameter.
+        Returns a pre-hash of the current proof, e.g., to be used to verify NI proofs
         """
         cur_statement = self.prehash_statement()
         if statement != cur_statement.digest():
-            raise Exception("Proof statements mismatch, impossible to verify")
+            raise StatementMismatch("Proof statements mismatch, impossible to verify")
         return cur_statement
 
     def check_adequate_lhs(self):

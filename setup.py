@@ -13,7 +13,7 @@ SETUP_REQUIRES = ["pytest-runner"]
 
 TEST_REQUIRES = ["pytest"]
 
-DEV_REQUIRES = TEST_REQUIRES + ["sphinx", "sphinx_rtd_theme", "black"]
+DEV_REQUIRES = TEST_REQUIRES + ["sphinx", "sphinx_rtd_theme", "m2r", "black"]
 
 
 here = os.path.abspath(os.path.dirname(__file__))

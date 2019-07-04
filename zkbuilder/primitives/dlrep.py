@@ -1,22 +1,41 @@
 """
-Classes and tools create discrete-log-representation ZK proofs, our basic building block.
+ZK proof for linear representations of discrete logarithms, our basic building block.
 
-An example of DL proof is :math:`PK{(x_1, x_2): y_1 = x_1 g_1 + x_2 g_2}` where :math:`g_1` and
-:math:`g_2` are points on a same elliptic curve over a chosen finite field.
+An example of such proof is :math:`PK\{ (x_0, x_1): y = x_0 G_0 + x_1 G_1 \}`, where :math:`x_0` and
+:math:`x_1` are secret integers from a finite field, :math:`G_0` and :math:`G_1` are points on a
+same elliptic curve, and :math:`y` is the actual value of the expression :math:`x_0 G_0 + x_1 G_1`.
+
+See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camenisch and Stadler,
+1997 for the details.
+
+
+.. _`Proof Systems for General Statements about Discrete Logarithms`:
+    ftp://ftp.inf.ethz.ch/pub/crypto/publications/CamSta97b.pdf
 
 """
 
-import os, sys
-
 from zkbuilder.base import *
 from zkbuilder.composition import *
+from zkbuilder.exceptions import IncompleteValuesError
+
+import warnings
 
 
 class DLRepVerifier(Verifier):
 
-    def check_responses_consistency(self, response, responses_dict=None):
-        """Goes through the secret names of the current DLRep and checks if reoccuring secrets indeed yield the same responses.
-        To do so, constructs a map (dict) between secrets and responses.
+    def check_responses_consistency(self, responses, responses_dict=None):
+        """
+        Check if reoccuring secrets indeed yield the same responses.
+
+        To do so, go through the names of the secrets in the current DLRep, and construct a mapping
+        between secrets and responses.
+
+        Args:
+            response: List of responses
+            responses_dict: Mapping from secrets or secret names to responses
+
+        Returns:
+            bool: True if responses are consistent, False otherwise.
         """
         if responses_dict is None:
             responses_dict = {}
@@ -24,38 +43,46 @@ class DLRepVerifier(Verifier):
         for i in range(len(self.proof.secret_vars)):
             s = self.proof.secret_vars[i]
             if s in responses_dict.keys():
-                if response[i] != responses_dict[s]:
-                    print(
-                        "names are",
+                if responses[i] != responses_dict[s]:
+                    warnings.warn(
+                        "Names are",
                         self.proof.secret_vars,
-                        "incorrect for",
+                        "/ Incorrect for",
                         self.proof.secret_vars[i],
                     )
-                    print("values are", response[i], "should be", responses_dict[s])
+                    warnings.warn("Values are", responses[i], "/ Should be", responses_dict[s])
                     return False
             else:
-                responses_dict.update({s: response[i]})
+                responses_dict.update({s: responses[i]})
         return True
 
 
 class DLRep(Proof):
     """
-    This class is used to model a discrete logarithm proof e.g. PK{(x1, x2): y = x1 * g1 + x2 * g2}.
-    Generic class is defined in CompositionProofs
+    Proof statement for a discrete-logarithm representation proof.
+
+    Supported statements of the following form:
+
+    .. math::
+        PK\{ (x_0, x_1, ..., x_n): y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}
+
+    Example usage for :math:`PK\{x: y = x G \}`:
+
+    >>> from petlib.ec import EcGroup
+    >>> x = Secret("x", value=42)
+    >>> g = EcGroup().generator()
+    >>> y = x * g
+    >>> stmt = DLRep(y, x * g)
+    >>> proof = stmt.prove()
 
     Args:
-        expr: An :py:`zkbuilder.base.Expression` object. For example: ``Secret("x1") * g1 + Secret("x2") * g_2``
-        lhs: The group generator to prove correct construction/factorization of. The prover
-            has to prove that he knows the secrets xi-s such that x1 * g1 + x2 * g2 + ... + xn * gn = lhs
-
-    Raises:
-        If generators from different groups are combined.
+        expr (:py:class:`zkbuilder.base.Expression`): Proof statement.
+            For example: ``Secret("x") * g`` represents :math:`PK\{ x: y = x G \}`.
+        lhs: "Left-hand side." Value of :math:`y`.
     """
     verifier_cls = DLRepVerifier
 
     def __init__(self, lhs, expr):
-        """
-        """
         if isinstance(expr, Expression):
             self.generators = expr.pts
             self.secret_vars = expr.secrets
@@ -79,9 +106,13 @@ class DLRep(Proof):
 
     def get_prover(self, secrets_dict=None):
         """
-        Draws a DLRepProver from the current Proof. Will fail if any secret value is unknown.
-        :param secrets_dict: A dictionnary mapping secret names to petlib.bn.Bn numbers, to update/overwrite the existent complete secrets (of which the values is available).
-        :return: An instance of DLRepProver, or None if some secrets values are missing.
+        Get a prover for the current proof statement.
+
+        Args:
+            secrets_dict: Optional mapping from secrets or secret names to their values.
+
+        Returns:
+            :py:class:`DLRepProver` or None: Prover object if all secret values are known.
         """
         if secrets_dict is None:
             secrets_dict = {}
@@ -95,7 +126,8 @@ class DLRep(Proof):
             or secrets_dict == {}
             or any(sec not in secrets_dict.keys() for sec in set(self.secret_vars))
         ):
-            print("Missing secrets in DLRep with secrets objects", self.secret_vars)
+            # TODO: Make this raise:
+            # raise IncompleteValuesError(self.secret_vars)
             return None
 
         # We check everything is indeed a big number, else we cast it
@@ -107,21 +139,30 @@ class DLRep(Proof):
 
     def get_proof_id(self):
         """
-        Generates an identifier for the proof. Syntax is ["DLRep", left-hand-side base, [list of
-        other bases]].  This identifier is used to check the proof statements on the prover and
+        Get the identifier for the proof.
+
+        This identifier is used to check the proof statements on the prover and
         verifier sides are consistent, and to generate a challenge in non-interactive proofs.
+
+        Returns:
+            str: Proof ID
         """
-        return ["DLRep", self.lhs, self.generators]
+        return str(["DLRep", self.lhs, self.generators])
 
     def get_randomizers(self):
         """
-        Initializes randomizers for each Secret in the associated DLRep. Each are drawn at
-        random between 0 and the order of the associated group.  By using a dict, we enforce that if
-        secret are repeated in x1 * g1 + x2 * g2 + ... + xn * gn (that is if xi and xj have the same
-        name) then they will get the same random value. Identical secret values and identical
-        randomizers will yield identical responses, and this identity will be checked by the
-        Verifier.  :return: Random values to compute the responses of the proof of knowledge for
-        each of the secrets.
+        Initialize randomizers for each secret.
+
+        Each randomizer is drawn at random from the associated group.
+
+        By using a dictionary, we enforce that if secret are repeated in :math:`x_0 G_0 + x_1 G_1 +
+        ... + x_n G_n`, that is, if :math:`x_i` and :math:`x_j` have the same name, they will get
+        the same random value. Identical secret values and identical randomizers will yield
+        identical responses, and this identity will be checked by the verifier.
+
+        Returns:
+            dict: Mapping from secrets to the random values that are needed to compute the responses
+                of the proof.
         """
         output = {}
         order = self.generators[0].group.order()
@@ -133,13 +174,14 @@ class DLRep(Proof):
         """
         Applies an equivalent verification equation for the current proof model: computes the
         commitment which would match the challenge and responses.  This commitment is to be compared
-        to the actual one in the generic :py:method:`Verifier.verify` method.
+        to the actual one in the generic :py:func:`Verifier.verify` method.
 
         Args:
-            challenge: A challenge
+            challenge: A challenge value
             responses: A list of responses
 
-        Return: The required commitment matching the parameters
+        Returns:
+            The required commitment matching the parameters.
         """
 
         leftside = (
@@ -153,8 +195,8 @@ class DLRep(Proof):
         function will misbehave if passed a non-empty but incomplete responses_dict.
 
         Args:
-            responses_dict: a dictionary from secret names (strings) to responses.
-            challenge: the challenge to enforce in the simulation
+            responses_dict: Optinal mapping from secrets or secret names to responses.
+            challenge: Optional challenge to use in the simulation
         """
         # Fill the missing positions of the responses dictionary
         responses_dict = self.update_randomizers(responses_dict)
@@ -169,21 +211,26 @@ class DLRep(Proof):
 
 
 class DLRepProver(Prover):
-    """
-    The prover in a discrete logarithm proof. See Abstractions file for details on the super class Prover.
-    """
+    """The prover in a discrete logarithm proof."""
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Computes the commitment using the randomizers and returns it. The function will misbehave if passed a non-empty but incomplete randomizers_dict.
-        :param randomizers_dict: Optional dictionary of random values for the Secret objects. Every value not enforced will be generated at random.
-        :return: A single commitment (base for the group), sum of bases (each weighted by the corresponding randomizer).
+        Compute the commitment using the randomizers.
+
+        Args:
+            randomizers_dict: Optional mapping from secrets or secret names to random values. Every
+                random value not given here will be generated at random.
+
+        Returns:
+            A single commitment---sum of bases, weighted by the corresponding randomizers
         """
         # Fill the missing positions of the randomizers dictionary
         randomizers_dict = self.proof.update_randomizers(randomizers_dict)
+
         # Compute an ordered list of randomizers mirroring the Secret objects
         self.ks = [randomizers_dict[sec] for sec in self.proof.secret_vars]
         subcommits = [a * b for a, b in zip(self.ks, self.proof.generators)]
+
         # We build the commitment doing the product g1^k1 g2^k2...
         sum_ = self.proof.generators[0].group.infinite()
         for com in subcommits:
@@ -193,9 +240,16 @@ class DLRepProver(Prover):
 
     def compute_response(self, challenge):
         """
-        Constructs an (ordered) list of N response mirroring the N secrets/generators
-        :param challenge: A number of type petlib.bn.Bn
-        :return: A list of responses, for each secret x and a random value k (associated to x), the response is equal to k + challenge * x
+        Constructs an (ordered) list of response for each secret.
+
+        For each secret :math:`x` and a random value :math:`k` (associated to :math:`x`), the
+        response is equal to :math:`k + c x`, where :math:`c` is the challenge value.
+
+        Args:
+            challenge: Challenge value
+
+        Returns:
+            A list of responses
         """
         order = self.proof.generators[0].group.order()
         resps = [

@@ -1,5 +1,9 @@
-import os
-import sys
+"""
+ZK proof for a BBS+ signature.
+"""
+
+# TODO: Fix the docs.
+
 
 from zkbuilder.primitives.dlrep import *
 from zkbuilder.base import *
@@ -30,7 +34,9 @@ class Signature:
 
 class UserCommitmentMessage:
     """
-    Embeds the product to be presigned by the issuer. If blinded by a user pedersen commitment, a NI proof is also specified.
+    Embed the product to be pre-signed by the issuer.
+
+    If blinded by a user's Pedersen commitment, a NI proof is also specified.
     """
 
     def __init__(self, commitment, pedersen_NIproof=None):
@@ -53,7 +59,8 @@ class UserCommitmentMessage:
 
 class SignatureCreator:
     """
-    Constructs a UserCommitment i.e the presigned product along if blind with a proof of correct construction (non_interactive)
+    Construct a UserCommitment, i.e., the pre-signed product along if blind with a proof of correct
+    construction (non-interactive).
     """
 
     def __init__(self, pk):
@@ -62,9 +69,11 @@ class SignatureCreator:
 
     def commit(self, messages, zkp=False):
         """
-        If zkp parameter is set to True, prepares a pedersen commitment to the set of messages to be signed and a non-interactive proof of correct construction.
-        Else, simply constructs the product of the attributes.
-        Packs the product/commitment and the optional proof in a UserCommitmentMessage object.
+        If ``zkp`` parameter is set to True, prepares a Pedersen commitment to the set of messages to be
+        signed and a non-interactive proof of correct construction.  Otherwise, simply construct the
+        product of the attributes.
+
+        Pack the product/commitment and the optional proof in a :py:class:`UserCommitmentMessage` object.
         """
         lhs = self.pk.generators[0].group.wsum(
             messages, self.pk.generators[2 : len(messages) + 2]
@@ -82,10 +91,8 @@ class SignatureCreator:
         return UserCommitmentMessage(lhs, NIproof)
 
     def obtain_signature(self, presignature):
-        """
-        Updates the received presignature into a complete signature.
-        s1 is the part of the signature blinding factor which is on the user side.
-        """
+        """Update the received pre-signature into a complete signature."""
+        # s1 is the part of the signature blinding factor which is on the user side.
         if self.s1 is None:
             new_s = presignature.s
         else:
@@ -95,14 +102,15 @@ class SignatureCreator:
 
 class KeyPair:
     """
-    Packs a public key with its private key and a list of canonical bases to use in proofs.
+    A public-private key pair, along with a list of canonical bases to use in proofs.
+
+    Args
+        bilinearpair (:py:class:`BiliniearGroupPair`: Bilinear group pair.
+        length: Upper bound on the number of generators needed to compute the proof.
+            Should be at least 2 + the number of messages.
     """
 
     def __init__(self, bilinearpair, length):
-        """
-        :param bilinearpair: Of type BilinearGroupPair, featuring a G1 and a G2 group from which are drawn the g_is and h0.
-        :param length: An upperbound on the number of generators needed to compute the proof. Should be at least 2 + the number of messages.
-        """
         self.generators = []
         for i in range(length + 2):
             randWord = str(i + 1)
@@ -116,15 +124,16 @@ class KeyPair:
 
 
 class PublicKey:
-    """
-    An abstraction for a public key.
-    """
+    """Public key"""
 
     def __init__(self, w, generators, h0):
         """
-        Initializes the attributes and precomputes the group pairings.
-        :param w: The public key value.
-        :param generators: the G1 generators to use in proofs. Length should be at least 2 + number of messages.
+        Initializes the attributes and pre-computes the group pairings.
+
+        Args
+            w: Value of the public key
+            generators: the :math:`\mathbb{G}_1` generators to use in proofs. Length should be at
+                least 2 + number of messages.
         """
         self.w = w
         self.generators = generators
@@ -140,8 +149,11 @@ class SecretKey:
 
     def sign(self, lhs):
         """
-        Signs a committed message (typically a product, blind or not) ie returns A,e,s2 such that A = (g0 + s2*g1 + Cm) * 1/e+gamma
-        If the product was blinded by the user's s1 secret value, user has to update the signature.
+        Sign a committed message (typically a product, blinded or not), i.e. returns (A,e,s2) such
+        that A = (g0 + s2*g1 + Cm) * 1/e+gamma If the product was blinded by the user's s1 secret
+        value, user has to update the signature.
+
+        TODO: Fix math in the docstring.
         """
         pedersen_product = lhs
         e = self.h0.group.order().random()

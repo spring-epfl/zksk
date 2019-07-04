@@ -1,9 +1,10 @@
 """
-See https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
-"""
+ZK proof of inequality of two discrete logarithms.
 
-import os
-import sys
+See Protocol 1 in "Thinking Inside the BLAC Box: Smarter Protocols for Faster Anonymous
+Blacklisting" by Henry and Goldberg, 2013:
+https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+"""
 
 from zkbuilder.base import *
 from zkbuilder.composition import *
@@ -11,12 +12,21 @@ from zkbuilder.primitives.dlrep import *
 
 
 class DLRepNotEqualProof(BaseProof):
+    """
+    ZK-proof statement of inequality of two discrete logarithms.
+
+    Using the notation from the BLAC paper:
+
+    .. math:: PK{ x: H_0 = x * h_0 \land H_1 \neq x * h_1 }
+
+    Instantiates a Proof of inequal logarithms: takes (H0, h0), (H1, h1), [x=Secret(value=...)] such
+    that H0 = x*h0 and H1 != x*h1.  All these arguments should be iterable. The binding keyword
+    argument allows to make the proof bind the x to an other proof.  If not set to True, it is not
+    possible to assert the same x was used in an other proof (even in an And conjunction)!
+    """
+
     def __init__(self, valid_tuple, invalid_tuple, secret_vars, binding=False):
-        """
-        Instantiates a Proof of inequal logarithms: takes (H0,h0), (H1,h1), [x=Secret(value=...)] such that H0 = x*h0 and H1 != x*h1.
-        All these arguments should be iterable. The binding keyword argument allows to make the proof bind the x to an other proof.
-        If not set to True, it is not possible to assert the same x was used in an other proof (even in an And conjunction)!
-        """
+
         self.ProverClass, self.VerifierClass = (
             DLRepNotEqualProver,
             DLRepNotEqualVerifier,

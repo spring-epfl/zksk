@@ -1,6 +1,3 @@
-import os
-import sys
-
 from zkbuilder.base import *
 from zkbuilder.composition import *
 from zkbuilder.pairings import *
@@ -555,6 +552,7 @@ def test_or_and_proof():
     secrets[xa] = 7
     secrets[Secret("xc")] = 18
     orproof = OrProof(pp0, andp)
+
     prov = orproof.get_prover(secrets)
     ver = orproof.get_verifier()
     com = prov.commit()
