@@ -7,3 +7,6 @@ __license__ = "MIT"
 __description__ = "A simple compiler for composable zero-knowledge proofs"
 __copyright__ = "Anonymous 2019"
 
+
+from zkbuilder.expr import Secret
+from zkbuilder.primitives.dlrep import DLRep
