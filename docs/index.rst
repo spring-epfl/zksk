@@ -8,8 +8,9 @@ zkbuilder's docs
 .. toctree::
    :maxdepth: 2
    :caption: Contents
-
-   tutorial
+   
+   getting_started
+   guide 
    
 
 .. toctree::
@@ -17,7 +18,6 @@ zkbuilder's docs
    :caption: API
     
    api/primitives
-
 
 
 Indices and tables
