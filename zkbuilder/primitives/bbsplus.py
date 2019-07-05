@@ -5,10 +5,11 @@ ZK proof for a BBS+ signature.
 # TODO: Fix the docs.
 
 
-from zkbuilder.primitives.dlrep import *
 from zkbuilder.base import *
+from zkbuilder.expr import Secret, wsum_secrets
 from zkbuilder.composition import *
 from zkbuilder.pairings import *
+from zkbuilder.primitives.dlrep import *
 
 
 class Signature:

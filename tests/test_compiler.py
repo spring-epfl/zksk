@@ -1,6 +1,7 @@
 from zkbuilder.base import *
 from zkbuilder.composition import *
 from zkbuilder.pairings import *
+from zkbuilder.expr import *
 from zkbuilder.primitives.dlrep import *
 from zkbuilder.primitives.bbsplus import *
 from zkbuilder.primitives.dlrep_notequal import *

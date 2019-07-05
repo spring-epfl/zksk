@@ -15,6 +15,7 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 """
 
 from zkbuilder.base import *
+from zkbuilder.expr import Secret, Expression
 from zkbuilder.composition import *
 from zkbuilder.exceptions import IncompleteValuesError
 

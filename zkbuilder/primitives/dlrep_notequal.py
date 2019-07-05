@@ -7,6 +7,7 @@ https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
 
 from zkbuilder.base import *
+from zkbuilder.expr import Secret, wsum_secrets
 from zkbuilder.composition import *
 from zkbuilder.primitives.dlrep import *
 
