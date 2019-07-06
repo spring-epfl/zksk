@@ -231,15 +231,17 @@ class BaseProof(Proof):
         Assumes all precommitment elements are in the same group, and that the number of such elements is known in advance.
         """
         group = self.generators[0].group
-        precommitment = []
-        for _ in range(self.precommitment_size):
-            precommitment.append(
-                group.hash_to_point(group.order().random().repr().encode("UTF-8"))
-            )
+        precommitment = self.simulate_precommitment()
         self.build_constructed_proof(precommitment)
         tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
         tr.precommitment = precommitment
         return tr
+
+    def simulate_precommitment(self):
+        """
+        Simulates a precommitment, returned as a list. Should be overriden when using simulations/Or Proof.
+        """
+        raise Exception("Override BaseProof.simulate_precommitment() in order to use Or Proof and simulations")
 
 
 class BaseProver(Prover):

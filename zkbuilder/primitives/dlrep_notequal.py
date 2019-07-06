@@ -32,7 +32,6 @@ class DLRepNotEqualProof(BaseProof):
             DLRepNotEqualProver,
             DLRepNotEqualVerifier,
         )
-        self.precommitment_size = 1
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
         # Declare two inner secrets whicch will depend on x, alpha and beta
@@ -72,6 +71,15 @@ class DLRepNotEqualProof(BaseProof):
             if el == self.generators[0].group.infinite():
                 return False
         return True
+
+    def simulate_precommitment(self):
+        """
+        Draws a base at random (not unity) from the generators' group. 
+        """
+        ret = self.generators[0].group.infinite()
+        while ret == ret.group.infinite():
+            ret = ret.group.hash_to_point(ret.group.order().random().repr().encode("UTF-8"))
+        return [ret]
 
 
 class DLRepNotEqualProver(BaseProver):

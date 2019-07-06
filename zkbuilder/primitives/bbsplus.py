@@ -180,8 +180,6 @@ class SignatureProof(BaseProof):
         self.ProverClass, self.VerifierClass = SignatureProver, SignatureVerifier
         self.pk = pk
         self.signature = signature
-        self.precommitment_size = 2
-
         if not binding:
             # We add two Secret slots for e and s if necessary
             secret_vars = [Secret(), Secret()] + secret_vars
@@ -238,6 +236,13 @@ class SignatureProof(BaseProof):
             subp.lhs for subp in self.constructed_proof.subproofs
         ]
         return self.constructed_proof
+
+    def simulate_precommitment(self):
+        """
+        Draws A1, A2 at random.
+        """
+        group = self.generators[0].group
+        return [group.hash_to_point(group.order().random().repr().encode("UTF-8")), group.hash_to_point(group.order().random().repr().encode("UTF-8"))]
 
 
 class SignatureProver(BaseProver):

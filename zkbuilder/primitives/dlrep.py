@@ -70,7 +70,7 @@ class DLRep(Proof):
     Example usage for :math:`PK\{x: y = x G \}`:
 
     >>> from petlib.ec import EcGroup
-    >>> x = Secret("x", value=42)
+    >>> x = Secret(42, name="x")
     >>> g = EcGroup().generator()
     >>> y = x * g
     >>> stmt = DLRep(y, x * g)
