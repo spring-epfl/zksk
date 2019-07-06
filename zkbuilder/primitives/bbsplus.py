@@ -68,7 +68,7 @@ class SignatureCreator:
         self.pk = pk
         self.s1 = None
 
-    def commit(self, messages, zkp=False):
+    def commit(self, messages, zkp=True):
         """
         If ``zkp`` parameter is set to True, prepares a Pedersen commitment to the set of messages to be
         signed and a non-interactive proof of correct construction.  Otherwise, simply construct the
