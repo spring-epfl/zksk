@@ -278,6 +278,7 @@ class BaseProver(Prover):
         self.constructed_prover = self.proof.constructed_proof.get_prover(
             self.constructed_dict
         )
+        # WL: why not use Secrets for the constructed proof as well?
 
 
 class BaseVerifier(Verifier):
@@ -364,21 +365,26 @@ class OrProof(Proof):
 
     def get_prover(self, secrets_dict={}):
         """
-        Gets an OrProver, which is built on one legit prover constructed from a subproof picked at random among all possible candidates.
+        Gets an OrProver, which is built on one legit prover constructed from a
+        subproof picked at random among all possible candidates.
         """
+
         # First we update the dictionary we have with the additional secrets, and process it
         self.secret_values.update(secrets_dict)
         secrets_dict = self.secret_values
         if self.simulation == True or secrets_dict == {}:
             return None
+
         # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
         for idx in range(len(self.subproofs)):
             if not self.subproofs[idx].simulation:
                 candidates[idx] = self.subproofs[idx]
+
         if len(candidates) == 0:
             print("Cannot run an Or Proof if all elements are simulated")
             return None
+
         # Now choose a proof among the possible ones and try to get a prover from it.
         # If for some reason it does not work (e.g some secrets are missing), remove it
         # from the list of possible proofs and try again
