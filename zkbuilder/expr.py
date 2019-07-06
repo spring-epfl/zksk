@@ -60,7 +60,7 @@ class Expression:
         TODO: Take secret_dict as optional input.
         """
         for secret in self.secrets:
-            if secret.value == None:
+            if secret.value is None:
                 raise Exception(
                     "trying to evaluate secret {0} which was set with no value".format(
                         secret.name

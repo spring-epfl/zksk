@@ -277,4 +277,3 @@ def sub_proof_prover(sub_proof, secrets_dict):
         if s_name in keys:
             secrets_for_prover[s_name] = secrets_dict[s_name]
     return sub_proof.get_prover(secrets_for_prover)
-
