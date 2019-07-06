@@ -113,6 +113,12 @@ class GTGroup:
             self.gen = self.bp.G1.generator().pair(self.bp.G2.generator())
         return self.gen
 
+    def sum(self, points):
+        res = self.infinite()
+        for p in points:
+            res = res + p
+        return res
+
     def wsum(self, weights, generators):
         res = self.infinite()
         for w, g in zip(weights, generators):
@@ -261,6 +267,14 @@ class G1Group:
     def hash_to_point(self, string):
         return G1Point(self.bp.bpgp.hashG1(string), self.bp)
 
+    # TODO throw these on a base class
+    def sum(self, points):
+        res = self.infinite()
+        for p in points:
+            res = res + p
+        return res
+
+    # TODO throw these on a base class
     def wsum(self, weights, generators):
         res = self.infinite()
         for w, g in zip(weights, generators):
@@ -290,6 +304,13 @@ class G2Group:
 
     def order(self):
         return self.bp.bpgp.order()
+
+    # TODO throw these on a base class
+    def sum(self, points):
+        res = self.infinite()
+        for p in points:
+            res = res + p
+        return res
 
     def wsum(self, weights, generators):
         res = self.infinite()
