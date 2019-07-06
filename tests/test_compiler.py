@@ -55,7 +55,7 @@ for i in range(1, N):
     randWord = randomword(30).encode("UTF-8")
     tab_g.append(G.hash_to_point(randWord))
 o = G.order()
-secrets_aliases = [Secret("x1"), Secret("x2"), Secret("x3"), Secret("x4"), Secret("x5")]
+secrets_aliases = [Secret(name="x1"), Secret(name="x2"), Secret(name="x3"), Secret(name="x4"), Secret(name="x5")]
 secrets_values = dict()
 secret_tab = []
 # This array is only useful to compute the public info because zip doesn't take dicts. #spaghetti
@@ -197,7 +197,7 @@ def test_get_many_different_provers():
     N = 10
     generators = get_generators(N)
     prefix = "secret_"
-    secrets_names = [Secret(prefix + str(i)) for i in range(N)]
+    secrets_names = [Secret(name=prefix + str(i)) for i in range(N)]
     secrets_vals = [Bn(i) for i in range(N)]
     secr_dict = dict(zip(secrets_names, secrets_vals))
     pp = DLRep(
@@ -262,12 +262,12 @@ def test_wrong_and_proofs():
     generators2 = get_generators(n2)
     generators2[0] = EcGroup(706).generator()
     secrets = [
-        Secret("x0"),
-        Secret("x1"),
-        Secret("x2"),
-        Secret("x3"),
-        Secret("x4"),
-        Secret("x5"),
+        Secret(name="x0"),
+        Secret(name="x1"),
+        Secret(name="x2"),
+        Secret(name="x3"),
+        Secret(name="x4"),
+        Secret(name="x5"),
     ]
     x0, x1, x2, x3, x4, x5 = secrets
 
@@ -466,7 +466,7 @@ def test_DLRep_right_hand_side_eval():
     g1 = 2 * g
     g2 = 5 * g
 
-    rhs = Secret("x1") * g1 + Secret("x2") * g2
+    rhs = Secret(name="x1") * g1 + Secret(name="x2") * g2
     with pytest.raises(
         Exception
     ):  # An exception should be raised because of a product of generators living in two different groups
@@ -523,8 +523,8 @@ def test_and_or_proof():
     pp1, pp2, secrets = setup_and_proofs()
     g1 = 7 * pp1.generators[0]
     g2 = 8 * pp1.generators[0]
-    xb = Secret("xb")
-    xa = Secret("xa")
+    xb = Secret(name="xb")
+    xa = Secret(name="xa")
     pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xb] = 7
     secrets[xa] = 18
@@ -547,11 +547,11 @@ def test_or_and_proof():
 
     g1 = 7 * pp1.generators[0]
     g2 = 8 * pp1.generators[0]
-    xb = Secret("xb")
-    xa = Secret("xa")
+    xb = Secret(name="xb")
+    xa = Secret(name="xa")
     pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xa] = 7
-    secrets[Secret("xc")] = 18
+    secrets[Secret(name="xc")] = 18
     orproof = OrProof(pp0, andp)
 
     prov = orproof.get_prover(secrets)
@@ -567,8 +567,8 @@ def test_or_or():
     first_or = OrProof(pp1, pp2)
     g1 = 7 * pp1.generators[0]
     g2 = 8 * pp1.generators[0]
-    xb = Secret("xb")
-    xa = Secret("xa")
+    xb = Secret(name="xb")
+    xa = Secret(name="xa")
     pp0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
     secrets[xa] = 7
     secrets[Secret()] = 18
@@ -797,10 +797,10 @@ def test_and_BLAC_binding1():
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [Secret(secrets_aliases[0]).name],
+        [Secret(name=secrets_aliases[0]).name],
         binding=True,
     )
-    pr2v = DLRep(lhs_tab[0], Secret(secrets_aliases[0].name) * tab_g[0])
+    pr2v = DLRep(lhs_tab[0], Secret(name=secrets_aliases[0].name) * tab_g[0])
 
     andpv = pr1v & pr2v
 
@@ -818,7 +818,7 @@ def test_and_BLAC_not_binding():
     pr2 = DLRep(lhs_tab[2], s0 * tab_g[2])
     andp = pr1 & pr2
 
-    s0p = Secret(secrets_aliases[0].name)
+    s0p = Secret(name=secrets_aliases[0].name)
     pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p])
     pr2v = DLRep(lhs_tab[2], s0p * tab_g[2])
     andpv = pr1v & pr2v
@@ -845,7 +845,7 @@ def test_and_BLAC_binding2():
     andp = pr1 & pr2
 
     # Twin proof
-    s0p = Secret(secrets_aliases[0].name)
+    s0p = Secret(name=secrets_aliases[0].name)
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p], binding=True
     )

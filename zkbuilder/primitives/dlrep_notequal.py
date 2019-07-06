@@ -35,8 +35,8 @@ class DLRepNotEqualProof(BaseProof):
         self.precommitment_size = 1
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("Wrong parameters for DLRepNotEqualProof")
-        # Declare two inner secrets whicch will depend on x
-        self.aliases = [Secret("alpha"), Secret("beta")]
+        # Declare two inner secrets whicch will depend on x, alpha and beta
+        self.aliases = [Secret(), Secret()]
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
         self.binding = binding

@@ -85,7 +85,7 @@ class Secret:
         value: Optional secret value.
 
     """
-    def __init__(self, name=None, value=None):
+    def __init__(self, value=None, name=None):
         self.name = name or str(hash(self))
         self.value = value
 
@@ -102,7 +102,7 @@ class Secret:
     __rmul__ = __mul__
 
     def __repr__(self):
-        return self.name
+        return self.name+':'+self.value.__repr__()
 
     def __hash__(self):
         if hasattr(self, "name"):
