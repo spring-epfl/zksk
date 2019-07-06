@@ -176,18 +176,23 @@ class SignatureProof(BaseProof):
         If binding keyord argument is set to True, the constructor will parse the two first elements of secret_vars as the Secret variables for the e and s attributes of the signature.
         Else, will internally declare its own.
         """
+
         self.ProverClass, self.VerifierClass = SignatureProver, SignatureVerifier
         self.pk = pk
+        self.signature = signature
         self.precommitment_size = 2
+
         if not binding:
             # We add two Secret slots for e and s if necessary
             secret_vars = [Secret(), Secret()] + secret_vars
+
         # We need L+1 generators for L messages. secret_vars are messages plus 'e' and 's'
         self.generators = pk.generators[: len(secret_vars)]
         self.aliases = [Secret(), Secret(), Secret(), Secret()]
-        self.signature = signature
         self.constructed_proof = None
+
         # Below is boilerplate
+        # TODO: handle secret_vars in super constructor
         self.secret_vars = secret_vars
         if signature is not None:
             # Digest the signature parameters
@@ -200,7 +205,9 @@ class SignatureProof(BaseProof):
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
         :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
+        # TODO: Why is this essential? and not automatic?
         self.precommitment = precommitment
+
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
         dl1 = DLRep(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)
