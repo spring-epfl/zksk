@@ -23,4 +23,16 @@ You can install zkbuilder using pip:
 
 [Upon paper acceptance, we will publish the package to PyPI]
 
+To run unit tests, first, install the dev version of the package:
+
+.. code-block:: bash
+
+   pip install -e ".[dev]"
+
+Second, run the tests with pytest:
+
+.. code-block:: bash
+
+   pytest
+
 .. end-getting-started-marker-do-not-remove
