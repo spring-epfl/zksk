@@ -82,9 +82,6 @@ class PowerTwoRangeProof(BaseProof):
         # The constructed proofs need extra randomizers as secrets
         self.randomizers = [Secret() for _ in range(self.nr_bits)]
 
-        # TODO: why do we need to set this manually?
-        self.precommitment_size = self.nr_bits + 1
-
         # Move to super initializer with default argument
         self.constructed_proof = None
         self.simulation = False
