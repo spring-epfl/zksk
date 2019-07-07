@@ -99,6 +99,7 @@ class Prover(metaclass=abc.ABCMeta):
         """
         # precommit to gather encapsulated precommitments. They are already included in their respective proof statement.
         precommitment = self.precommit()
+
         commitment = self.proof.ec_encode(self.internal_commit())
 
         # Create a SHA-256 hash object with proof statement.

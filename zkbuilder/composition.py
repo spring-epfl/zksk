@@ -199,7 +199,9 @@ class BaseProof(Proof):
                 sec not in self.secret_values.keys() for sec in set(self.secret_vars)
             )
         ):
+            # TODO: not sure None is the right output here
             return None
+
         return self.ProverClass(self, self.secret_values)
 
     def get_verifier(self):
@@ -292,13 +294,15 @@ class BaseProver(Prover):
         Triggers the inner proof construction and extracts a prover from it given the secrets.
         """
         self.proof.build_constructed_proof(self.precommitment)
-        # Map the secret names to the values we just computed, and update the secrets dictionary accordingly
+
+        # Map the secret names to the values we just computed, and update the
+        # secrets dictionary accordingly
         self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
         self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.proof.constructed_proof.get_prover(
             self.constructed_dict
         )
-        # WL: why not use Secrets for the constructed proof as well?
+        # TODO WL: why not use Secrets for the constructed proof as well?
 
 
 class BaseVerifier(Verifier):
@@ -525,6 +529,7 @@ class OrProver(Prover):
                     index1 = index - 1
                 else:
                     index1 = index
+                # TODO: not sure when simulations are created
                 precommitment.append(self.simulations[index1].precommitment)
         if not any(precommitment):
             return None
