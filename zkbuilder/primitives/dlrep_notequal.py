@@ -32,12 +32,16 @@ class DLRepNotEqualProof(BaseProof):
             DLRepNotEqualProver,
             DLRepNotEqualVerifier,
         )
+
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
-            raise Exception("Wrong parameters for DLRepNotEqualProof")
-        # Declare two inner secrets whicch will depend on x, alpha and beta
-        self.aliases = [Secret(), Secret()]
+            raise Exception("The valid_tuple and invalid_tuple must be 2-tuples")
+
+        # The internal ZK proof uses two constructed secrets
+        self.alpha, self.beta = Secret(), Secret()
+
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]
+
         self.binding = binding
         self.constructed_proof = None
         self.secret_vars = secret_vars
@@ -47,20 +51,18 @@ class DLRepNotEqualProof(BaseProof):
         """
         Builds the internal AndProof associated to a DLRepNotEqualProof. See formula in Protocol 1 of the BLAC paper.
         """
-        new_lhs = [self.generators[0].group.infinite()] + precommitment
+        infty = self.generators[0].group.infinite()
         self.precommitment = precommitment
-        p = []
-        for i in range(len(new_lhs)):
-            p.append(
-                DLRep(
-                    new_lhs[i],
-                    wsum_secrets(self.aliases, [self.generators[i], self.lhs[i]]),
-                )
-            )
+        p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
+        p2 = DLRep(precommitment[0], self.alpha * self.generators[1] + self.beta * self.lhs[1])
+        proofs = [p1, p2]
+
         if self.binding:
-            # If the binding parameter is set, we add a DLRep member repeating the first member without randomizing the secret.
-            p.append(DLRep(self.lhs[0], self.secret_vars[0] * self.generators[0]))
-        self.constructed_proof = AndProof(*p)
+            # If the binding parameter is set, we add a DLRep member repeating
+            # the first member without randomizing the secret.
+            proofs.append(DLRep(self.lhs[0], self.secret_vars[0] * self.generators[0]))
+
+        self.constructed_proof = AndProof(*proofs)
         return self.constructed_proof
 
     def check_adequate_lhs(self):
@@ -87,17 +89,19 @@ class DLRepNotEqualProver(BaseProver):
         """
         Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
         """
+        order = self.proof.generators[0].group.order()
         cur_secret = self.secret_values[self.proof.secret_vars[0]]
-        self.blinder = self.proof.generators[0].group.order().random()
-        # Choose a value for the two internal secrets
-        new_secrets = (
-            cur_secret * self.blinder % self.proof.generators[0].group.order(),
-            -self.blinder % self.proof.generators[0].group.order(),
-        )
+        self.blinder = order.random()
+
+        # Set the value of the two internal secrets
+        self.proof.alpha.value = cur_secret * self.blinder % order
+        self.proof.beta.value = -self.blinder % order
+
         precommitment = [
             self.blinder * (cur_secret * self.proof.generators[1] - self.proof.lhs[1])
         ]
-        return precommitment, new_secrets
+
+        return precommitment
 
 
 class DLRepNotEqualVerifier(BaseVerifier):

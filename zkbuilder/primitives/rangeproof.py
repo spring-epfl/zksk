@@ -46,9 +46,8 @@ class RangeProof(BaseProof):
 
 
 class PowerTwoRangeProof(BaseProof):
-    def __init__(self, com, g, h, nr_bits, value=None, randomizer=None):
-        """Constructs a range proof statement
-
+    def __init__(self, com, g, h, nr_bits, value, randomizer):
+        """
         Constructs a range proof statement that
 
              ``0 <= value < 2**nr_bits``
@@ -58,13 +57,13 @@ class PowerTwoRangeProof(BaseProof):
             g: First Pedersen commitment base point
             h: Second Pedersen commitment base point
             nr_bits: The number of bits of the committed value
-            value: The value for which we construct a range proof (prover only)
-            randomizer: The randomizer of com (prover only)
+            value (Secret): The value for which we construct a range proof
+            randomizer (Secret): The randomizer of com
         """
         self.ProverClass = PowerTwoRangeProver
         self.VerifierClass = PowerTwoRangeVerifier
 
-        if not value is None and not randomizer is None:
+        if not value.value is None and not randomizer.value is None:
             # Not sure why we need these here? To do the order checks?
             # TODO: do we need to set secret_vars explicitly? Yes,
             # But is there a better way to do this? Maybe force overriding?
@@ -80,8 +79,8 @@ class PowerTwoRangeProof(BaseProof):
         self.g, self.h = g, h
         self.nr_bits = nr_bits
 
-        # TODO: I think I'd rather avoid this altogether
-        self.aliases = [Secret() for _ in range(self.nr_bits)]
+        # The constructed proofs need extra randomizers as secrets
+        self.randomizers = [Secret() for _ in range(self.nr_bits)]
 
         # TODO: why do we need to set this manually?
         self.precommitment_size = self.nr_bits + 1
@@ -94,8 +93,6 @@ class PowerTwoRangeProof(BaseProof):
         # TODO: Why is this essential? and not automatic?
         self.precommitment = precommitment
 
-        rand_secrets = self.aliases
-
         if self.is_prover:
             # Indicators that tell us which or-clause is true
             value = self.secret_vars[0].value
@@ -105,9 +102,10 @@ class PowerTwoRangeProof(BaseProof):
 
         bit_proofs = []
         for i in range(self.nr_bits):
-            p0 = DLRep(precommitment[i], rand_secrets[i] * self.h)
-            p1 = DLRep(precommitment[i] - self.g, rand_secrets[i] * self.h)
+            p0 = DLRep(precommitment[i], self.randomizers[i] * self.h)
+            p1 = DLRep(precommitment[i] - self.g, self.randomizers[i] * self.h)
 
+            # When we are a prover, mark which disjunct is true
             if self.is_prover:
                 p0.simulation = zero_simulated[i]
                 p1.simulation = one_simulated[i]
@@ -144,19 +142,23 @@ class PowerTwoRangeProver(BaseProver):
 
         value = self.proof.secret_vars[0].value
         value_as_bits = decompose_into_n_bits(value, self.proof.nr_bits)
-        bit_randomizers = [order.random() for _ in range(self.proof.nr_bits)]
-        precommitment = [ b * g + r * h for b, r in zip(value_as_bits, bit_randomizers)]
+
+        # Set true value to computed secrets
+        for rand in self.proof.randomizers:
+            rand.value = order.random()
+
+        precommitment = [ b * g + r.value * h for b, r in zip(value_as_bits, self.proof.randomizers)]
 
         # Compute revealed randomizer
         rand = Bn(0)
         power = Bn(1)
-        for r in bit_randomizers:
-            rand = rand.mod_add(r * power, order)
+        for r in self.proof.randomizers:
+            rand = rand.mod_add(r.value * power, order)
             power *= 2
         rand = rand.mod_sub(self.proof.secret_vars[1].value, order)
         precommitment.append(rand)
 
-        return precommitment, bit_randomizers
+        return precommitment
 
 
 class PowerTwoRangeVerifier(BaseVerifier):
@@ -179,13 +181,13 @@ def main():
     com = value * g + randomizer * h
 
     proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit)
+    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
 
     pp = proof.prove()
     assert(proof_prime.verify(pp))
 
     proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit)
+    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
 
     prov = proof.get_prover()
     ver = proof_prime.get_verifier()

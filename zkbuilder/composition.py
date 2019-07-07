@@ -272,8 +272,8 @@ class BaseProver(Prover):
         return self.response
 
     def precommit(self):
-        self.precommitment, self.constructed_secrets = self.internal_precommit()
-        self.process_precommitment(self.constructed_secrets)
+        self.precommitment = self.internal_precommit()
+        self.process_precommitment()
         return self.precommitment
 
     def internal_precommit(self):
@@ -289,20 +289,14 @@ class BaseProver(Prover):
         """
         return [], []
 
-    def process_precommitment(self, new_secrets):
+    def process_precommitment(self):
         """
         Triggers the inner proof construction and extracts a prover from it given the secrets.
         """
         self.proof.build_constructed_proof(self.precommitment)
-
-        # Map the secret names to the values we just computed, and update the
-        # secrets dictionary accordingly
-        self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
-        self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.proof.constructed_proof.get_prover(
-            self.constructed_dict
+            self.secret_values
         )
-        # TODO WL: why not use Secrets for the constructed proof as well?
 
 
 class BaseVerifier(Verifier):
@@ -667,6 +661,9 @@ class AndProof(Proof):
             sub_proof_prover(sub_proof, secrets_dict) for sub_proof in self.subproofs
         ]
         if None in subs:
+            # TODO: It'd be great if we can get rid of the Nones, so we know which
+            # sub proofs are failing
+            print(subs)
             return None
         return AndProver(self, subs)
 
