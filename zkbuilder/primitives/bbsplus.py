@@ -246,7 +246,7 @@ class SignatureProof(BaseProof):
 
 
 class SignatureProver(BaseProver):
-    def precommit(self):
+    def internal_precommit(self):
         """
         Generates the lacking information to construct a complete proof and returns it.
         At the same time, triggers the said proof construction for self and self.proof.
@@ -264,9 +264,9 @@ class SignatureProver(BaseProver):
         new_secrets = [r1, r2, delta1, delta2]
         A1 = r1 * self.proof.generators[1] + r2 * self.proof.generators[2]
         A2 = r1 * self.proof.generators[2] + self.proof.signature.A
-        self.precommitment = [A1, A2]
-        self.process_precommitment(new_secrets)
-        return self.precommitment
+        precommitment = [A1, A2]
+
+        return precommitment, new_secrets
 
 
 class SignatureVerifier(BaseVerifier):

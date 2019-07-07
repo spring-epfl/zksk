@@ -269,6 +269,24 @@ class BaseProver(Prover):
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
 
+    def precommit(self):
+        self.precommitment, self.constructed_secrets = self.internal_precommit()
+        self.process_precommitment(self.constructed_secrets)
+        return self.precommitment
+
+    def internal_precommit(self):
+        """Computes precommitments and additional secrets for proof
+
+        Override this function to compute precommitments and corresponding
+        secrets that must be computed before the ZK proof itself can be
+        constructed and proven.
+
+        Returns:
+            precommitment: The precommitment
+            constructed_secrets: New secrets used in the proof
+        """
+        return [], []
+
     def process_precommitment(self, new_secrets):
         """
         Triggers the inner proof construction and extracts a prover from it given the secrets.

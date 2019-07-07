@@ -83,7 +83,7 @@ class DLRepNotEqualProof(BaseProof):
 
 
 class DLRepNotEqualProver(BaseProver):
-    def precommit(self):
+    def internal_precommit(self):
         """
         Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
         """
@@ -94,11 +94,10 @@ class DLRepNotEqualProver(BaseProver):
             cur_secret * self.blinder % self.proof.generators[0].group.order(),
             -self.blinder % self.proof.generators[0].group.order(),
         )
-        self.precommitment = [
+        precommitment = [
             self.blinder * (cur_secret * self.proof.generators[1] - self.proof.lhs[1])
         ]
-        self.process_precommitment(new_secrets)
-        return self.precommitment
+        return precommitment, new_secrets
 
 
 class DLRepNotEqualVerifier(BaseVerifier):

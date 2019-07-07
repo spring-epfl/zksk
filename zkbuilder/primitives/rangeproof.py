@@ -135,8 +135,9 @@ class PowerTwoRangeProof(BaseProof):
         return combined == self.com + rand * self.h
 
 class PowerTwoRangeProver(BaseProver):
-    def precommit(self):
+    def internal_precommit(self):
         """
+        Must return: precommitment, and any new secrets
         """
         g, h = self.proof.g, self.proof.h
         order = self.proof.g.group.order()
@@ -144,7 +145,7 @@ class PowerTwoRangeProver(BaseProver):
         value = self.proof.secret_vars[0].value
         value_as_bits = decompose_into_n_bits(value, self.proof.nr_bits)
         bit_randomizers = [order.random() for _ in range(self.proof.nr_bits)]
-        self.precommitment = [ b * g + r * h for b, r in zip(value_as_bits, bit_randomizers)]
+        precommitment = [ b * g + r * h for b, r in zip(value_as_bits, bit_randomizers)]
 
         # Compute revealed randomizer
         rand = Bn(0)
@@ -153,13 +154,9 @@ class PowerTwoRangeProver(BaseProver):
             rand = rand.mod_add(r * power, order)
             power *= 2
         rand = rand.mod_sub(self.proof.secret_vars[1].value, order)
+        precommitment.append(rand)
 
-        self.precommitment.append(rand)
-
-        # TODO: why do we call this function explicitly? Why do we also return the precommitment?
-        # Ok, I see now, this processes the secrets, let's redo this somehow, so that is automagic.
-        self.process_precommitment(bit_randomizers)
-        return self.precommitment
+        return precommitment, bit_randomizers
 
 
 class PowerTwoRangeVerifier(BaseVerifier):
