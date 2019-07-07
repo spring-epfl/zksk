@@ -174,14 +174,27 @@ def main():
 
     g = G.generator()
     h = 10 * G.generator() # FIXME
+    limit = 20
 
     com = value * g + randomizer * h
 
-    proof = PowerTwoRangeProof(com.eval(), g, h, 20, value, randomizer)
-    proof_prime = PowerTwoRangeProof(com.eval(), g, h, 20)
+    proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
+    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit)
 
     pp = proof.prove()
     assert(proof_prime.verify(pp))
+
+    proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
+    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit)
+
+    prov = proof.get_prover()
+    ver = proof_prime.get_verifier()
+    ver.process_precommitment(prov.precommit())
+    commitment = prov.commit()
+    chal = ver.send_challenge(commitment)
+    resp = prov.compute_response(chal)
+    assert ver.proof.check_adequate_lhs() and ver.verify(resp)
+
 
 if __name__ == "__main__":
     main()
