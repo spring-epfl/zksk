@@ -16,7 +16,7 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 from zkbuilder.base import *
 from zkbuilder.expr import Secret, Expression
 from zkbuilder.composition import *
-from zkbuilder.exceptions import IncompleteValuesError
+from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
 
 import warnings
 
@@ -84,16 +84,16 @@ class DLRep(Proof):
 
     def __init__(self, lhs, expr):
         if isinstance(expr, Expression):
-            self.generators = expr.pts
+            self.generators = expr.bases
             self.secret_vars = expr.secrets
         else:
-            raise Exception("Undefined behaviour for this input")
+            raise TypeError("Expected an Expression. Got: {}".format(expr))
 
         # Check all the generators live in the same group
         test_group = self.generators[0].group
         for g in self.generators:
             if g.group != test_group:
-                raise Exception(
+                raise InvalidExpression(
                     "All generators should come from the same group", g.group
                 )
 
