@@ -1,8 +1,8 @@
 """
 Proof of knowledge of two discrete logarithms:
-
 PK{ (x0, x1): y = x0 * g0 + x1 * g1 }
 
+WARNING: if you update this file, update the line numbers in the documentation.
 """
 
 from petlib.ec import EcGroup

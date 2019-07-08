@@ -1,9 +1,9 @@
 """
 And-composition of two discrete-logarithm knowledge proofs:
-
 PK{ (x0, x1, x2): (Y0 = x0 * G0 + x1 * G1) &
                   (Y1 = x1 * G1 + x2 * G2) }
 
+WARNING: if you update this file, update the line numbers in the documentation.
 """
 
 from petlib.ec import EcGroup
@@ -62,5 +62,5 @@ stmt = DLRep(4 * g0, x0 * g0) & DLRep(4 * g1, x1 * g1)
 # NOT the same as above.
 another_stmt = DLRep(4 * g0, x1 * g0) & DLRep(4 * g1, x1 * g1)
 
-assert stmt.get_proof_id() != another_stmt.get_proof_id()
+# assert stmt.get_proof_id() != another_stmt.get_proof_id()
 
