@@ -1,6 +1,10 @@
+"""
+TODO: Fix docs of and/or proofs.
+"""
+
 from zkbuilder.base import *
 from zkbuilder.utils import check_groups
-from zkbuilder.exceptions import StatementSpecError
+from zkbuilder.exceptions import StatementSpecError, StatementMismatch
 
 import copy
 
@@ -222,13 +226,9 @@ class Proof:
 
 class ExtendedProof(Proof):
     """
-    A Proof that deals with precommitments.
+    Proof that deals with precommitments.
 
-    TODO: Clarify
-
-    One needs to initalize self.ProverClass and self.VerifierClass in the init.
-    The idea is to draw a Prover capable of generating a precommitment, and use it to construct a
-    legit constructed proof.
+    TODO: More details.
     """
 
     def get_prover(self, secrets_dict=None):
@@ -289,8 +289,11 @@ class ExtendedProof(Proof):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates the ExtendedProof.
-        Assumes all precommitment elements are in the same group, and that the number of such elements is known in advance.
+        Simulate the proof.
+
+        Args:
+            responses_dict
+            challenge
         """
         group = self.generators[0].group
         precommitment = self.simulate_precommitment()
@@ -301,30 +304,37 @@ class ExtendedProof(Proof):
 
     def simulate_precommitment(self):
         """
-        Simulates a precommitment, returned as a list. Should be overriden when using simulations/Or Proof.
+        Simulate a precommitment.
+
+        Should be overriden when using simulations/Or Proof.
         """
-        raise Exception("Override ExtendedProof.simulate_precommitment() in order to use Or Proof and simulations")
+        raise Exception("Override ExtendedProof.simulate_precommitment() in order to"
+                        "use or proof and simulations")
 
 
 class ExtendedProver(Prover):
     """
-    A framework for Provers dealing with precommitments. The Prover will create a constructed Prover and wrap its methods.
+    Prover dealing with precommitments.
+
+    This prover will create a constructed Prover object and delegate to its methods.
     """
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Triggers the inside prover commit. Transfers the randomizer dict coming from above, which will be
-        used if the binding of the proof is set True.
+        Trigger the inside the prover commit.
+
+        Transfers the randomizer_dict if passed. It might be used if the binding of the proof is set
+        True.
         """
         if self.proof.constructed_proof is None:
             raise Exception(
-                "Please precommit before commiting, else proofs lack parameters"
+                "You need to pre-commit before commiting. The proofs lack parameters otherwise."
             )
         return self.constructed_prover.internal_commit(randomizers_dict)
 
     def compute_response(self, challenge):
         """
-        Wraps the response computation for the inner proof.
+        Wrap the response computation for the inner proof.
         """
         self.challenge = challenge
         self.constructed_prover.challenge = challenge
@@ -361,12 +371,12 @@ class ExtendedProver(Prover):
 
 class ExtendedVerifier(Verifier):
     """
-    A framework for Verifiers dealing with precommitments.
+    Verifier that deals with precommitments.
     """
 
     def process_precommitment(self, precommitment):
         """
-        Receives the precommitment and triggers the inner proof construction.
+        Receive the precommitment and trigger the inner proof construction.
         """
         self.precommitment = precommitment
         self.proof.build_constructed_proof(precommitment)
@@ -374,8 +384,11 @@ class ExtendedVerifier(Verifier):
 
     def send_challenge(self, com):
         """
-        Checks the received statement and transfers the commitment to the inner proof, without making it check any statement.
+        Check the received statement and transfer the commitment to the inner proof
+
+        Does not not actually check any statements.
         """
+
         statement, self.commitment = com
         self.proof.check_statement(statement)
         self.challenge = self.constructed_verifier.send_challenge(
@@ -383,57 +396,69 @@ class ExtendedVerifier(Verifier):
         )
         return self.challenge
 
-    def check_responses_consistency(self, response, response_dict):
+    def check_responses_consistency(self, responses, responses_dict):
         """
-        Wraps the inner proof responses consistency check.
+        Wrap the inner proof responses consistency check.
         """
         return self.constructed_verifier.check_responses_consistency(
-            response, response_dict
+            responses, responses_dict
         )
 
 
 class OrProof(Proof):
+    """
+    An disjunction of several subproofs.
+
+    Subproofs are copied at instantiation.
+
+    Args:
+        subproofs: Two or more proof statements.
+    """
     def __init__(self, *subproofs):
-        """
-        Constructs the Or conjunction of several subproofs.
-        Subproofs are copied at instantiation.
-        :param subproofs: An arbitrary number of proofs.
-        """
         if len(subproofs) < 2:
-            raise Exception("OrProof needs >1 arguments !")
-        # We will make a shallow copy of each subproof so they dont mess up with each other.
-        # This step is important in Or Proof since we can have different outputs for a same proof (independent simulations or simulations/execution)
+            raise Exception("OrProof needs > 1 arguments")
+
+        # We make a shallow copy of each subproof so they don't mess up each other.  This step is
+        # important, as we can have different outputs for the same proof (independent simulations or
+        # simulations/execution)
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
         self.generators = get_generators(self.subproofs)
         self.secret_vars = get_secret_vars(self.subproofs)
+        self.simulation = False
+
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
         for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
-        self.simulation = False
-        check_groups(self.secret_vars, self.generators)
+
         # For now we consider the same constraints as in the And Proof
+        check_groups(self.secret_vars, self.generators)
 
     def get_proof_id(self):
         return ["Or", [sub.get_proof_id() for sub in self.subproofs]]
 
     def recompute_commitment(self, challenge, responses):
         """
-        Recomputes the commitments, raises an Exception if the global challenge was not respected.
-        :param challenge: The global challenge sent by the verifier.
-        :param responses: A tuple (subchallenges, actual_responses) containing the subchallenges
-        each proof used (ordered list), and a list of responses (also ordered)
+        Recompute the commitments, raise an Exception if the global challenge was not respected.
+
+        Args:
+            challenge: The global challenge sent by the verifier.
+            responses: A tuple (subchallenges, actual_responses) containing the subchallenges each
+                proof used (ordered list), and a list of responses (also ordered)
         """
         # We retrieve the challenges, hidden in the responses tuple
         self.or_challenges = responses[0]
         responses = responses[1]
         comm = []
+
         # We check for challenge consistency i.e the constraint was respected
         if find_residual_chal(self.or_challenges, challenge, CHALLENGE_LENGTH) != Bn(0):
             raise Exception("Inconsistent challenge")
-        # Compute the list of commitments, one for each proof with its challenge and responses (in-order)
+
+        # Compute the list of commitments, one for each proof with its challenge and responses
+        # (in-order)
         for i in range(len(self.subproofs)):
             cur_proof = self.subproofs[i]
             comm.append(
@@ -443,7 +468,7 @@ class OrProof(Proof):
 
     def get_prover(self, secrets_dict={}):
         """
-        Gets an OrProver, which is built on one legit prover constructed from a
+        Get an OrProver, which is built on one legit prover constructed from a
         subproof picked at random among all possible candidates.
         """
 
@@ -491,7 +516,9 @@ class OrProof(Proof):
         """
         Checks for appearance of reoccuring secrets both inside and outside an Or Proof.
         Raises an error if finds any. Method called from AndProof.check_or_flaw
-        :param forbidden_secrets: A list of all the secrets in the mother proof.
+
+        Args:
+            forbidden_secrets: A list of all the secrets in the mother proof.
         """
         if forbidden_secrets is None:
             return
@@ -516,11 +543,16 @@ class OrProof(Proof):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates an Or Proof. To do so, simulates the N-1 first subproofs, computes the complementary challenge
-        and simulates the last proof using this challenge. Does not use the responses_dict passed as parameter since inside an Or Proof
-        responses consistency is not required between subproofs.
-        :param challenge: The global challenge, equal to the sum of all the subchallenges mod chal bitlength.
-        :param responses_dict: A dictionary of responses to enforce for consistency. Useless hiere, kept to have the same prototype for all simulate_proof methods.
+        Simulates an Or Proof. To do so, simulates the N-1 first subproofs, computes the
+        complementary challenge and simulates the last proof using this challenge. Does not use the
+        responses_dict passed as parameter since inside an Or Proof responses consistency is not
+        required between subproofs.
+
+        Args:
+            challenge: The global challenge, equal to the sum of all the subchallenges mod chal
+                bitlength.
+            responses_dict: A dictionary of responses to enforce for consistency.
+                Useless hiere, kept to have the same prototype for all simulate_proof methods.
         """
         if challenge is None:
             challenge = chal_randbits(CHALLENGE_LENGTH)
@@ -548,14 +580,19 @@ class OrProof(Proof):
 
 
 class OrProver(Prover):
+    """
+    Prover for the or proof.
+
+    This prover is built with only one subprover, and needs to have access to the index of the
+    corresponding subproof in its mother proof. Runs all the simulations for the other proofs and
+    stores them.
+    """
+
     def __init__(self, proof, subprover):
-        """
-        Constructs a Prover for the Or Proof. Is built with only one subprover, and needs to have access to the index of the corresponding subproof in its mother proof.
-        Runs all the simulations for the other proofs and stores them.
-        """
         self.subprover = subprover
         self.proof = proof
         self.true_prover_idx = self.proof.chosen_idx
+
         # Create a list to store the SimulationTranscripts
         self.simulations = []
         self.setup_simulations()
@@ -571,8 +608,9 @@ class OrProver(Prover):
 
     def precommit(self):
         """
-        Generates a precommitment for the legit subprover, and gathers the precommitments from the stored simulations.
-        Outputs a list of the precommitments needed by the subproofs if any. Else, returns None.
+        Generate a precommitment for the legit subprover, and gathers the precommitments from the
+        stored simulations.  Outputs a list of the precommitments needed by the subproofs if any.
+        Else, returns None.
         """
         precommitment = []
         for index in range(len(self.proof.subproofs)):
@@ -591,8 +629,12 @@ class OrProver(Prover):
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Commits from the subprover, gathers the commitments from the stored simulations. Packs into a list.
-        :param randomizers_dict: A dictionary of randomizers to use for responses consistency. Not used in this proof. Parameter kept so all internal_commit methods have the same prototype.
+        Commits from the subprover, gathers the commitments from the stored simulations. Packs into
+        a list.
+
+        Args:
+            randomizers_dict: A dictionary of randomizers to use for responses consistency. Not used
+                in this proof. Parameter kept so all internal_commit methods have the same prototype.
         """
         commitment = []
         for index in range(len(self.proof.subproofs)):
@@ -608,10 +650,14 @@ class OrProver(Prover):
 
     def compute_response(self, challenge):
         """
-        Computes the complementary challenge with respect to the received global challenge and the list of challenges used in the stored simulations.
-        Computes the responses of the subprover using this auxiliary challenge, gathers the responses from the stored simulations.
-        Returns both the complete list of subchallenges (included the auxiliary challenge) and the list of responses, both ordered.
-        :param challenge: The global challenge to use. All subchallenges must add to this one.
+        Computes the complementary challenge with respect to the received global challenge and the
+        list of challenges used in the stored simulations.  Computes the responses of the subprover
+        using this auxiliary challenge, gathers the responses from the stored simulations.  Returns
+        both the complete list of subchallenges (included the auxiliary challenge) and the list of
+        responses, both ordered.
+
+        Args:
+            challenge: The global challenge to use. All subchallenges must add to this one.
         """
         residual_chal = find_residual_chal(
             [el.challenge for el in self.simulations], challenge, CHALLENGE_LENGTH
@@ -631,22 +677,28 @@ class OrProver(Prover):
                 challenges.append(self.simulations[index1].challenge)
                 response.append(self.simulations[index1].responses)
 
-        # We carry the or challenges in a tuple, will be unpacked by the verifier calling recompute_commitment
+        # We carry the or challenges in a tuple, will be unpacked by the verifier calling
+        # recompute_commitment
         return (challenges, response)
 
 
 class OrVerifier(Verifier):
+    """
+    Verifier for the Or Proof.
+
+    The verifiers is built on a list of subverifiers, which will unpack the received attributes.
+    """
     def __init__(self, proof, subverifiers):
-        """
-        Constructs a Verifier for the Or Proof. Is built on a list of subverifiers, which will unpack the received attributes.
-        """
         self.subs = subverifiers
         self.proof = proof
 
     def process_precommitment(self, precommitment):
         """
-        Reads the received list of precommitments (or None if non applicable) and distributes them to the subverifiers so they can finalize their proof construction if necessary.
-        :param precommitment: A list of all required precommitments, ordered.
+        Reads the received list of precommitments (or None if non applicable) and distributes them
+        to the subverifiers so they can finalize their proof construction if necessary.
+
+        Args:
+            precommitment: A list of all required precommitments, ordered.
         """
         if precommitment is None:
             return
@@ -656,8 +708,13 @@ class OrVerifier(Verifier):
     def check_responses_consistency(self, responses, responses_dict={}):
         """
         Checks that for a same secret, response are actually the same.
-        Since every member is run with its own challenge, it is enough that one member is consistent within itself.
-        :param responses: a tuple (subchallenges, actual_responses) from which we extract only the actual responses for each subverifier.
+
+        Since every member is run with its own challenge, it is enough that one member is consistent
+        within itself.
+
+        Args:
+            responses: a tuple (subchallenges, actual_responses) from which we extract only the
+                actual responses for each subverifier.
         """
         for idx in range(len(self.subs)):
             if not self.subs[idx].check_responses_consistency(responses[1][idx], {}):
@@ -675,10 +732,9 @@ class AndProof(Proof):
         if len(subproofs) < 2:
             raise Exception("AndProof needs >1 arguments !")
 
-        # We will make a shallow copy of each subproof so they dont mess up with each other.
-        # This step is important in case we have proofs which locally draw random values.
-        # It ensures several occurrences of the same proof in the tree indeed have their own randomnesses
-
+        # We will make a shallow copy of each subproof so they dont mess up with each other.  This
+        # step is important in case we have proofs which locally draw random values.  It ensures
+        # several occurrences of the same proof in the tree indeed have their own randomnesses
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
         self.generators = get_generators(self.subproofs)
@@ -696,7 +752,8 @@ class AndProof(Proof):
 
     def recompute_commitment(self, challenge, andresp):
         """
-        Recomputes the commitment consistent with the given challenge and response, as a list of commitments of the subproofs.
+        Recomputes the commitment consistent with the given challenge and response, as a list of
+        commitments of the subproofs.
         :param challenge: The challenge to use in the proof
         :param andresp: A list of responses (themselves being lists), ordered as the list of subproofs.
         """
