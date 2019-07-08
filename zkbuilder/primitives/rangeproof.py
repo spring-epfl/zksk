@@ -59,12 +59,12 @@ class PowerTwoRangeProof(ExtendedProof):
         PK \{ value: ``lower_limit \leq value < num\_bits`` \}
 
     Args:
-        com: A Pedersen commitment, ``com = value * g + randomizer * h``
+        com: Pedersen commitment, ``com = value * g + randomizer * h``
         g: First Pedersen commitment base point
         h: Second Pedersen commitment base point
         num_bits: The number of bits of the committed value
-        value: The value for which we construct a range proof (prover only)
-        randomizer: The randomizer of com (prover only)
+        value: Value for which we construct a range proof (prover only)
+        randomizer: Randomizer of the commitment (prover only)
     """
     def __init__(self, com, g, h, num_bits, value=None, randomizer=None):
         if not value.value is None and not randomizer.value is None:
@@ -164,39 +164,3 @@ class PowerTwoRangeProver(ExtendedProver):
         precommitment.append(rand)
 
         return precommitment
-
-
-def main():
-    print("Running main!")
-    mG = BilinearGroupPair()
-    G = mG.G1
-
-    value = Secret(value=Bn(10))
-    randomizer = Secret(value=G.order().random())
-
-    g = G.generator()
-    h = 10 * G.generator() # FIXME
-    limit = 20
-
-    com = value * g + randomizer * h
-
-    proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
-
-    pp = proof.prove()
-    assert(proof_prime.verify(pp))
-
-    proof = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    proof_prime = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
-
-    prov = proof.get_prover()
-    ver = proof_prime.get_verifier()
-    ver.process_precommitment(prov.precommit())
-    commitment = prov.commit()
-    chal = ver.send_challenge(commitment)
-    resp = prov.compute_response(chal)
-    assert ver.proof.check_adequate_lhs() and ver.verify(resp)
-
-
-if __name__ == "__main__":
-    main()
