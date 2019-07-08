@@ -175,9 +175,9 @@ class SignatureProof(ExtendedProof):
         If the object is used for proving, it requires a signature argument.
         If binding keyord argument is set to True, the constructor will parse the two first elements of secret_vars as the Secret variables for the e and s attributes of the signature.
         Else, will internally declare its own.
+        TODO: secret_vars -> msg?
         """
 
-        self.ProverClass, self.VerifierClass = SignatureProver, SignatureVerifier
         self.pk = pk
         self.signature = signature
         if not binding:
@@ -186,8 +186,10 @@ class SignatureProof(ExtendedProof):
 
         # We need L+1 generators for L messages. secret_vars are messages plus 'e' and 's'
         self.generators = pk.generators[: len(secret_vars)]
-        self.aliases = [Secret(), Secret(), Secret(), Secret()]
         self.constructed_proof = None
+
+        # The prover will compute the following secrets:
+        self.r1, self.r2, self.delta1, self.delta2 = Secret(), Secret(), Secret(), Secret()
 
         # Below is boilerplate
         # TODO: handle secret_vars in super constructor
@@ -208,13 +210,15 @@ class SignatureProof(ExtendedProof):
 
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
-        dl1 = DLRep(self.A1, self.aliases[0] * g1 + self.aliases[1] * g2)
+
+        dl1 = DLRep(self.A1, self.r1 * g1 + self.r2 * g2)
         dl2 = DLRep(
             g0.group.infinite(),
-            self.aliases[2] * g1
-            + self.aliases[3] * g2
+            self.delta1 * g1
+            + self.delta2 * g2
             + self.secret_vars[0] * (-1 * self.A1),
         )
+
         self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * self.pk.gen_pairs[0])
         generators = [
             -1 * (self.A2.pair(self.pk.h0)),
@@ -222,20 +226,25 @@ class SignatureProof(ExtendedProof):
             self.pk.gen_pairs[2],
         ]
         generators.extend(self.pk.gen_pairs[1 : len(self.generators)])
+
         # Build secret names [e, r1, delta1, s, m_i]
         new_secret_vars = (
             self.secret_vars[:1]
-            + [self.aliases[0], self.aliases[2]]
+            + [self.r1, self.delta1]
             + self.secret_vars[1:]
         )
         pairings_proof = DLRep(
             self.pair_lhs, wsum_secrets(new_secret_vars, generators)
         )
+
         self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
         self.constructed_proof.lhs = [
             subp.lhs for subp in self.constructed_proof.subproofs
         ]
         return self.constructed_proof
+
+    def get_prover_cls(self):
+        return SignatureProver
 
     def simulate_precommitment(self):
         """
@@ -245,8 +254,8 @@ class SignatureProof(ExtendedProof):
         return [group.hash_to_point(group.order().random().repr().encode("UTF-8")), group.hash_to_point(group.order().random().repr().encode("UTF-8"))]
 
 
-class SignatureProver(BaseProver):
-    def precommit(self):
+class SignatureProver(ExtendedProver):
+    def internal_precommit(self):
         """
         Generates the lacking information to construct a complete proof and returns it.
         At the same time, triggers the said proof construction for self and self.proof.
@@ -256,18 +265,17 @@ class SignatureProver(BaseProver):
         if self.proof.signature is None:
             raise Exception("No signature given!")
         # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
-        r1, r2 = (
-            self.proof.generators[0].group.order().random(),
-            self.proof.generators[0].group.order().random(),
-        )
-        delta1, delta2 = r1 * self.proof.signature.e, r2 * self.proof.signature.e
-        new_secrets = [r1, r2, delta1, delta2]
+
+        # Set true value to computed secrets
+        order = self.proof.generators[0].group.order()
+        r1, r2 = order.random(), order.random()
+        self.proof.r1.value, self.proof.r2.value = r1, r2
+        self.proof.delta1.value = r1 * self.proof.signature.e % order
+        self.proof.delta2.value = r2 * self.proof.signature.e % order
+
         A1 = r1 * self.proof.generators[1] + r2 * self.proof.generators[2]
         A2 = r1 * self.proof.generators[2] + self.proof.signature.A
-        self.precommitment = [A1, A2]
-        self.process_precommitment(new_secrets)
-        return self.precommitment
+        precommitment = [A1, A2]
 
+        return precommitment
 
-class SignatureVerifier(BaseVerifier):
-    pass

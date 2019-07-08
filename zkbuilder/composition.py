@@ -256,12 +256,16 @@ class ExtendedProof(Proof):
                 sec not in self.secret_values.keys() for sec in set(self.secret_vars)
             )
         ):
+            # TODO: not sure None is the right output here
             return None
 
         return self.get_prover_cls()(self, self.secret_values)
 
-    def get_verifier(self):
-        return self.get_verifier_cls()(self)
+    def get_verifier_cls(self):
+        return ExtendedProver
+
+    def get_verifier_cls(self):
+        return ExtendedVerifier
 
     def recompute_commitment(self, challenge, responses):
         """
@@ -302,7 +306,7 @@ class ExtendedProof(Proof):
         raise Exception("Override ExtendedProof.simulate_precommitment() in order to use Or Proof and simulations")
 
 
-class BaseProver(Prover):
+class ExtendedProver(Prover):
     """
     A framework for Provers dealing with precommitments. The Prover will create a constructed Prover and wrap its methods.
     """
@@ -327,21 +331,35 @@ class BaseProver(Prover):
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
 
-    def process_precommitment(self, new_secrets):
+    def precommit(self):
+        self.precommitment = self.internal_precommit()
+        self.process_precommitment()
+        return self.precommitment
+
+    def internal_precommit(self):
+        """Computes precommitments and additional secrets for proof
+
+        Override this function to compute precommitments and corresponding
+        secrets that must be computed before the ZK proof itself can be
+        constructed and proven.
+
+        Returns:
+            precommitment: The precommitment
+            constructed_secrets: New secrets used in the proof
+        """
+        return [], []
+
+    def process_precommitment(self):
         """
         Triggers the inner proof construction and extracts a prover from it given the secrets.
         """
         self.proof.build_constructed_proof(self.precommitment)
-        # Map the secret names to the values we just computed, and update the secrets dictionary accordingly
-        self.constructed_dict = dict(zip(self.proof.aliases, new_secrets))
-        self.constructed_dict.update(self.secret_values)
         self.constructed_prover = self.proof.constructed_proof.get_prover(
-            self.constructed_dict
+            self.secret_values
         )
-        # WL: why not use Secrets for the constructed proof as well?
 
 
-class BaseVerifier(Verifier):
+class ExtendedVerifier(Verifier):
     """
     A framework for Verifiers dealing with precommitments.
     """
@@ -565,6 +583,7 @@ class OrProver(Prover):
                     index1 = index - 1
                 else:
                     index1 = index
+                # TODO: not sure when simulations are created
                 precommitment.append(self.simulations[index1].precommitment)
         if not any(precommitment):
             return None
@@ -702,6 +721,9 @@ class AndProof(Proof):
             sub_proof_prover(sub_proof, secrets_dict) for sub_proof in self.subproofs
         ]
         if None in subs:
+            # TODO: It'd be great if we can get rid of the Nones, so we know which
+            # sub proofs are failing
+            print(subs)
             return None
         return AndProver(self, subs)
 

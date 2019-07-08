@@ -96,11 +96,13 @@ class DLRep(Proof):
                 raise Exception(
                     "All generators should come from the same group", g.group
                 )
+
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
         for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
+
         self.lhs = lhs
         self.simulation = False
 
