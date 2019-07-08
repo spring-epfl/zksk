@@ -1,3 +1,4 @@
+
 """
 Tiny expression language suitable for expressing statements on discrete logarithm representations
 
@@ -10,6 +11,12 @@ Tiny expression language suitable for expressing statements on discrete logarith
 >>> expr = a * g + b * h
 
 """
+
+import struct
+import hashlib
+
+from zkbuilder.exceptions import InvalidExpression, IncompleteValuesError
+
 
 class Expression:
     """
@@ -28,13 +35,13 @@ class Expression:
 
     def __init__(self, secret, base):
         if not isinstance(secret, Secret):
-            raise Exception(
-                "in {0} * {1}, the first parameter should be a Secret ".format(
+            raise InvalidExpression(
+                "In {0} * {1}, the first parameter should be a Secret".format(
                     secret, base
                 )
             )
-        self.secrets = [secret]
-        self.pts = [base]
+        self._secrets = [secret]
+        self._bases = [base]
 
     def __add__(self, other):
         """
@@ -47,33 +54,45 @@ class Expression:
             Expression: New expression
         """
         if not isinstance(other, Expression):
-            raise Exception(
-                '${0} doesn\'t correspond to something "x1" * g1 + "x2" * g2 + ... + "xn" * gn'
+            raise InvalidExpression(
+                "Invalid expression. Only linear combinations of group elements are supported."
             )
-        self.secrets.extend(other.secrets)
-        self.pts.extend(other.pts)
+        self._secrets.extend(other._secrets)
+        self._bases.extend(other._bases)
         return self
+
+    @property
+    def secrets(self):
+        return tuple(self._secrets)
+
+    @property
+    def bases(self):
+        return tuple(self._bases)
 
     def eval(self):
         """Evaluate the expression, if all secret values are available.
 
         TODO: Take secret_dict as optional input.
         """
-        for secret in self.secrets:
+        for secret in self._secrets:
             if secret.value is None:
-                raise Exception(
-                    "trying to evaluate secret {0} which was set with no value".format(
-                        secret.name
-                    )
+                raise IncompleteValuesError(
+                    "Secret {0} does not have a value".format(secret.name)
                 )
 
         def ith_mul(i):
-            return self.secrets[i].value * self.pts[i]
+            return self._secrets[i].value * self._bases[i]
 
         summation = ith_mul(0)
-        for i in range(1, len(self.secrets)):
+        for i in range(1, len(self._secrets)):
             summation += ith_mul(i)
         return summation
+
+    def __repr__(self):
+        fragments = []
+        for secret, base in zip(self._secrets, self._bases):
+            fragments.append("Expression({}, {})".format(secret, base))
+        return " + ".join(fragments)
 
 
 class Secret:
@@ -85,9 +104,18 @@ class Secret:
         value: Optional secret value.
 
     """
+
+    NUM_NAME_BYTES = 8
+
     def __init__(self, value=None, name=None):
-        self.name = name or str(hash(self))
+        if name is None:
+            name = self._generate_unique_name()
+        self.name = name
         self.value = value
+
+    def _generate_unique_name(self):
+        h = struct.pack(">q", hash(self))
+        return hashlib.sha256(h).hexdigest()[:self.NUM_NAME_BYTES * 4]
 
     def __mul__(self, base):
         """
@@ -102,25 +130,30 @@ class Secret:
     __rmul__ = __mul__
 
     def __repr__(self):
-        return self.name+':'+self.value.__repr__()
+        if self.value is None and self.name is None:
+            return "Secret()"
+        elif self.value is None:
+            return "Secret(name={})".format(repr(self.name))
+        elif self.name is None:
+            return "Secret({})".format(self.value)
+        else:
+            return "Secret({}, {})".format(self.value, repr(self.name))
 
     def __hash__(self):
         if hasattr(self, "name"):
-            return hash(self.name)
+            return hash(("Secret", self.name))
         else:
             return super().__hash__()
 
 
 def wsum_secrets(secrets, generators):
     """
-    Returns a complete Expression object when passed a list of Secret instances and a list of
-    generators, of same length.
+    Build expression as a dot product of given secrets and generators.
     """
     if len(secrets) != len(generators):
-        raise Exception("Bad wsum")
+        raise ValueError("Should have as many secrets as generators.")
 
-    sum_ = secrets[0] * generators[0]
+    result = secrets[0] * generators[0]
     for idx in range(len(generators) - 1):
-        sum_ = sum_ + secrets[idx + 1] * generators[idx + 1]
-    return sum_
-
+        result = result + secrets[idx + 1] * generators[idx + 1]
+    return result
