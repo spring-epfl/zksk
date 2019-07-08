@@ -11,7 +11,7 @@ zkbuilder's docs
    
    getting_started
    guide 
-   
+   internals
 
 .. toctree::
    :maxdepth: 2

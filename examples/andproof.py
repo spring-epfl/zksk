@@ -2,7 +2,7 @@
 And-composition of two discrete-logarithm knowledge proofs:
 
 PK{ (x0, x1, x2): (Y0 = x0 * G0 + x1 * G1) &
-                  (Y1 = x1 * G1 + x2 * G2) \}
+                  (Y1 = x1 * G1 + x2 * G2) }
 
 """
 
@@ -52,3 +52,15 @@ commitment = prover.commit()
 challenge = verifier.send_challenge(commitment)
 response = prover.compute_response(challenge)
 assert verifier.verify(response)
+
+# Composition takes into account re-occuring secrets.
+
+x0 = Secret(4)
+x1 = Secret(4)
+stmt = DLRep(4 * g0, x0 * g0) & DLRep(4 * g1, x1 * g1)
+
+# NOT the same as above.
+another_stmt = DLRep(4 * g0, x1 * g0) & DLRep(4 * g1, x1 * g1)
+
+assert stmt.get_proof_id() != another_stmt.get_proof_id()
+

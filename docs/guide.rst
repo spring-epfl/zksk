@@ -138,7 +138,8 @@ Composing proofs with "and"
 We show how to build an "and"-composition of two discrete logarithm proofs:
 
 .. math::
-   PK \{ (x_0, x_1, x_2): Y_0 = x_0 G_0 + x_1 * G_1 \land Y_1 = x_1 G_1 + x_2 G_2 \}
+   PK \{ (x_0, x_1, x_2): \underbrace{Y_0 = x_0 G_0 + x_1 G_1}_{\text{First statement}}
+      \land \underbrace{Y_1 = x_1 G_2 + x_2 G_3}_{\text{Second statement}} \}
 
 As before, we initialize the points :math:`G_i` and the secrets :math:`x_i`.
 
@@ -166,16 +167,11 @@ parameters.
 Composing proofs takes into consideration the reoccuring secrets. The following are two **not**
 equivalent snippets:
 
-.. code:: python
+.. literalinclude:: ../examples/andproof.py
+   :lines: 58-60
 
-   x0 = Secret(value=4)
-   x1 = Secret(value=4)
-   stmt = DLRepProof(y0, x0 * g0) & DLRepProof(y1, x1 * g1)
-
-.. code:: python
-   
-   # NOT the same as above.
-   stmt = DLRepProof(y0, x1 * g0) & DLRepProof(y1, x1 * g1)  
+.. literalinclude:: ../examples/andproof.py
+   :lines: 62-63
 
 They are not equivalent as the second one will verify that the same
 :py:class:`zkbuilder.expr.Secret` object is used. 
