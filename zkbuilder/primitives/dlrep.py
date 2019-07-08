@@ -8,7 +8,6 @@ same elliptic curve, and :math:`y` is the actual value of the expression :math:`
 See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camenisch and Stadler,
 1997 for the details.
 
-
 .. _`Proof Systems for General Statements about Discrete Logarithms`:
     ftp://ftp.inf.ethz.ch/pub/crypto/publications/CamSta97b.pdf
 

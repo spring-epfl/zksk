@@ -1,9 +1,11 @@
 """
 ZK proof of inequality of two discrete logarithms.
 
-See Protocol 1 in "Thinking Inside the BLAC Box: Smarter Protocols for Faster Anonymous
-Blacklisting" by Henry and Goldberg, 2013:
-https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+See Protocol 1 in "`Thinking Inside the BLAC Box: Smarter Protocols for Faster Anonymous
+Blacklisting`_" by Henry and Goldberg, 2013:
+
+.. _`Thinking Inside the BLAC Box: Smarter Protocols for Faster Anonymous
+    Blacklisting`: https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
 
 from zkbuilder.base import *
@@ -12,7 +14,7 @@ from zkbuilder.composition import *
 from zkbuilder.primitives.dlrep import *
 
 
-class DLRepNotEqualProof(BaseProof):
+class DLRepNotEqualProof(ExtendedProof):
     """
     ZK-proof statement of inequality of two discrete logarithms.
 
@@ -74,7 +76,7 @@ class DLRepNotEqualProof(BaseProof):
 
     def simulate_precommitment(self):
         """
-        Draws a base at random (not unity) from the generators' group. 
+        Draws a base at random (not unity) from the generators' group.
         """
         ret = self.generators[0].group.infinite()
         while ret == ret.group.infinite():

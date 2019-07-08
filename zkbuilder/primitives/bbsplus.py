@@ -164,7 +164,7 @@ class SecretKey:
         return Signature(A, e, s2)
 
 
-class SignatureProof(BaseProof):
+class SignatureProof(ExtendedProof):
     """
     Proof of knowledge of a (A,e,s) signature over a set (known length) of (hidden) messages.
     """

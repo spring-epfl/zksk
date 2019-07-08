@@ -1,5 +1,6 @@
 from zkbuilder.base import *
 from zkbuilder.utils import check_groups
+from zkbuilder.exceptions import StatementSpecError
 
 import copy
 
@@ -7,64 +8,78 @@ import copy
 class Proof:
     """A composable sigma-protocol proof statement."""
 
+    @abc.abstractmethod
+    def get_randomizers(self):
+        pass
+
     def __and__(self, other):
         """
-        Returns an AndProof from this proof and the other proof using the infix '&' operator.
-        If called again, subproofs are merged so only one AndProof remains in the end.
+        Return a conjuction of proof statements using :py:class:`AndProof`.
+
+        If called multiple times, subproofs are flattened so that only one :py:class:`AndProof`
+        remains at the root.
         """
         if isinstance(other, AndProof):
             if isinstance(self, AndProof):
                 return AndProof(*self.subproofs, *other.subproofs)
             else:
                 return AndProof(self, *other.subproofs)
+
         elif isinstance(self, AndProof):
             return AndProof(*self.subproofs, other)
+
         return AndProof(self, other)
 
     def __or__(self, other):
         """
-        :return: an OrProof from this proof and the other proof using the infix '|' operator.
-        If called again, subproofs are merged so only one OrProof remains in the end.
+        Return a disjunction of proof statements using :py:class:`OrProof`.
+
+        If called multiple times, subproofs are flattened so that only one :py:class:`OrProof`
+        remains at the root.
         """
         if isinstance(other, OrProof):
             if isinstance(self, OrProof):
                 return OrProof(*self.subproofs, *other.subproofs)
             else:
                 return OrProof(self, *other.subproofs)
+
         elif isinstance(self, OrProof):
             return OrProof(*self.subproofs, other)
+
         return OrProof(self, other)
 
     def get_prover_cls(self):
         if hasattr(self, "prover_cls"):
             return self.prover_cls
         else:
-            raise ValueError("No prover class specified.")
+            raise StatementSpecError("No prover class specified.")
 
     def get_verifier_cls(self):
         if hasattr(self, "verifier_cls"):
             return self.verifier_cls
         else:
-            raise ValueError("No verifier class specified.")
+            raise StatementSpecError("No verifier class specified.")
 
     def get_prover(self, secrets_dict=None):
         """
-        Returns a :py:class:`Prover` object for the current proof.
+        Return a Verifier object for the current proof.
         """
         return self.get_prover_cls()(self)
 
     def get_verifier(self):
         """
-        Returns a :py:class:`Verifier` object for the current proof.
+        Return a Verifier object for the current proof.
         """
         return self.get_verifier_cls()(self)
 
     def recompute_commitment(self, challenge, response):
         """
-        Computes a pseudo-commitment: the commitment you should have received
-        if the proof was correct. It should be compared to the actual commitment.
+        Compute a pseudo-commitment
 
-        Reoccuring secrets yield identical responses.
+        A pseudo-commitment is the commitment a verifier should have received if the proof was
+        correct. It should be compared to the actual commitment.
+
+        Re-occuring secrets yield identical responses.
 
         Args:
             challenge: the challenge used in the proof
@@ -113,7 +128,12 @@ class Proof:
 
     def check_adequate_lhs(self):
         """
-        Optional verification criteria to be checked at verification step. Returns True by default, to be overriden if necessary.
+        Verification criteria to be checked at verification step. Override if needed.
+
+        Should be overridden if necessary.
+
+        Returns:
+            bool: True by default.
         """
         return True
 
@@ -125,14 +145,21 @@ class Proof:
 
     def update_randomizers(self, randomizers_dict):
         """
-        Constructs a full dictionary of randomizers (also used as responses in simulations) by copying the values of the dict passed as parameter,
-        and drawing the other values at random until all the secrets have a randomizer.
-        :param randomizers_dict: A dictionary to enforce
+        Construct a mapping of all secrets to randomizers.
+
+        Does so by copying the values of the passed ``randomizers_dict``, and drawing the other
+        values at random until all the secrets have a randomizer.
+
+        These are used as a part of proofs and also as responses in simulations.
+
+        Args:
+            randomizers_dict: A dictionary to enforce
         """
         # If we are not provided a randomizer dict from above, we compute it.
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
-        # If we were passed an incomplete dictionary, fill it
+
+        # Fill the dictionary.
         elif any([x not in randomizers_dict for x in self.secret_vars]):
             tmp = self.get_randomizers()
             tmp.update(randomizers_dict)
@@ -141,8 +168,10 @@ class Proof:
 
     def ec_encode(self, data):
         """
-        Figures out which encoder to use in the petlib.pack function encode() and uses it.
-        Can break if both petlib.ec.EcPt points and custom BilinearPairings points are used in the same proof.
+        Figure out which encoder to use in the ``petlib.pack`` and uses it.
+
+        TODO: Can break if both ``petlib.ec.EcPt`` points and custom :py:class:`BilinearPairings`
+        points are used in the same proof.
         """
         if not isinstance(self.generators[0], EcPt):
             encoding = enc_GXpt
@@ -150,19 +179,33 @@ class Proof:
             encoding = None
         return encode(data, custom_encoder=encoding)
 
-    def prehash_statement(self, other=None):
+    def prehash_statement(self, extra=None):
         """
-        Returns a hash of the proof's descriptor.
-        Since for now proofs mixing EcPt and G1Pt are not supported, we typecheck to encode with the petlib.pack function.
-        :arg other: An optional other object to pack, e.g a commitment (for non-interactive proofs). Avoids having to figure out the encoding mode multiple times.
+        Return a hash of the proof's descriptor.
+
+        .. WARNING::
+
+            Currently, proofs that mix ``petlib.ec.EcPt`` and :py:class:`pairings.G1Point`` are not
+            supported.
+
+        Args:
+            extra: Optional additional object to pack, e.g a commitment (for non-interactive
+                proofs). Avoids having to figure out the encoding mode multiple times.
         """
+        # TODO: extra is not used.
         ppp = sha256(self.ec_encode(self.get_proof_id()))
         return ppp
 
     def verify_simulation_consistency(self, transcript):
-        """
-        Tool function useful for debugging. Checks if a the fields of a transcript satisfy the verification equation.
-        Should NOT be used instead of proof.verify() since it would accept simulations !
+        """Check if the fields of a transcript satisfy the verification equation.
+
+        Useful for debugging purposed.
+
+        .. WARNING::
+
+            This is NOT an alternative to the full proof verification, as this function
+            accepts simulated proofs.
+
         """
         verifier = self.get_verifier()
         verifier.process_precommitment(transcript.precommitment)
@@ -174,23 +217,37 @@ class Proof:
         return verifier.verify(transcript.responses)
 
     def __repr__(self):
-        return "\n" + str(self.get_proof_id())
+        return str(self.get_proof_id())
 
 
-class BaseProof(Proof):
+class ExtendedProof(Proof):
     """
-    A framework for Proofs dealing with precommitments.
+    A Proof that deals with precommitments.
+
+    TODO: Clarify
+
     One needs to initalize self.ProverClass and self.VerifierClass in the init.
-    The idea is to draw a Prover capable of generating a precommitment, and use it to construct a legit constructed proof.
+    The idea is to draw a Prover capable of generating a precommitment, and use it to construct a
+    legit constructed proof.
     """
 
-    def get_prover(self, secrets_dict={}):
+    def get_prover(self, secrets_dict=None):
+        """
+        Get a prover object.
+
+        Returns:
+            Prover object if all secret values are known, None otherwise.
+        """
+        if secrets_dict is None:
+            secrets_dict = {}
+
         # Construct a dictionary with the secret values we already know
         self.secret_values = {}
         for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
-        # First we update the dictionary we have with the additional secrets, and process it
+
+        # Update the dictionary with the additional secrets.
         self.secret_values.update(secrets_dict)
         if (
             self.simulation
@@ -200,10 +257,11 @@ class BaseProof(Proof):
             )
         ):
             return None
-        return self.ProverClass(self, self.secret_values)
+
+        return self.get_prover_cls()(self, self.secret_values)
 
     def get_verifier(self):
-        return self.VerifierClass(self)
+        return self.get_verifier_cls()(self)
 
     def recompute_commitment(self, challenge, responses):
         """
@@ -227,7 +285,7 @@ class BaseProof(Proof):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates the BaseProof.
+        Simulates the ExtendedProof.
         Assumes all precommitment elements are in the same group, and that the number of such elements is known in advance.
         """
         group = self.generators[0].group
@@ -241,7 +299,7 @@ class BaseProof(Proof):
         """
         Simulates a precommitment, returned as a list. Should be overriden when using simulations/Or Proof.
         """
-        raise Exception("Override BaseProof.simulate_precommitment() in order to use Or Proof and simulations")
+        raise Exception("Override ExtendedProof.simulate_precommitment() in order to use Or Proof and simulations")
 
 
 class BaseProver(Prover):
@@ -656,27 +714,39 @@ class AndProof(Proof):
     def get_proof_id(self):
         return ["And", [sub.get_proof_id() for sub in self.subproofs]]
 
-    def get_randomizers(self) -> dict:
+    def get_randomizers(self):
         """
-        Creates a dictionary of randomizers by querying the subproofs dicts and merging them
+        Create a dictionary of randomizers by querying the subproofs' maps and merging them.
         """
         random_vals = {}
-        # Pair each Secret to one generator. Overwrites when a Secret reoccurs but since the associated generators should yield groups of same order it's fine
+
+        # Pair each Secret to one generator. Overwrites when a Secret re-occurs but since the
+        # associated generators should yield groups of same order, it's fine.
         dict_name_gen = dict(zip(self.secret_vars, self.generators))
-        # Pair each Secret to a randomizer
+
+        # Pair each Secret to a randomizer.
         for u in dict_name_gen:
             random_vals[u] = dict_name_gen[u].group.order().random()
+
         return random_vals
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates the And Proof, i.e draws a global challenge, a global dictionary of responses (for consistency) and simulates each subproof.
-        Gathers the commitments, and pack everything into a unique SimulationTranscript
-        :param responses_dict: A dictionary of responses to enforce (could come from an upper And Proof, for example). Draw one if None.
-        :param challenge: The challenge to use in the proof. Draw one if None.
+        Simulate the And proof
+
+        To do so, draw a global challenge, a global dictionary of responses (for consistency) and
+        simulate each subproof.
+
+        Gathers the commitments, and pack everything into a :py:class:`base.SimulationTranscript`.
+
+        Args:
+            responses_dict: A dictionary of responses to override (could come from an upper And
+                Proof, for example). Draw randomly if None.
+            challenge: The challenge to use in the proof. Draw one if None.
         """
         # Fill the missing positions of the responses dictionary
         responses_dict = self.update_randomizers(responses_dict)
+
         if challenge is None:
             challenge = chal_randbits(CHALLENGE_LENGTH)
         com = []

@@ -4,3 +4,6 @@ class IncompleteValuesError(Exception):
 
 class StatementMismatch(Exception):
     """Proof statements mismatch, impossible to verify."""
+
+class StatementSpecError(Exception):
+    pass

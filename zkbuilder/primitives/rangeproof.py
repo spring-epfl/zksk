@@ -1,5 +1,7 @@
 """
-see https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+.. _`Blackronym`:
+    https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+
 """
 import os, sys
 
@@ -22,45 +24,47 @@ def to_Bn(num):
     else:
         return Bn(num)
 
-class RangeProof(BaseProof):
+class RangeProof(ExtendedProof):
+    """
+    A range proof statement.
+
+    .. math::
+
+        PK \{ value: ``lower\_limit \leq value < upper\_limit`` \}
+
+    Args:
+        com: Pedersen commitment ``com = value * g + randomizer * h``
+        g: First Pedersen-commitment base point
+        h: Second Pedersen-commitment base point
+        lower_limit: Lower limit
+        upper_limit: Upper limit
+        value: Value for which we construct a range proof
+        randomizer: Randomizer of the commitment
+    """
+
     def __init__(self, com, g, h, lower_limit, upper_limit, value, randomizer):
-        """Constructs a range proof statement
-
-        Constructs a range proof statement that
-
-             ``lower_limit <= value < upper_limit``
-
-        Args:
-            com: A Pedersen commitment, ``com = value * g + randomizer * h``
-            g: First Pedersen commitment base point
-            h: Second Pedersen commitment base point
-            lower_limit: Lower limit
-            upper_limit: Upper limit
-            value: The value for which we construct a range proof
-            randomizer: The randomizer of com
-        """
         self.lower_limit, self.upper_limit = to_Bn(lower_limit), to_Bn(upper_limit)
-        self.nr_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
-
-        pass
+        self.num_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
 
 
-class PowerTwoRangeProof(BaseProof):
-    def __init__(self, com, g, h, nr_bits, value=None, randomizer=None):
-        """Constructs a range proof statement
+class PowerTwoRangeProof(ExtendedProof):
+    """
+    A power-two range proof statement.
 
-        Constructs a range proof statement that
+    .. math::
 
-             ``0 <= value < 2**nr_bits``
+        PK \{ value: ``lower_limit \leq value < num\_bits`` \}
 
-        Args:
-            com: A Pedersen commitment, ``com = value * g + randomizer * h``
-            g: First Pedersen commitment base point
-            h: Second Pedersen commitment base point
-            nr_bits: The number of bits of the committed value
-            value: The value for which we construct a range proof (prover only)
-            randomizer: The randomizer of com (prover only)
-        """
+    Args:
+        com: A Pedersen commitment, ``com = value * g + randomizer * h``
+        g: First Pedersen commitment base point
+        h: Second Pedersen commitment base point
+        num_bits: The number of bits of the committed value
+        value: The value for which we construct a range proof (prover only)
+        randomizer: The randomizer of com (prover only)
+    """
+
+    def __init__(self, com, g, h, num_bits, value=None, randomizer=None):
         self.ProverClass = PowerTwoRangeProver
         self.VerifierClass = PowerTwoRangeVerifier
 
@@ -78,13 +82,13 @@ class PowerTwoRangeProof(BaseProof):
 
         self.com = com
         self.g, self.h = g, h
-        self.nr_bits = nr_bits
+        self.num_bits = num_bits
 
         # TODO: I think I'd rather avoid this altogether
-        self.aliases = [Secret() for _ in range(self.nr_bits)]
+        self.aliases = [Secret() for _ in range(self.num_bits)]
 
         # TODO: why do we need to set this manually?
-        self.precommitment_size = self.nr_bits + 1
+        self.precommitment_size = self.num_bits + 1
 
         # Move to super initializer with default argument
         self.constructed_proof = None
@@ -99,12 +103,12 @@ class PowerTwoRangeProof(BaseProof):
         if self.is_prover:
             # Indicators that tell us which or-clause is true
             value = self.secret_vars[0].value
-            value_as_bits = decompose_into_n_bits(value, self.nr_bits)
+            value_as_bits = decompose_into_n_bits(value, self.num_bits)
             zero_simulated = [b == 1 for b in value_as_bits]
             one_simulated = [b == 0 for b in value_as_bits]
 
         bit_proofs = []
-        for i in range(self.nr_bits):
+        for i in range(self.num_bits):
             p0 = DLRep(precommitment[i], rand_secrets[i] * self.h)
             p1 = DLRep(precommitment[i] - self.g, rand_secrets[i] * self.h)
 
@@ -123,12 +127,12 @@ class PowerTwoRangeProof(BaseProof):
         """TODO (internal)
 
         """
-        rand = self.precommitment[self.nr_bits]
+        rand = self.precommitment[self.num_bits]
 
         # Combine bit commitments into value commitment
         combined = self.g.group.infinite()
         power = Bn(1)
-        for c in self.precommitment[:self.nr_bits]:
+        for c in self.precommitment[:self.num_bits]:
             combined += power * c
             power *= 2
 
@@ -142,8 +146,8 @@ class PowerTwoRangeProver(BaseProver):
         order = self.proof.g.group.order()
 
         value = self.proof.secret_vars[0].value
-        value_as_bits = decompose_into_n_bits(value, self.proof.nr_bits)
-        bit_randomizers = [order.random() for _ in range(self.proof.nr_bits)]
+        value_as_bits = decompose_into_n_bits(value, self.proof.num_bits)
+        bit_randomizers = [order.random() for _ in range(self.proof.num_bits)]
         self.precommitment = [ b * g + r * h for b, r in zip(value_as_bits, bit_randomizers)]
 
         # Compute revealed randomizer
