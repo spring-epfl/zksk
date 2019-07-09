@@ -28,12 +28,12 @@ def to_Bn(num):
 
 
 class RangeProof(ExtendedProof):
-    """
+    r"""
     A range proof statement.
 
     .. math::
 
-        PK \{ value: ``lower\_limit \leq value < upper\_limit`` \}
+        PK \{ value: ``lower_limit \leq value < upper\_limit`` \}
 
     Args:
         com: Pedersen commitment ``com = value * g + randomizer * h``
@@ -51,7 +51,7 @@ class RangeProof(ExtendedProof):
 
 
 class PowerTwoRangeProof(ExtendedProof):
-    """
+    r"""
     A power-two range proof statement.
 
     .. math::
@@ -90,7 +90,34 @@ class PowerTwoRangeProof(ExtendedProof):
         self.constructed_proof = None
         self.simulation = False
 
-    def build_constructed_proof(self, precommitment):
+    def precommit(self):
+        """
+        Must return: precommitment
+        """
+        g, h = self.g, self.h
+        order = self.g.group.order()
+
+        value = self.secret_vars[0].value
+        value_as_bits = decompose_into_n_bits(value, self.num_bits)
+
+        # Set true value to computed secrets
+        for rand in self.randomizers:
+            rand.value = order.random()
+
+        precommitment = [ b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)]
+
+        # Compute revealed randomizer
+        rand = Bn(0)
+        power = Bn(1)
+        for r in self.randomizers:
+            rand = rand.mod_add(r.value * power, order)
+            power *= 2
+        rand = rand.mod_sub(self.secret_vars[1].value, order)
+        precommitment.append(rand)
+
+        return precommitment
+
+    def construct_proof(self, precommitment):
         # TODO: Why is this essential? and not automatic?
         self.precommitment = precommitment
 
@@ -117,9 +144,6 @@ class PowerTwoRangeProof(ExtendedProof):
 
         return self.constructed_proof
 
-    def get_prover_cls(self):
-        return PowerTwoRangeProver
-
     # TODO: name of check is too specific, e.g., for range proofs we need another post check
     def check_adequate_lhs(self):
         """TODO (internal)
@@ -136,31 +160,3 @@ class PowerTwoRangeProof(ExtendedProof):
 
         return combined == self.com + rand * self.h
 
-
-class PowerTwoRangeProver(ExtendedProver):
-    def internal_precommit(self):
-        """
-        Must return: precommitment, and any new secrets
-        """
-        g, h = self.proof.g, self.proof.h
-        order = self.proof.g.group.order()
-
-        value = self.proof.secret_vars[0].value
-        value_as_bits = decompose_into_n_bits(value, self.proof.num_bits)
-
-        # Set true value to computed secrets
-        for rand in self.proof.randomizers:
-            rand.value = order.random()
-
-        precommitment = [ b * g + r.value * h for b, r in zip(value_as_bits, self.proof.randomizers)]
-
-        # Compute revealed randomizer
-        rand = Bn(0)
-        power = Bn(1)
-        for r in self.proof.randomizers:
-            rand = rand.mod_add(r.value * power, order)
-            power *= 2
-        rand = rand.mod_sub(self.proof.secret_vars[1].value, order)
-        precommitment.append(rand)
-
-        return precommitment

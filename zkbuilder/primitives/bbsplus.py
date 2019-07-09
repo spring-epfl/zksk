@@ -200,14 +200,35 @@ class SignatureProof(ExtendedProof):
             self.secret_vars[1].value = signature.s
         self.simulation = False
 
-    def build_constructed_proof(self, precommitment):
+    def precommit(self):
+        """
+        Generates the lacking information to construct a complete proof and returns it.
+        At the same time, triggers the said proof construction for self and self.proof.
+        After this function returns, the current prover is able to commit.
+        Returned value is to be processed on the verifier side by verifier.process_precommitment( )
+        """
+        if self.signature is None:
+            raise Exception("No signature given!")
+        # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
+
+        # Set true value to computed secrets
+        order = self.generators[0].group.order()
+        r1, r2 = order.random(), order.random()
+        self.r1.value, self.r2.value = r1, r2
+        self.delta1.value = r1 * self.signature.e % order
+        self.delta2.value = r2 * self.signature.e % order
+
+        A1 = r1 * self.generators[1] + r2 * self.generators[2]
+        A2 = r1 * self.generators[2] + self.signature.A
+        precommitment = [A1, A2]
+
+        return precommitment
+
+    def construct_proof(self, precommitment):
         """
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
         :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
-        # TODO: Why is this essential? and not automatic?
-        self.precommitment = precommitment
-
         self.A1, self.A2 = precommitment[0], precommitment[1]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
 
@@ -243,39 +264,10 @@ class SignatureProof(ExtendedProof):
         ]
         return self.constructed_proof
 
-    def get_prover_cls(self):
-        return SignatureProver
-
-    def simulate_precommitment(self):
+    def simulate_precommit(self):
         """
         Draws A1, A2 at random.
         """
         group = self.generators[0].group
         return [group.hash_to_point(group.order().random().repr().encode("UTF-8")), group.hash_to_point(group.order().random().repr().encode("UTF-8"))]
-
-
-class SignatureProver(ExtendedProver):
-    def internal_precommit(self):
-        """
-        Generates the lacking information to construct a complete proof and returns it.
-        At the same time, triggers the said proof construction for self and self.proof.
-        After this function returns, the current prover is able to commit.
-        Returned value is to be processed on the verifier side by verifier.process_precommitment( )
-        """
-        if self.proof.signature is None:
-            raise Exception("No signature given!")
-        # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
-
-        # Set true value to computed secrets
-        order = self.proof.generators[0].group.order()
-        r1, r2 = order.random(), order.random()
-        self.proof.r1.value, self.proof.r2.value = r1, r2
-        self.proof.delta1.value = r1 * self.proof.signature.e % order
-        self.proof.delta2.value = r2 * self.proof.signature.e % order
-
-        A1 = r1 * self.proof.generators[1] + r2 * self.proof.generators[2]
-        A2 = r1 * self.proof.generators[2] + self.proof.signature.A
-        precommitment = [A1, A2]
-
-        return precommitment
 

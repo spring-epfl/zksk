@@ -43,12 +43,29 @@ class DLRepNotEqualProof(ExtendedProof):
         self.secret_vars = secret_vars
         self.simulation = False
 
-    def build_constructed_proof(self, precommitment):
+    def precommit(self):
+        """
+        Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
+        """
+        order = self.generators[0].group.order()
+        cur_secret = self.secret_values[self.secret_vars[0]]
+        blinder = order.random()
+
+        # Set the value of the two internal secrets
+        self.alpha.value = cur_secret * blinder % order
+        self.beta.value = -blinder % order
+
+        precommitment = [
+            blinder * (cur_secret * self.generators[1] - self.lhs[1])
+        ]
+
+        return precommitment
+
+    def construct_proof(self, precommitment):
         """
         Builds the internal AndProof associated to a DLRepNotEqualProof. See formula in Protocol 1 of the BLAC paper.
         """
         infty = self.generators[0].group.infinite()
-        self.precommitment = precommitment
         p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
         p2 = DLRep(precommitment[0], self.alpha * self.generators[1] + self.beta * self.lhs[1])
         proofs = [p1, p2]
@@ -70,7 +87,7 @@ class DLRepNotEqualProof(ExtendedProof):
                 return False
         return True
 
-    def simulate_precommitment(self):
+    def simulate_precommit(self):
         """
         Draws a base at random (not unity) from the generators' group.
         """
@@ -78,26 +95,3 @@ class DLRepNotEqualProof(ExtendedProof):
         while ret == ret.group.infinite():
             ret = ret.group.hash_to_point(ret.group.order().random().repr().encode("UTF-8"))
         return [ret]
-
-    def get_prover_cls(self):
-        return DLRepNotEqualProver
-
-
-class DLRepNotEqualProver(ExtendedProver):
-    def internal_precommit(self):
-        """
-        Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
-        """
-        order = self.proof.generators[0].group.order()
-        cur_secret = self.secret_values[self.proof.secret_vars[0]]
-        blinder = order.random()
-
-        # Set the value of the two internal secrets
-        self.proof.alpha.value = cur_secret * blinder % order
-        self.proof.beta.value = -blinder % order
-
-        precommitment = [
-            blinder * (cur_secret * self.proof.generators[1] - self.proof.lhs[1])
-        ]
-
-        return precommitment
