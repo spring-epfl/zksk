@@ -145,7 +145,7 @@ class PowerTwoRangeProof(ExtendedProof):
         return self.constructed_proof
 
     # TODO: name of check is too specific, e.g., for range proofs we need another post check
-    def check_adequate_lhs(self):
+    def is_valid(self):
         """TODO (internal)
 
         """

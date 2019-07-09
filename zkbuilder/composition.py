@@ -131,7 +131,7 @@ class Proof:
             raise StatementMismatch("Proof statements mismatch, impossible to verify")
         return cur_statement
 
-    def check_adequate_lhs(self):
+    def is_valid(self):
         """
         Verification criteria to be checked at verification step. Override if needed.
 
@@ -552,15 +552,16 @@ class OrProof(Proof):
                 avoid shared secrets inside and outside an Or"
                 )
 
-    def check_adequate_lhs(self):
+    def is_valid(self):
         """
+        TODO: rewrite documentation
         Check that all the left-hand sides of the proofs have a coherent value.
         For instance, it will return False if a DLRepNotEqualProof is in the tree and
         if it is about to prove its components are in fact equal.
         This allows to not waste computation time in running useless verifications.
         """
         for sub in self.subproofs:
-            if not sub.check_adequate_lhs():
+            if not sub.is_valid():
                 return False
         return True
 
@@ -874,7 +875,7 @@ class AndProof(Proof):
         for subp in self.subproofs:
             subp.check_or_flaw(forbidden_secrets)
 
-    def check_adequate_lhs(self):
+    def is_valid(self):
         """
         Check that all the left-hand sides of the proofs have a coherent value.
         For instance, it will return False if a DLRepNotEqualProof is in the tree and
@@ -882,7 +883,7 @@ class AndProof(Proof):
         This allows to not waste computation time in running useless verifications.
         """
         for sub in self.subproofs:
-            if not sub.check_adequate_lhs():
+            if not sub.is_valid():
                 return False
         return True
 

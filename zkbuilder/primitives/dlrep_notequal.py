@@ -78,7 +78,7 @@ class DLRepNotEqualProof(ExtendedProof):
         self.constructed_proof = AndProof(*proofs)
         return self.constructed_proof
 
-    def check_adequate_lhs(self):
+    def is_valid(self):
         """
         Verifies the second part of the constructed proof is indeed about to prove the secret is not the discrete logarithm.
         """

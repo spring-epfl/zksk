@@ -25,7 +25,7 @@ def test_dlrne_interactive(group):
     challenge = verifier.send_challenge(commitment)
     responses = prover.compute_response(challenge)
 
-    assert verifier.proof.check_adequate_lhs()
+    assert verifier.proof.is_valid()
     assert verifier.verify(responses)
 
 

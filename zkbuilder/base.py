@@ -173,7 +173,7 @@ class Verifier(metaclass=abc.ABCMeta):
             bool: True if verification succeeded, False otherwise.
         """
         # Optional verification criteria.
-        if not self.proof.check_adequate_lhs():
+        if not self.proof.is_valid():
             return False
 
         if not self.check_responses_consistency(arg, {}):
@@ -205,7 +205,7 @@ class Verifier(metaclass=abc.ABCMeta):
         prehash = self.proof.check_statement(transcript.statement)
 
         # Optional verification criteria.
-        if not self.proof.check_adequate_lhs():
+        if not self.proof.is_valid():
             return False
         if not self.check_responses_consistency(transcript.responses, {}):
             raise Exception("Responses for a same secret name do not match!")

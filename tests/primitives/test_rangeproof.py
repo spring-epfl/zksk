@@ -39,4 +39,4 @@ def test_rangeproof():
     verifier = p2.get_verifier()
     protocol = SigmaProtocol(verifier, prover)
     assert protocol.verify()
-    assert verifier.proof.check_adequate_lhs()
+    assert verifier.proof.is_valid()
