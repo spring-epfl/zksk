@@ -99,8 +99,8 @@ def test_dlrep_bad_hash(group):
         p2.verify(tr)
 
 
-def test_dlrep_wrong_secrets():
-    g = EcGroup().generator()
+def test_dlrep_wrong_secrets(group):
+    g = group.generator()
     g1 = 2 * g
     g2 = 5 * g
     x1 = Secret()

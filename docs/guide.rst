@@ -351,7 +351,7 @@ construction (a ``DLRepProof``).
 
     # NMAX is an upperbound on the number of generators to be used
     mG = BilinearGroupPair()
-    keypair = KeyPair(mG, NMAX) 
+    keypair = Keypair(mG, NMAX) 
 
     # Construct a UserCommitment object embedding the blinded block and the proof of correct construction.
     creator = SignatureCreator(pk)

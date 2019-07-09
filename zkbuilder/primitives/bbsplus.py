@@ -101,7 +101,7 @@ class SignatureCreator:
         return Signature(presignature.A, presignature.e, new_s)
 
 
-class KeyPair:
+class Keypair:
     """
     A public-private key pair, along with a list of canonical bases to use in proofs.
 

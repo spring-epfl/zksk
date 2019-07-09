@@ -2,12 +2,12 @@ from petlib.bn import Bn
 
 from zkbuilder import Secret
 from zkbuilder.pairings import BilinearGroupPair
-from zkbuilder.primitives.bbsplus import KeyPair, SignatureCreator, SignatureProof
+from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureProof
 
 
 def test_signature_setup():
     mG = BilinearGroupPair()
-    keypair = KeyPair(mG, 9)
+    keypair = Keypair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32), Bn(12)]
 
     pk, sk = keypair.pk, keypair.sk
@@ -25,7 +25,7 @@ def test_signature_setup():
 
 def test_signature_proof():
     mG = BilinearGroupPair()
-    keypair = KeyPair(mG, 9)
+    keypair = Keypair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
@@ -58,7 +58,7 @@ def test_signature_proof():
 
 def test_signature_non_interactive_proof():
     mG = BilinearGroupPair()
-    keypair = KeyPair(mG, 9)
+    keypair = Keypair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk

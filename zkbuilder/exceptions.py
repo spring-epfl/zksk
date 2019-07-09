@@ -1,3 +1,6 @@
+"""
+Common exception classes.
+"""
 
 class IncompleteValuesError(Exception):
     """Cannot evaluate a proof as not all secret values are set."""
@@ -10,3 +13,6 @@ class StatementMismatch(Exception):
 
 class StatementSpecError(Exception):
     """Statement not fully specified."""
+
+class VerificationError(Exception):
+    """Error during verification."""

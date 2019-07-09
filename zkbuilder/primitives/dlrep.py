@@ -44,13 +44,8 @@ class DLRepVerifier(Verifier):
             s = self.proof.secret_vars[i]
             if s in responses_dict.keys():
                 if responses[i] != responses_dict[s]:
-                    warnings.warn(
-                        "Names are",
-                        self.proof.secret_vars,
-                        "/ Incorrect for",
-                        self.proof.secret_vars[i],
-                    )
-                    warnings.warn("Values are", responses[i], "/ Should be", responses_dict[s])
+                    warnings.warn("Values are {}. Should be {}".format(responses[i],
+                        responses_dict[s]))
                     return False
             else:
                 responses_dict.update({s: responses[i]})
