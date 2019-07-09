@@ -55,9 +55,8 @@ class DLRepNotEqualProof(ExtendedProof):
         self.alpha.value = cur_secret * blinder % order
         self.beta.value = -blinder % order
 
-        precommitment = [
-            blinder * (cur_secret * self.generators[1] - self.lhs[1])
-        ]
+        precommitment = {}
+        precommitment["com"] = blinder * (cur_secret * self.generators[1] - self.lhs[1])
 
         return precommitment
 
@@ -67,7 +66,7 @@ class DLRepNotEqualProof(ExtendedProof):
         """
         infty = self.generators[0].group.infinite()
         p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
-        p2 = DLRep(precommitment[0], self.alpha * self.generators[1] + self.beta * self.lhs[1])
+        p2 = DLRep(precommitment["com"], self.alpha * self.generators[1] + self.beta * self.lhs[1])
         proofs = [p1, p2]
 
         if self.binding:
@@ -82,16 +81,13 @@ class DLRepNotEqualProof(ExtendedProof):
         """
         Verifies the second part of the constructed proof is indeed about to prove the secret is not the discrete logarithm.
         """
-        for el in self.precommitment:
-            if el == self.generators[0].group.infinite():
-                return False
-        return True
+        return self.precommitment["com"] != self.generators[0].group.infinite()
 
     def simulate_precommit(self):
         """
         Draws a base at random (not unity) from the generators' group.
         """
-        ret = self.generators[0].group.infinite()
-        while ret == ret.group.infinite():
-            ret = ret.group.hash_to_point(ret.group.order().random().repr().encode("UTF-8"))
-        return [ret]
+        group = self.generators[0].group
+        precommitment = {}
+        precommitment["com"] = group.order().random() * group.generator()
+        return precommitment

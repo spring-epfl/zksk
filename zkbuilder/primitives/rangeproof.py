@@ -104,7 +104,8 @@ class PowerTwoRangeProof(ExtendedProof):
         for rand in self.randomizers:
             rand.value = order.random()
 
-        precommitment = [ b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)]
+        precommitment = {}
+        precommitment["Cs"] = [ b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)]
 
         # Compute revealed randomizer
         rand = Bn(0)
@@ -113,7 +114,7 @@ class PowerTwoRangeProof(ExtendedProof):
             rand = rand.mod_add(r.value * power, order)
             power *= 2
         rand = rand.mod_sub(self.secret_vars[1].value, order)
-        precommitment.append(rand)
+        precommitment["rand"] = rand
 
         return precommitment
 
@@ -130,8 +131,8 @@ class PowerTwoRangeProof(ExtendedProof):
 
         bit_proofs = []
         for i in range(self.num_bits):
-            p0 = DLRep(precommitment[i], self.randomizers[i] * self.h)
-            p1 = DLRep(precommitment[i] - self.g, self.randomizers[i] * self.h)
+            p0 = DLRep(precommitment["Cs"][i], self.randomizers[i] * self.h)
+            p1 = DLRep(precommitment["Cs"][i] - self.g, self.randomizers[i] * self.h)
 
             # When we are a prover, mark which disjunct is true
             if self.is_prover:
@@ -149,12 +150,12 @@ class PowerTwoRangeProof(ExtendedProof):
         """TODO (internal)
 
         """
-        rand = self.precommitment[self.num_bits]
+        rand = self.precommitment["rand"]
 
         # Combine bit commitments into value commitment
         combined = self.g.group.infinite()
         power = Bn(1)
-        for c in self.precommitment[:self.num_bits]:
+        for c in self.precommitment["Cs"]:
             combined += power * c
             power *= 2
 

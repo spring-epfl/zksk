@@ -218,9 +218,9 @@ class SignatureProof(ExtendedProof):
         self.delta1.value = r1 * self.signature.e % order
         self.delta2.value = r2 * self.signature.e % order
 
-        A1 = r1 * self.generators[1] + r2 * self.generators[2]
-        A2 = r1 * self.generators[2] + self.signature.A
-        precommitment = [A1, A2]
+        precommitment = {}
+        precommitment["A1"] = r1 * self.generators[1] + r2 * self.generators[2]
+        precommitment["A2"] = r1 * self.generators[2] + self.signature.A
 
         return precommitment
 
@@ -229,7 +229,7 @@ class SignatureProof(ExtendedProof):
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
         :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
-        self.A1, self.A2 = precommitment[0], precommitment[1]
+        self.A1, self.A2 = precommitment["A1"], precommitment["A2"]
         g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
 
         dl1 = DLRep(self.A1, self.r1 * g1 + self.r2 * g2)
@@ -269,5 +269,9 @@ class SignatureProof(ExtendedProof):
         Draws A1, A2 at random.
         """
         group = self.generators[0].group
-        return [group.hash_to_point(group.order().random().repr().encode("UTF-8")), group.hash_to_point(group.order().random().repr().encode("UTF-8"))]
+
+        precommitment = {}
+        precommitment["A1"] = group.order().random() * group.generator()
+        precommitment["A2"] = group.order().random() * group.generator()
+        return precommitment
 
