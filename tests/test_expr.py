@@ -8,11 +8,6 @@ from zkbuilder.expr import Secret, Expression, wsum_secrets
 from zkbuilder.utils import DEFAULT_GROUP, get_generators
 
 
-@pytest.fixture
-def group():
-    return DEFAULT_GROUP
-
-
 def test_secret_named():
     x = Secret(name="x")
     assert x.name == "x"
