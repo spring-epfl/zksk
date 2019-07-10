@@ -144,7 +144,7 @@ class Proof:
 
     def check_or_flaw(self, forbidden_secrets=None):
         """
-        Check if a secret appears both inside an outside an Or Proof. Does nothing if not overriden.
+        Check if a secret appears both inside an outside an or-proof. Does nothing if not overriden.
         """
         pass
 
@@ -355,7 +355,7 @@ class ExtendedProver(Prover):
         True.
         """
         if self.proof.constructed_proof is None:
-            raise Exception(
+            raise StatementSpecError(
                 "You need to pre-commit before commiting. The proofs lack parameters otherwise."
             )
         return self.constructed_prover.internal_commit(randomizers_dict)
@@ -433,7 +433,7 @@ class OrProof(Proof):
     """
     def __init__(self, *subproofs):
         if len(subproofs) < 2:
-            raise Exception("OrProof needs > 1 arguments")
+            raise ValueError("OrProof needs > 1 arguments")
 
         # We make a shallow copy of each subproof so they don't mess up each other.  This step is
         # important, as we can have different outputs for the same proof (independent simulations or
@@ -450,7 +450,7 @@ class OrProof(Proof):
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
 
-        # For now we consider the same constraints as in the And Proof
+        # For now we consider the same constraints as in the and-proof
         check_groups(self.secret_vars, self.generators)
 
     def get_proof_id(self):
@@ -502,16 +502,16 @@ class OrProof(Proof):
                 candidates[idx] = self.subproofs[idx]
 
         if len(candidates) == 0:
-            print("Cannot run an Or Proof if all elements are simulated")
+            print("Cannot run an or-proof if all elements are simulated")
             return None
 
         # Now choose a proof among the possible ones and try to get a prover from it.
         # If for some reason it does not work (e.g some secrets are missing), remove it
         # from the list of possible proofs and try again
-        rd = random.SystemRandom()
-        # We would appreciate a do...while here >:(
+        random_gen = random.SystemRandom()
         possible = list(candidates.keys())
-        self.chosen_idx = rd.choice(possible)
+        self.chosen_idx = random_gen.choice(possible)
+
         # Feed the selected proof the secrets it needs if we have them, and try to get_prover
         valid_prover = sub_proof_prover(self.subproofs[self.chosen_idx], secrets_dict)
         while valid_prover is None:
@@ -520,7 +520,7 @@ class OrProof(Proof):
             if len(possible) == 0:
                 self.chosen_idx = None
                 return None
-            self.chosen_idx = rd.choice(possible)
+            self.chosen_idx = random_gen.choice(possible)
             valid_prover = sub_proof_prover(
                 self.subproofs[self.chosen_idx], secrets_dict
             )
@@ -531,8 +531,8 @@ class OrProof(Proof):
 
     def check_or_flaw(self, forbidden_secrets=None):
         """
-        Checks for appearance of reoccuring secrets both inside and outside an Or Proof.
-        Raises an error if finds any. Method called from AndProof.check_or_flaw
+        Checks for appearance of reoccuring secrets both inside and outside an or-proof.
+        Raises an error if finds any. Method is called from AndProof.check_or_flaw
 
         Args:
             forbidden_secrets: A list of all the secrets in the mother proof.
@@ -542,8 +542,8 @@ class OrProof(Proof):
         for secret in set(self.secret_vars):
             if forbidden_secrets.count(secret) > self.secret_vars.count(secret):
                 raise Exception(
-                    "Or flaw detected. Aborting. Try to flatten the proof to  \
-                avoid shared secrets inside and outside an Or"
+                    "Invalid secrets found. Try to flatten the proof to avoid shared secrets "
+                    "inside and outside the Or."
                 )
 
     def is_valid(self):
@@ -561,9 +561,9 @@ class OrProof(Proof):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates an Or Proof. To do so, simulates the N-1 first subproofs, computes the
+        Simulates an or-proof. To do so, simulates the N-1 first subproofs, computes the
         complementary challenge and simulates the last proof using this challenge. Does not use the
-        responses_dict passed as parameter since inside an Or Proof responses consistency is not
+        responses_dict passed as parameter since inside an or-proof responses consistency is not
         required between subproofs.
 
         Args:
@@ -578,21 +578,24 @@ class OrProof(Proof):
         resp = []
         or_chals = []
         precom = []
-        # Generate one simulation at a time and update a list of each attribute
+
+        # Generate one simulation at a time and update a list of each attribute.
         for index in range(len(self.subproofs) - 1):
             transcript = self.subproofs[index].simulate_proof()
             com.append(transcript.commitment)
             resp.append(transcript.responses)
             or_chals.append(transcript.challenge)
             precom.append(transcript.precommitment)
-        # Generate the last simulation
+
+        # Generate the last simulation.
         final_chal = find_residual_chal(or_chals, challenge, CHALLENGE_LENGTH)
         or_chals.append(final_chal)
         trfinal = self.subproofs[index + 1].simulate_proof(challenge=final_chal)
         com.append(trfinal.commitment)
         resp.append(trfinal.responses)
         precom.append(trfinal.precommitment)
-        # Pack everything into a SimulationTranscript, pack the or_challenges in the response field
+
+        # Pack everything into a SimulationTranscript, pack the or-challenges in the response field.
         return SimulationTranscript(
                 commitment=com, challenge=challenge, responses=(or_chals, resp), precommitment=precom)
 
@@ -687,7 +690,7 @@ class OrProver(Prover):
                 challenges.append(residual_chal)
                 response.append(self.subprover.compute_response(residual_chal))
             else:
-                # Note len(simulations) = len(subproofs) - 1 !
+                # Note that len(simulations) = len(subproofs) - 1.
                 if index > self.true_prover_idx:
                     index1 = index - 1
                 else:
@@ -695,14 +698,14 @@ class OrProver(Prover):
                 challenges.append(self.simulations[index1].challenge)
                 response.append(self.simulations[index1].responses)
 
-        # We carry the or challenges in a tuple, will be unpacked by the verifier calling
-        # recompute_commitment
+        # We carry the or-challenges in a tuple, will be unpacked by the verifier calling
+        # recompute_commitment.
         return (challenges, response)
 
 
 class OrVerifier(Verifier):
     """
-    Verifier for the Or Proof.
+    Verifier for the or-proof.
 
     The verifiers is built on a list of subverifiers, which will unpack the received attributes.
     """
@@ -750,22 +753,25 @@ class AndProof(Proof):
         if len(subproofs) < 2:
             raise Exception("AndProof needs >1 arguments !")
 
-        # We will make a shallow copy of each subproof so they dont mess up with each other.  This
-        # step is important in case we have proofs which locally draw random values.  It ensures
-        # several occurrences of the same proof in the tree indeed have their own randomnesses
+        # We make a shallow copy of each subproof so they dont mess with each other.  This step is
+        # important in case we have proofs which locally draw random values.  It ensures several
+        # occurrences of the same proof in the tree indeed have their own randomnesses.
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
         self.generators = get_generators(self.subproofs)
         self.secret_vars = get_secret_vars(self.subproofs)
-        # Construct a dictionary with the secret values we already know
+
+        # Construct a dictionary with the secret values we already know.
         self.secret_values = {}
         for sec in self.secret_vars:
             if sec.value is not None:
                 self.secret_values[sec] = sec.value
         self.simulation = False
-        # Check reoccuring secrets are related to generators of same group order
+
+        # Check reoccuring secrets are related to generators of same group order.
         check_groups(self.secret_vars, self.generators)
-        # Raise an error when detecting a secret occuring both inside and outside an Or Proof
+
+        # Raise an error when detecting a secret occuring both inside and outside an or-proof.
         self.check_or_flaw()
 
     def recompute_commitment(self, challenge, andresp):
@@ -783,7 +789,7 @@ class AndProof(Proof):
 
     def get_prover(self, secrets_dict={}):
         """
-        Constructs a Prover for the And Proof, which is a list of the Provers related to each subproof, in order.
+        Constructs a Prover for the and-proof, which is a list of the Provers related to each subproof, in order.
         If any of the collected Provers is invalid (None), returns None.
         """
         # First we update the dictionary we have with the additional secrets, and process it
@@ -804,7 +810,7 @@ class AndProof(Proof):
 
     def get_verifier(self):
         """
-        Constructs a Verifier for the And Proof, based on a list of the Verifiers of each subproof.
+        Constructs a Verifier for the and-proof, based on a list of the Verifiers of each subproof.
         """
         return AndVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
@@ -849,7 +855,9 @@ class AndProof(Proof):
         com = []
         resp = []
         precom = []
-        # Simulate all subproofs and gather their attributes, repack them in a unique SimulationTranscript
+
+        # Simulate all subproofs and gather their attributes, repack them in a unique
+        # SimulationTranscript.
         for subp in self.subproofs:
             simulation = subp.simulate_proof(responses_dict, challenge)
             com.append(simulation.commitment)
@@ -860,8 +868,8 @@ class AndProof(Proof):
 
     def check_or_flaw(self, forbidden_secrets=None):
         """
-        Checks for appearance of reoccuring secrets both inside and outside an Or Proof.
-        Raises an error if finds any. This method only sets the list of all secrets in the tree and triggers a depth-search first for Or Proofs
+        Checks for appearance of reoccuring secrets both inside and outside an or-proof.
+        Raises an error if finds any. This method only sets the list of all secrets in the tree and triggers a depth-search first for or-proofs
         :param forbidden_secrets: A list of all the secrets in the mother proof.
         """
         if forbidden_secrets is None:
@@ -885,25 +893,27 @@ class AndProof(Proof):
 class AndProver(Prover):
     def __init__(self, proof, subprovers):
         """
-        Constructs a Prover for an And Proof, from a list of valid subprovers.
+        Constructs a Prover for an and-proof, from a list of valid subprovers.
         """
         self.subs = subprovers
         self.proof = proof
 
     def precommit(self):
         """
-        Computes the precommitment for an And Proof, i.e a list of the precommitments of the subprovers.
+        Computes the precommitment for an and-proof, i.e a list of the precommitments of the subprovers.
         If not applicable (not subprover outputs a precommitment), returns None.
         """
         precommitment = []
         for idx in range(len(self.subs)):
+
             # Collects precommitments one by one
             subprecom = self.subs[idx].precommit()
             if subprecom is not None:
                 if len(precommitment) == 0:
                     precommitment = [None] * len(self.subs)
                 precommitment[idx] = subprecom
-        # If any precommitment is valid, return the list. If all were None, return None
+
+        # If any precommitment is valid, return the list. If all were None, return None.
         return precommitment if len(precommitment) != 0 else None
 
     def internal_commit(self, randomizers_dict=None):
@@ -930,7 +940,7 @@ class AndProver(Prover):
 class AndVerifier(Verifier):
     def __init__(self, proof, subverifiers):
         """
-        Constructs a Verifier for the And Proof, with a list of subverifiers.
+        Constructs a Verifier for the and-proof, with a list of subverifiers.
         """
         self.subs = subverifiers
         self.proof = proof
