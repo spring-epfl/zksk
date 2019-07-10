@@ -1,5 +1,8 @@
 from bplib.bp import BpGroup, G1Elem, G2Elem, GTElem
 
+import petlib.pack as pack
+import msgpack
+
 
 def test():
     """
@@ -126,6 +129,7 @@ class GTGroup:
         return res
 
 
+# TODO: Why should this not just be called GTPoint?
 class AdditivePoint:
     """
     A wrapper for GT points so they use additive notation.
@@ -318,6 +322,31 @@ class G2Group:
             res = res + w * g
         return res
 
+
+def pt_enc(obj):
+    """Encoder for G1Point/G2Point/AdditivePoint"""
+    nid = obj.bp.bpgp.nid
+    data = obj.pt.export()
+    packed_data = msgpack.packb((nid, data))
+    return packed_data
+
+
+def pt_dec(bptype, xtype):
+    """Construct decoder for G1Point/G2Point/AdditivePoint"""
+
+    def dec(data):
+        nid, data = msgpack.unpackb(data)
+        bpairing = BilinearGroupPair()
+        pt = bptype.from_bytes(data, bpairing.bpgp)
+        return xtype(pt, bpairing)
+
+    return dec
+
+
+# Register encoders and decoders for pairing points
+pack.register_coders(G1Point, 111, pt_enc, pt_dec(G1Elem, G1Point))
+pack.register_coders(G2Point, 112, pt_enc, pt_dec(G2Elem, G2Point))
+pack.register_coders(AdditivePoint, 113, pt_enc, pt_dec(GTElem, AdditivePoint))
 
 if __name__ == "__main__":
     import doctest

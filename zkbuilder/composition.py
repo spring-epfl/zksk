@@ -173,16 +173,9 @@ class Proof:
 
     def ec_encode(self, data):
         """
-        Figure out which encoder to use in the ``petlib.pack`` and uses it.
-
-        TODO: Can break if both ``petlib.ec.EcPt`` points and custom :py:class:`BilinearPairings`
-        points are used in the same proof.
+        Encode points using petlib encoder
         """
-        if not isinstance(self.generators[0], EcPt):
-            encoding = enc_GXpt
-        else:
-            encoding = None
-        return encode(data, custom_encoder=encoding)
+        return encode(data)
 
     def prehash_statement(self, extra=None):
         """
@@ -290,7 +283,8 @@ class ExtendedProof(Proof,abc.ABC):
 
     def _construct_proof(self, precommitment):
         self.precommitment = precommitment
-        return self.construct_proof(precommitment)
+        self.constructed_proof =  self.construct_proof(precommitment)
+        return self.constructed_proof
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
