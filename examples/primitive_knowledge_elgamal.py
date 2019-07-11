@@ -31,13 +31,13 @@ class AdditiveElgamalPlaintextProof(ExtendedProof):
 
     Given an additive ElGamal ciphertext
 
-    .. math:`c = (c_1, c_2) = (rG, rH + mG)`
+    .. math:: c = (c_1, c_2) = (rG, rH + mG)
 
     against a public key :math:`H` this proof proves knowledge of the
     message :math:`m` and the randomizer :math:`r` used to create the
     ciphertext `c`. In particular, it computes the following proof:
 
-    .. math:: PK{ (x, r) : c_1 = r * G \land c_2 = r * H + m * G }
+    .. math:: PK\{ (x, r) : c_1 = rG \land c_2 = rH + m G \}
 
     Example:
 
