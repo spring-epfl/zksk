@@ -7,16 +7,22 @@ zkbuilder's docs
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Basics
+
+   quickstart
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Guide 
    
-   getting_started
-   guide 
+   usage
+   primitives
    new_primitives
    internals
 
 .. toctree::
    :maxdepth: 2
-   :caption: API
+   :caption: Reference
     
    api/primitives
 

@@ -59,7 +59,7 @@ x0 = Secret(4)
 x1 = Secret(4)
 stmt = DLRep(4 * g0, x0 * g0) & DLRep(4 * g1, x1 * g1)
 
-# NOT the same as above.
+# NOT the same as above. Note that x1 is used for both clauses.
 another_stmt = DLRep(4 * g0, x1 * g0) & DLRep(4 * g1, x1 * g1)
 
 # assert stmt.get_proof_id() != another_stmt.get_proof_id()
