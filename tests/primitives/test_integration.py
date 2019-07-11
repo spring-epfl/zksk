@@ -28,6 +28,9 @@ def get_secrets(num):
     secret_dict = {x: v for x, v in zip(secrets, secret_values)}
     return secrets, secret_values, secret_dict
 
+def get_secrets_new(num):
+    secrets = [Secret(i * 1337 + i) for i in range(num)]
+    return secrets
 
 # BBS+ & BBS+
 def test_bbsplus_and_proof():
@@ -226,6 +229,7 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
     Manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the
     signature and in the DLRNE.  Should not be detected since bindings in the DLRNE are False.
     """
+
     mG = BilinearGroupPair()
     keypair = Keypair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
@@ -376,7 +380,7 @@ def test_signature_or_dlrne():
     presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
-    secret_dict = {e: signature.e, s: signature.s, m2: messages[1], m3: messages[2]}
+    secret_dict = {e: signature.e, s: signature.s, m1: messages[0], m2: messages[1], m3: messages[2]}
 
     sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
@@ -612,17 +616,18 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
         protocol.verify()
 
 
+
 # DLRNE & DLRNE
 def test_and_dlrep_partial_binding():
     """
     Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x (not only
     cheating, a contradiction).  Should be undetected as binding is off in at least one proof
     """
-    secrets, secret_values, secret_dict = get_secrets(4)
+    secrets = get_secrets_new(4)
     generators = get_generators(4)
-    lhs_values = [x * g for x, g in zip(secret_values, generators)]
+    lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
-    y3 = secret_values[2] * generators[3]
+    y3 = secrets[2].value * generators[3]
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
@@ -633,6 +638,8 @@ def test_and_dlrep_partial_binding():
         [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1], bind=True
     )
     andp = p1 & p2
+
+    sprime = Secret()
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
@@ -644,18 +651,15 @@ def test_and_dlrep_partial_binding():
     )
     andp_prime = p1_prime & p2_prime
 
-    prov = andp.get_prover(secret_dict)
-    prov.subs[1].secret_values[secrets[0]] = secret_values[1]
-
-    protocol = SigmaProtocol(andp_prime.get_verifier(), prov)
+    protocol = SigmaProtocol(andp_prime.get_verifier(), andp.get_prover())
     assert protocol.verify()
 
 
 # DLRNE & DLREP & DLRNE & DLRNE
 def test_multiple_and_dlrep_binding():
-    secrets, secret_values, secret_dict = get_secrets(4)
+    secrets = get_secrets_new(4)
     generators = get_generators(4)
-    lhs_values = [x * g for x, g in zip(secret_values, generators)]
+    lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
@@ -682,13 +686,13 @@ def test_multiple_and_dlrep_binding():
 
     s0 = Secret()
     s2 = Secret()
-    p11 = DLRepNotEqualProof(
+    p1prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
         s0,
         bind=False,
     )
-    p21 = DLRep(lhs_values[2], s2 * generators[2])
+    p2prime = DLRep(lhs_values[2], s2 * generators[2])
 
     p3prime = DLRepNotEqualProof(
         [lhs_values[2], generators[2]], [lhs_values[1], generators[1]], s2, bind=True
@@ -698,10 +702,8 @@ def test_multiple_and_dlrep_binding():
         [lhs_values[1], generators[1]], [lhs_values[3], generators[3]], s0, bind=True
     )
 
-    andp1 = p11 & p21 & p31 & p41
-    prov = andp.get_prover(secret_dict)
-    prov.subs[3].secret_values[secrets[0]] = secret_values[1]
-    protocol = SigmaProtocol(andp1.get_verifier(), prov)
+    andp1 = p1prime & p2prime & p3prime & p4prime
+    protocol = SigmaProtocol(andp1.get_verifier(), andp.get_prover())
     assert protocol.verify()
 
 

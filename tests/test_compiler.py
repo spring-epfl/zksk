@@ -918,6 +918,7 @@ def test_and_BLAC_binding3():
         [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1], bind=True
     )
     andp = pr1 & pr2
+
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
@@ -930,7 +931,6 @@ def test_and_BLAC_binding3():
     andpv = pr1v & pr2v
 
     prov = andp.get_prover(secrets_values)
-    prov.subs[1].secret_values[secrets_aliases[0]] = secret_tab[1]
 
     prot = SigmaProtocol(andpv.get_verifier(), prov)
     assert prot.run()
@@ -1030,13 +1030,13 @@ def test_multi_and_BLAC_binding2():
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], s2, bind=True
     )
+    # Note that pr41 binds s0 here, but not bound in pr11
     pr41 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]], [lhs_tab[3], tab_g[3]], s0, bind=True
     )
 
     andp1 = pr11 & pr21 & pr31 & pr41
     prov = andp.get_prover(secrets_values)
-    prov.subs[3].secret_values[secrets_aliases[0]] = secret_tab[1]
     prot = SigmaProtocol(andp1.get_verifier(), prov)
     assert prot.run()
 
@@ -1503,55 +1503,6 @@ def test_wrong_signature_and_DLRNE1():
         ver.verify(responses)
 
 
-def test_wrong_signature_and_DLRNE():
-    """
-    We manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the
-    signature and in the DLRNE.
-    Should not be detected since bindings in the DLRNE are False.
-    """
-    mG = BilinearGroupPair()
-    keypair = KeyPair(mG, 9)
-    messages = [Bn(30), Bn(31), Bn(32)]
-    pk, sk = keypair.pk, keypair.sk
-    generators, h0 = keypair.generators, keypair.h0
-
-    creator = SignatureCreator(pk)
-    lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
-    signature = creator.obtain_signature(presignature)
-    e, s, m1, m2, m3 = (Secret() for _ in range(5))
-    secret_dict = {
-        e: signature.e,
-        s: signature.s,
-        m1: messages[0],
-        m2: messages[1],
-        m3: messages[2],
-    }
-
-    sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
-
-    g1 = mG.G1.generator()
-    pg1 = signature.s * g1 + g1
-    pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=False)
-
-    sec = [Secret() for _ in range(5)]
-    sigproof1 = SignatureProof(sec, pk, signature)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]])
-
-    andp = sigproof & dneq
-    andp1 = sigproof1 & dneq1
-    prov = andp.get_prover(secret_dict)
-
-    prov.subs[1].secret_values[s] = signature.s + 1
-    ver = andp1.get_verifier()
-    ver.process_precommitment(prov.precommit())
-    commitment = prov.commit()
-
-    challenge = ver.send_challenge(commitment)
-    responses = prov.compute_response(challenge)
-    assert ver.verify(responses)
-
 
 def test_and_NI_sig():
     mG = BilinearGroupPair()
@@ -1699,7 +1650,7 @@ def test_signature_or_DLRNE():
     presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
-    secret_dict = {e: signature.e, s: signature.s, m2: messages[1], m3: messages[2]}
+    secret_dict = {e: signature.e, s: signature.s, m1: messages[0], m2: messages[1], m3: messages[2]}
 
     sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()

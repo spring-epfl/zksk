@@ -231,12 +231,13 @@ def chal_randbits(bitlength=CHALLENGE_LENGTH):
     return order.random()
 
 
-def get_secret_vars(sub_list):
+def get_secret_vars(subproofs):
     """
     Gathers all Secret objects in a list of Proofs.
     """
     secrets = []
-    [secrets.extend(elem.secret_vars) for elem in sub_list]
+    # TODO: rewrite following ugly list comprehension
+    [secrets.extend(elem.get_secret_vars()) for elem in subproofs]
     return secrets
 
 
@@ -291,10 +292,17 @@ def sub_proof_prover(sub_proof, secrets_dict):
     by giving it only the secrets it should know and not more.
     :param sub_proof: The proof from which to get a prover
     :param secrets_dict: The secret values to filter out before passing them to the prover
+
+    TODO: aargh, do we need this?
     """
-    keys = set(sub_proof.secret_vars)
-    secrets_for_prover = {}
-    for s_name in secrets_dict.keys():
-        if s_name in keys:
-            secrets_for_prover[s_name] = secrets_dict[s_name]
-    return sub_proof.get_prover(secrets_for_prover)
+    # keys = set(sub_proof.get_secret_vars())
+    # secrets_for_prover = {}
+    #for s_name in secrets_dict.keys():
+    #    if s_name in keys:
+    #        secrets_for_prover[s_name] = secrets_dict[s_name]
+    return sub_proof.get_prover(secrets_dict)
+
+
+def update_secret_values(secrets_dict):
+    for k,v in secrets_dict.items():
+        k.value = v

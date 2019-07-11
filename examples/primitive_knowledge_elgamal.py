@@ -66,9 +66,6 @@ class AdditiveElgamalPlaintextProof(ExtendedProof):
         self.msg = msg
         self.randomizer = randomizer
 
-        # TODO: kill all of this
-        self.secret_vars = [msg, randomizer]
-
         # TODO: rename
         self.simulation = simulated
 

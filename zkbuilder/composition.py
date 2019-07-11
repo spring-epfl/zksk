@@ -117,6 +117,7 @@ class Proof:
         Generate the transcript of a simulated non-interactive proof.
         """
         self.set_simulate()
+        self.prepare_simulate_proof()
         transcript = self.simulate_proof(challenge=challenge)
         transcript.statement = self.prehash_statement().digest()
         return transcript
@@ -165,10 +166,11 @@ class Proof:
             randomizers_dict = self.get_randomizers()
 
         # Fill the dictionary.
-        elif any([x not in randomizers_dict for x in self.secret_vars]):
+        elif any([x not in randomizers_dict for x in self.get_secret_vars()]):
             tmp = self.get_randomizers()
             tmp.update(randomizers_dict)
             randomizers_dict = tmp
+
         return randomizers_dict
 
     def ec_encode(self, data):
@@ -217,6 +219,14 @@ class Proof:
     def __repr__(self):
         return str(self.get_proof_id())
 
+    @abc.abstractmethod
+    def get_secret_vars(self):
+        pass
+
+    @abc.abstractmethod
+    def get_generators(self):
+        pass
+
 
 class ExtendedProof(Proof,abc.ABC):
     """
@@ -232,26 +242,15 @@ class ExtendedProof(Proof,abc.ABC):
         Returns:
             Prover object if all secret values are known, None otherwise.
         """
+
         if secrets_dict is None:
             secrets_dict = {}
 
-        # Construct a dictionary with the secret values we already know
-        self.secret_values = {}
-        for sec in self.secret_vars:
-            if sec.value is not None:
-                self.secret_values[sec] = sec.value
+        for k,v in secrets_dict.items():
+            k.value = v
 
-        # Update the dictionary with the additional secrets.
+        self.secret_values = {}
         self.secret_values.update(secrets_dict)
-        if (
-            self.simulation
-            or self.secret_values == {}
-            or any(
-                sec not in self.secret_values.keys() for sec in set(self.secret_vars)
-            )
-        ):
-            # TODO: not sure None is the right output here
-            return None
 
         return self.get_prover_cls()(self, self.secret_values)
 
@@ -271,7 +270,8 @@ class ExtendedProof(Proof,abc.ABC):
         """
         Packs the proof statement as the proof name, the list of generators and the precommitment.
         """
-        if self.constructed_proof is not None:
+        # TODO: undo hhasattr test, try and make default
+        if hasattr(self, "constructed_proof") and self.constructed_proof is not None:
             st = [
                 self.__class__.__name__,
                 self.precommitment,
@@ -286,6 +286,10 @@ class ExtendedProof(Proof,abc.ABC):
         self.constructed_proof =  self.construct_proof(precommitment)
         return self.constructed_proof
 
+    def prepare_simulate_proof(self):
+        self.precommitment = self.simulate_precommit()
+        self._construct_proof(self.precommitment)
+
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
         Simulate the proof.
@@ -294,8 +298,6 @@ class ExtendedProof(Proof,abc.ABC):
             responses_dict
             challenge
         """
-        self.precommitment = self.simulate_precommit()
-        self._construct_proof(self.precommitment)
         tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
         tr.precommitment = self.precommitment
         return tr
@@ -303,6 +305,12 @@ class ExtendedProof(Proof,abc.ABC):
     def _precommit(self):
         self.precommitment = self.precommit()
         return self.precommitment
+
+    def get_secret_vars(self):
+        return self.constructed_proof.get_secret_vars()
+
+    def get_generators(self):
+        return self.constructed_proof.get_generators()
 
     @abc.abstractmethod
     def construct_proof(self):
@@ -439,16 +447,19 @@ class OrProof(Proof):
         # important, as we can have different outputs for the same proof (independent simulations or
         # simulations/execution)
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
-
-        self.generators = get_generators(self.subproofs)
-        self.secret_vars = get_secret_vars(self.subproofs)
         self.simulation = False
 
+        # TODO: removed this for now, what breaks?
         # Construct a dictionary with the secret values we already know
-        self.secret_values = {}
-        for sec in self.secret_vars:
-            if sec.value is not None:
-                self.secret_values[sec] = sec.value
+        # self.secret_values = {}
+        # for sec in self.secret_vars:
+        #     if sec.value is not None:
+        #         self.secret_values[sec] = sec.value
+
+    def check(self):
+        # TODO TODO TODO: integrate somewhere
+        self.generators = self.get_generators()
+        self.secret_vars = self.get_secret_vars()
 
         # For now we consider the same constraints as in the And Proof
         check_groups(self.secret_vars, self.generators)
@@ -490,10 +501,13 @@ class OrProof(Proof):
         """
 
         # First we update the dictionary we have with the additional secrets, and process it
-        self.secret_values.update(secrets_dict)
-        secrets_dict = self.secret_values
-        if self.simulation == True or secrets_dict == {}:
+        # TODO: check this secret_values handling totally different
+        update_secret_values(secrets_dict)
+
+        if self.simulation == True:
             return None
+
+        # TODO: ADD TEST: simulation must be True/False for all subproofs
 
         # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
@@ -559,6 +573,12 @@ class OrProof(Proof):
                 return False
         return True
 
+
+    def prepare_simulate_proof(self):
+        for subp in self.subproofs:
+            subp.prepare_simulate_proof()
+
+
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
         Simulates an Or Proof. To do so, simulates the N-1 first subproofs, computes the
@@ -596,6 +616,20 @@ class OrProof(Proof):
         return SimulationTranscript(
                 commitment=com, challenge=challenge, responses=(or_chals, resp), precommitment=precom)
 
+    def get_secret_vars(self):
+        secret_vars = []
+        for sub in self.subproofs:
+            secret_vars.extend(sub.get_secret_vars())
+
+        return secret_vars
+
+    def get_generators(self):
+        generators = []
+        for sub in self.subproofs:
+            generators.extend(sub.get_generators())
+
+        return generators
+
 
 class OrProver(Prover):
     """
@@ -621,6 +655,7 @@ class OrProver(Prover):
         """
         for index in range(len(self.proof.subproofs)):
             if index != self.true_prover_idx:
+                self.proof.subproofs[index].prepare_simulate_proof()
                 cur = self.proof.subproofs[index].simulate_proof()
                 self.simulations.append(cur)
 
@@ -755,16 +790,22 @@ class AndProof(Proof):
         # several occurrences of the same proof in the tree indeed have their own randomnesses
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
-        self.generators = get_generators(self.subproofs)
-        self.secret_vars = get_secret_vars(self.subproofs)
         # Construct a dictionary with the secret values we already know
-        self.secret_values = {}
-        for sec in self.secret_vars:
-            if sec.value is not None:
-                self.secret_values[sec] = sec.value
+        #self.secret_values = {}
+        #for sec in self.secret_vars:
+        #    if sec.value is not None:
+        #        self.secret_values[sec] = sec.value
+
         self.simulation = False
+
+    def check(self):
+        # TODO TODO TODO: call check
+        self.generators = self.get_generators()
+        self.secret_vars = self.get_secret_vars()
+
         # Check reoccuring secrets are related to generators of same group order
         check_groups(self.secret_vars, self.generators)
+
         # Raise an error when detecting a secret occuring both inside and outside an Or Proof
         self.check_or_flaw()
 
@@ -787,19 +828,21 @@ class AndProof(Proof):
         If any of the collected Provers is invalid (None), returns None.
         """
         # First we update the dictionary we have with the additional secrets, and process it
-        self.secret_values.update(secrets_dict)
-        secrets_dict = self.secret_values
-        if self.simulation == True or secrets_dict == {}:
+        update_secret_values(secrets_dict)
+
+        if self.simulation == True:
             return None
 
         subs = [
             sub_proof_prover(sub_proof, secrets_dict) for sub_proof in self.subproofs
         ]
+
         if None in subs:
             # TODO: It'd be great if we can get rid of the Nones, so we know which
             # sub proofs are failing
             print(subs)
-            return None
+            raise Exception("Failed to construct prover for a conjunct")
+
         return AndProver(self, subs)
 
     def get_verifier(self):
@@ -819,13 +862,17 @@ class AndProof(Proof):
 
         # Pair each Secret to one generator. Overwrites when a Secret re-occurs but since the
         # associated generators should yield groups of same order, it's fine.
-        dict_name_gen = dict(zip(self.secret_vars, self.generators))
+        dict_name_gen = dict(zip(self.get_secret_vars(), self.get_generators()))
 
         # Pair each Secret to a randomizer.
         for u in dict_name_gen:
             random_vals[u] = dict_name_gen[u].group.order().random()
 
         return random_vals
+
+    def prepare_simulate_proof(self):
+        for subp in self.subproofs:
+            subp.prepare_simulate_proof()
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -855,6 +902,7 @@ class AndProof(Proof):
             com.append(simulation.commitment)
             resp.append(simulation.responses)
             precom.append(simulation.precommitment)
+
         return SimulationTranscript(commitment=com, challenge=challenge, responses=resp,
                 precommitment=precom)
 
@@ -880,6 +928,20 @@ class AndProof(Proof):
             if not sub.is_valid():
                 return False
         return True
+
+    def get_secret_vars(self):
+        secret_vars = []
+        for sub in self.subproofs:
+            secret_vars.extend(sub.get_secret_vars())
+
+        return secret_vars
+
+    def get_generators(self):
+        generators = []
+        for sub in self.subproofs:
+            generators.extend(sub.get_generators())
+
+        return generators
 
 
 class AndProver(Prover):
