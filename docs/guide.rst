@@ -14,7 +14,7 @@ the group operation additively, i.e., :math:`+` denotes the group operation.
    In code, we follow the Python conventions and write both groups and group elements in lowercase.
 
 .. Tip ::
-   We use petlib library for working with elliptic curves. We advise you to read `petlib's
+   We use the petlib library for working with elliptic curves. We advise you to read `petlib's
    documentation page <https://petlib.readthedocs.io/en/latest/>`__. 
 
 We use Camenisch-Stadler notation [CS97]_ for zero-knowledge proofs. A proof of knowledge of a
