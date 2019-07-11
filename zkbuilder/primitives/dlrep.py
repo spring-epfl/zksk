@@ -79,8 +79,8 @@ class DLRep(Proof):
 
     def __init__(self, lhs, expr):
         if isinstance(expr, Expression):
-            self.generators = expr.bases
-            self.secret_vars = expr.secrets
+            self.generators = list(expr.bases)
+            self.secret_vars = list(expr.secrets)
         else:
             raise TypeError("Expected an Expression. Got: {}".format(expr))
 
@@ -186,6 +186,9 @@ class DLRep(Proof):
         )
         return leftside
 
+    def prepare_simulate_proof(self):
+        pass
+
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
         Returns a transcript of a proof simulation. Responses and challenge can be enforced.  The
@@ -205,6 +208,13 @@ class DLRep(Proof):
         commitment = self.recompute_commitment(challenge, responses)
 
         return SimulationTranscript(commitment=commitment, challenge=challenge, responses=responses)
+
+    def get_secret_vars(self):
+        return self.secret_vars
+
+    def get_generators(self):
+        return self.generators
+
 
 
 class DLRepProver(Prover):

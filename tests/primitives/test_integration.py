@@ -28,6 +28,9 @@ def get_secrets(num):
     secret_dict = {x: v for x, v in zip(secrets, secret_values)}
     return secrets, secret_values, secret_dict
 
+def get_secrets_new(num):
+    secrets = [Secret(i * 1337 + i) for i in range(num)]
+    return secrets
 
 # BBS+ & BBS+
 def test_bbsplus_and_proof():
@@ -149,12 +152,12 @@ def test_signature_and_dlrne():
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
     andp = sigproof & dneq
 
     secrets = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(secrets, pk)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [secrets[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), secrets[1], bind=True)
     andp1 = sigproof1 & dneq1
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
@@ -197,11 +200,11 @@ def test_signature_and_dlrne_fails_on_wrong_secret():
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
 
     secrets = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(secrets, pk, signature)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [secrets[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), secrets[1], bind=True)
 
     andp = sigproof & dneq
     andp1 = sigproof1 & dneq1
@@ -226,6 +229,7 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
     Manually modify a secret in the DLRNE member, i.e we wrongfully claim to use the same "s" i the
     signature and in the DLRNE.  Should not be detected since bindings in the DLRNE are False.
     """
+
     mG = BilinearGroupPair()
     keypair = Keypair(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
@@ -244,23 +248,24 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
         m2: messages[1],
         m3: messages[2],
     }
-
     sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1 + g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=False)
+    splus = Secret(signature.s + 1)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), splus, bind=False)
 
     secrets = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(secrets, pk, signature)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [secrets[1]])
+    # Note difference: dneq above uses an independent secret for dneq,
+    # here it is bound to the secret s (secrets[1]) from the signature proof
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), secrets[1])
 
     andp = sigproof & dneq
     andp1 = sigproof1 & dneq1
     prov = andp.get_prover(secret_dict)
 
-    prov.subs[1].secret_values[s] = signature.s + 1
     ver = andp1.get_verifier()
     ver.process_precommitment(prov.precommit())
     commitment = prov.commit()
@@ -375,18 +380,18 @@ def test_signature_or_dlrne():
     presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
-    secret_dict = {e: signature.e, s: signature.s, m2: messages[1], m3: messages[2]}
+    secret_dict = {e: signature.e, s: signature.s, m1: messages[0], m2: messages[1], m3: messages[2]}
 
     sigproof = SignatureProof([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
     andp = sigproof | dneq
 
     secrets = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(secrets, pk)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [secrets[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), secrets[1], bind=True)
     andp1 = sigproof1 | dneq1
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
@@ -407,22 +412,22 @@ def test_and_dlrne():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [lhs_values[2], generators[2]], [secrets[1]]
+        [lhs_values[1], generators[1]], [lhs_values[2], generators[2]], secrets[1]
     )
     andp = p1 & p2
 
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2_prime = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [lhs_values[2], generators[2]], [secrets[1]]
+        [lhs_values[1], generators[1]], [lhs_values[2], generators[2]], secrets[1]
     )
 
     andp_prime = p1_prime & p2_prime
@@ -443,27 +448,27 @@ def test_and_dlrne_fails_on_same_dl():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True
+        secrets[0],
+        bind=True
     )
     p2 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [y3, generators[3]],
-        [secrets[1]],
+        secrets[1],
     )
 
     andp = p1 & p2
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True
+        secrets[0],
+        bind=True
     )
 
     p2_prime = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [y3, generators[3]],
-        [secrets[1]]
+        secrets[1]
     )
 
     andp_prime = p1_prime & p2_prime
@@ -480,8 +485,8 @@ def test_and_dlrne_binding_1():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRep(lhs_values[0], secrets[0] * generators[0])
     andp = p1 & p2
@@ -489,8 +494,8 @@ def test_and_dlrne_binding_1():
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2_prime = DLRep(lhs_values[0], Secret(name=secrets[0].name) * generators[0])
     andp_prime = p1_prime & p2_prime
@@ -512,13 +517,13 @@ def test_and_dlrne_does_not_fail_on_same_dl_when_not_binding():
     y3 = secret_values[2] * generators[3]
     s0 = secrets[0]
 
-    p1 = DLRepNotEqualProof([lhs_values[0], generators[0]], [lhs_values[1], generators[1]], [s0])
+    p1 = DLRepNotEqualProof([lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0)
     p2 = DLRep(lhs_values[2], s0 * generators[2])
     andp = p1 & p2
 
     s0_prime = Secret(name=secrets[0].name)
     p1_prime = DLRepNotEqualProof([lhs_values[0], generators[0]], [lhs_values[1], generators[1]],
-            [s0_prime])
+            s0_prime)
     p2_prime = DLRep(lhs_values[2], s0_prime * generators[2])
     andp_prime = p1_prime & p2_prime
 
@@ -543,8 +548,8 @@ def test_dlrep_and_dlrne_fails_on_same_dl_when_binding():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRep(lhs_values[2], secrets[0] * generators[2])
     andp = p1 & p2
@@ -552,7 +557,7 @@ def test_dlrep_and_dlrne_fails_on_same_dl_when_binding():
     # Twin proof
     s0_prime = Secret(name=secrets[0].name)
     p1_prime = DLRepNotEqualProof(
-        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], [s0_prime], binding=True
+        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0_prime, bind=True
     )
     p2_prime = DLRep(lhs_values[2], s0_prime * generators[2])
     andp_prime = p1_prime & p2_prime
@@ -584,22 +589,22 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[0], bind=True
     )
     andp = p1 & p2
 
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2_prime = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[0], bind=True
     )
     andp_prime = p1_prime & p2_prime
 
@@ -611,95 +616,94 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
         protocol.verify()
 
 
+
 # DLRNE & DLRNE
 def test_and_dlrep_partial_binding():
     """
     Claim to use (H0 = h0*x, H1 != h1*x) , (H1 = h1*x, H3 != h3*x) with the same x (not only
     cheating, a contradiction).  Should be undetected as binding is off in at least one proof
     """
-    secrets, secret_values, secret_dict = get_secrets(4)
+    secrets = get_secrets_new(4)
     generators = get_generators(4)
-    lhs_values = [x * g for x, g in zip(secret_values, generators)]
+    lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
-    y3 = secret_values[2] * generators[3]
+    y3 = secrets[2].value * generators[3]
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=False,
+        secrets[0],
+        bind=False,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1], bind=True
     )
     andp = p1 & p2
+
+    sprime = Secret()
     p1_prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=False,
+        sprime,
+        bind=False,
     )
     p2_prime = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], sprime, bind=True
     )
     andp_prime = p1_prime & p2_prime
 
-    prov = andp.get_prover(secret_dict)
-    prov.subs[1].secret_values[secrets[0]] = secret_values[1]
-
-    protocol = SigmaProtocol(andp_prime.get_verifier(), prov)
+    protocol = SigmaProtocol(andp_prime.get_verifier(), andp.get_prover())
     assert protocol.verify()
 
 
 # DLRNE & DLREP & DLRNE & DLRNE
 def test_multiple_and_dlrep_binding():
-    secrets, secret_values, secret_dict = get_secrets(4)
+    secrets = get_secrets_new(4)
     generators = get_generators(4)
-    lhs_values = [x * g for x, g in zip(secret_values, generators)]
+    lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=False,
+        secrets[0],
+        bind=False,
     )
     p2 = DLRep(lhs_values[2], secrets[2] * generators[2])
 
     p3 = DLRepNotEqualProof(
         [lhs_values[2], generators[2]],
         [lhs_values[1], generators[1]],
-        [secrets[2]],
-        binding=True,
+        secrets[2],
+        bind=True,
     )
     p4 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [lhs_values[3], generators[3]],
-        [secrets[0]],
-        binding=True,
+        secrets[1],
+        bind=True,
     )
 
     andp = p1 & p2 & p3 & p4
 
     s0 = Secret()
     s2 = Secret()
-    p11 = DLRepNotEqualProof(
+    p1prime = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=False,
+        s0,
+        bind=False,
     )
-    p21 = DLRep(lhs_values[2], s2 * generators[2])
+    p2prime = DLRep(lhs_values[2], s2 * generators[2])
 
-    p31 = DLRepNotEqualProof(
-        [lhs_values[2], generators[2]], [lhs_values[1], generators[1]], [s2], binding=True
+    p3prime = DLRepNotEqualProof(
+        [lhs_values[2], generators[2]], [lhs_values[1], generators[1]], s2, bind=True
     )
-    p41 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [lhs_values[3], generators[3]], [s0], binding=True
+    # Note difference: p4prime binds s0 instead of secrets[1] in the original proof
+    p4prime = DLRepNotEqualProof(
+        [lhs_values[1], generators[1]], [lhs_values[3], generators[3]], s0, bind=True
     )
 
-    andp1 = p11 & p21 & p31 & p41
-    prov = andp.get_prover(secret_dict)
-    prov.subs[3].secret_values[secrets[0]] = secret_values[1]
-    protocol = SigmaProtocol(andp1.get_verifier(), prov)
+    andp1 = p1prime & p2prime & p3prime & p4prime
+    protocol = SigmaProtocol(andp1.get_verifier(), andp.get_prover())
     assert protocol.verify()
 
 
@@ -712,22 +716,22 @@ def test_multiple_and_dlrep_fails_on_bad_secret_when_binding():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRep(lhs_values[0], secrets[0] * generators[0])
 
     p3 = DLRepNotEqualProof(
         [lhs_values[2], generators[2]],
         [lhs_values[1], generators[1]],
-        [secrets[2]],
-        binding=True,
+        secrets[2],
+        bind=True,
     )
     p4 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [lhs_values[3], generators[3]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
 
     andp = p1 & p2 & p3 & p4
@@ -735,22 +739,22 @@ def test_multiple_and_dlrep_fails_on_bad_secret_when_binding():
     p11 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p21 = DLRep(lhs_values[0], secrets[0] * generators[0])
 
     p31 = DLRepNotEqualProof(
         [lhs_values[2], generators[2]],
         [lhs_values[1], generators[1]],
-        [secrets[2]],
-        binding=True,
+        secrets[2],
+        bind=True,
     )
     p41 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [lhs_values[3], generators[3]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
 
     andp1 = p11 & p21 & p31 & p41
@@ -771,8 +775,8 @@ def test_and_dlrne_non_interactive_1(group):
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
-    p2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
+    p2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], x, bind=True)
     andp = pr & p2 & DLRep(y, x * g)
     tr = andp.prove()
     assert andp.verify(tr)
@@ -787,16 +791,16 @@ def test_and_dlrne_non_interactive_2():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRep(lhs_values[0], secrets[0] * generators[0])
 
     p3 = DLRepNotEqualProof(
         [lhs_values[2], generators[2]],
         [lhs_values[1], generators[1]],
-        [secrets[2]],
-        binding=True,
+        secrets[2],
+        bind=True,
     )
 
     andp = p1 & p2 & p3
@@ -804,12 +808,12 @@ def test_and_dlrne_non_interactive_2():
     s0 = Secret()
     s2 = Secret()
     p11 = DLRepNotEqualProof(
-        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], [s0], binding=True
+        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0, bind=True
     )
     p21 = DLRep(lhs_values[0], s0 * generators[0])
 
     p31 = DLRepNotEqualProof(
-        [lhs_values[2], generators[2]], [lhs_values[1], generators[1]], [s2], binding=True
+        [lhs_values[2], generators[2]], [lhs_values[1], generators[1]], s2, bind=True
     )
 
     andp1 = p11 & p21 & p31
@@ -827,22 +831,22 @@ def test_multiple_dlrne_simulation():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=False,
+        secrets[0],
+        bind=False,
     )
     p2 = DLRep(lhs_values[2], secrets[2] * generators[2])
 
     p3 = DLRepNotEqualProof(
         [lhs_values[2], generators[2]],
         [lhs_values[1], generators[1]],
-        [secrets[2]],
-        binding=True,
+        secrets[2],
+        bind=True,
     )
     p4 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]],
         [lhs_values[3], generators[3]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
 
     andp = p1 & p2 & p3 & p4
@@ -861,8 +865,8 @@ def test_dlrne_simulation_binding():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
         [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]]
@@ -883,11 +887,11 @@ def test_or_dlrne():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[1]]
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
     )
     orp = OrProof(p1, p2)
     prov = orp.get_prover(secret_dict)
@@ -910,11 +914,11 @@ def test_or_dlrne_non_interactive():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[1]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1], bind=True
     )
     orp = p1 | p2
     tr = orp.prove(secret_dict)
@@ -931,20 +935,20 @@ def test_or_or_dlrne():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p11 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[1]]
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
     )
     p3 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[1]]
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
     )
     orp_nested = OrProof(p1, p2)
     orp = OrProof(orp_nested, p11, p3)
@@ -968,11 +972,11 @@ def test_or_and_dlrne():
     p1 = DLRepNotEqualProof(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
-        [secrets[0]],
-        binding=True,
+        secrets[0],
+        bind=True,
     )
     p2 = DLRepNotEqualProof(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[1]], binding=True
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1], bind=True
     )
     andp_nested = AndProof(p1, p2)
     orp = OrProof(andp_nested, p1, p2)

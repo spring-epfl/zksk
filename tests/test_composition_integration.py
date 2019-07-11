@@ -113,6 +113,9 @@ def test_and_proof_fails_when_bases_belong_to_different_groups(group):
     with pytest.raises(InvalidExpression):
         # An exception should be raised because of a shared secrets linked to two different groups
         and_proof = AndProof(p1, p2)
+        prover = and_proof.get_prover()
+        verifier = and_proof.get_verifier()
+        verify(verifier, prover)
 
 
 def test_and_proof_fails_when_secret_is_wrong(params, group):

@@ -11,6 +11,7 @@ zkbuilder's docs
    
    getting_started
    guide 
+   new_primitives
    internals
 
 .. toctree::
