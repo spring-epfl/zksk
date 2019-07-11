@@ -21,7 +21,7 @@ class DLRepNotEqualProof(ExtendedProof):
 
     Using the notation from the BLAC paper:
 
-    .. math:: PK{ x: H_0 = x * h_0 \land H_1 \neq x * h_1 }
+    .. math:: PK\{ (x): H_0 = x * h_0 \land H_1 \neq x * h_1 \}
 
     Instantiates a Proof of inequal logarithms: takes (H0, h0), (H1, h1), [x=Secret(value=...)] such
     that H0 = x*h0 and H1 != x*h1.  All these arguments should be iterable. The binding keyword
@@ -73,8 +73,7 @@ class DLRepNotEqualProof(ExtendedProof):
             # the first member without randomizing the secret.
             proofs.append(DLRep(self.lhs[0], self.x * self.generators[0]))
 
-        self.constructed_proof = AndProof(*proofs)
-        return self.constructed_proof
+        return AndProof(*proofs)
 
     def is_valid(self):
         """
