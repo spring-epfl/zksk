@@ -689,8 +689,8 @@ def test_BLAC():
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
-    prv = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
+    prv = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     prov = pr.get_prover(secret_dict)
     ver = prv.get_verifier()
@@ -710,8 +710,8 @@ def test_false_BLAC1():
     g2 = 1397 * g
     y2 = 3 * g2
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x])
-    prv = DLRepNotEqualProof([y, g], [y2, g2], [x])
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x)
+    prv = DLRepNotEqualProof([y, g], [y2, g2], x)
     secret_dict = {x: 3}
     prov = pr.get_prover(secret_dict)
     ver = prv.get_verifier()
@@ -727,22 +727,22 @@ def test_and_BLAC():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], secrets_aliases[1]
     )
     andp = pr1 & pr2
 
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2v = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [lhs_tab[2], tab_g[2]], secrets_aliases[1]
     )
 
     andpv = pr1v & pr2v
@@ -758,11 +758,11 @@ def test_not_and_BLAC():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1]
     )
 
     andp = pr1 & pr2
@@ -770,11 +770,11 @@ def test_not_and_BLAC():
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2v = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1]
     )
 
     andpv = pr1v & pr2v
@@ -787,8 +787,8 @@ def test_and_BLAC_binding1():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
     andp = pr1 & pr2
@@ -797,8 +797,8 @@ def test_and_BLAC_binding1():
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [Secret(name=secrets_aliases[0]).name],
-        binding=True,
+        Secret(name=secrets_aliases[0]).name,
+        bind=True,
     )
     pr2v = DLRep(lhs_tab[0], Secret(name=secrets_aliases[0].name) * tab_g[0])
 
@@ -814,12 +814,12 @@ def test_and_BLAC_not_binding():
     y3 = secret_tab[2] * tab_g[3]
     s0 = secrets_aliases[0]
 
-    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0])
+    pr1 = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], s0)
     pr2 = DLRep(lhs_tab[2], s0 * tab_g[2])
     andp = pr1 & pr2
 
     s0p = Secret(name=secrets_aliases[0].name)
-    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p])
+    pr1v = DLRepNotEqualProof([lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], s0p)
     pr2v = DLRep(lhs_tab[2], s0p * tab_g[2])
     andpv = pr1v & pr2v
 
@@ -838,8 +838,8 @@ def test_and_BLAC_binding2():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRep(lhs_tab[2], secrets_aliases[0] * tab_g[2])
     andp = pr1 & pr2
@@ -847,7 +847,7 @@ def test_and_BLAC_binding2():
     # Twin proof
     s0p = Secret(name=secrets_aliases[0].name)
     pr1v = DLRepNotEqualProof(
-        [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0p], binding=True
+        [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], s0p, bind=True
     )
     pr2v = DLRep(lhs_tab[2], s0p * tab_g[2])
     andpv = pr1v & pr2v
@@ -874,22 +874,22 @@ def test_not_and_BLAC_binding():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[0], bind=True
     )
     andp = pr1 & pr2
 
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2v = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[0], bind=True
     )
     andpv = pr1v & pr2v
 
@@ -911,21 +911,21 @@ def test_and_BLAC_binding3():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=False,
+        secrets_aliases[0],
+        bind=False,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1], bind=True
     )
     andp = pr1 & pr2
     pr1v = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=False,
+        secrets_aliases[0],
+        bind=False,
     )
     pr2v = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[0], bind=True
     )
     andpv = pr1v & pr2v
 
@@ -941,22 +941,22 @@ def test_multi_and_BLAC_binding1():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[2]],
-        binding=True,
+        secrets_aliases[2],
+        bind=True,
     )
     pr4 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]],
         [lhs_tab[3], tab_g[3]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
 
     andp = pr1 & pr2 & pr3 & pr4
@@ -964,22 +964,22 @@ def test_multi_and_BLAC_binding1():
     pr11 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr21 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr31 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[2]],
-        binding=True,
+        secrets_aliases[2],
+        bind=True,
     )
     pr41 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]],
         [lhs_tab[3], tab_g[3]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
 
     andp1 = pr11 & pr21 & pr31 & pr41
@@ -997,22 +997,22 @@ def test_multi_and_BLAC_binding2():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=False,
+        secrets_aliases[0],
+        bind=False,
     )
     pr2 = DLRep(lhs_tab[2], secrets_aliases[2] * tab_g[2])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[2]],
-        binding=True,
+        secrets_aliases[2],
+        bind=True,
     )
     pr4 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]],
         [lhs_tab[3], tab_g[3]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[1],
+        bind=True,
     )
 
     andp = pr1 & pr2 & pr3 & pr4
@@ -1022,16 +1022,16 @@ def test_multi_and_BLAC_binding2():
     pr11 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=False,
+        s0,
+        bind=False,
     )
     pr21 = DLRep(lhs_tab[2], s2 * tab_g[2])
 
     pr31 = DLRepNotEqualProof(
-        [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], [s2], binding=True
+        [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], s2, bind=True
     )
     pr41 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [lhs_tab[3], tab_g[3]], [s0], binding=True
+        [lhs_tab[1], tab_g[1]], [lhs_tab[3], tab_g[3]], s0, bind=True
     )
 
     andp1 = pr11 & pr21 & pr31 & pr41
@@ -1049,10 +1049,10 @@ def test_BLAC_NI():
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     nip = pr.prove(secret_dict)
-    pr2 = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
+    pr2 = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
     assert pr2.verify(nip)
 
 
@@ -1064,9 +1064,9 @@ def test_BLAC_NI_direct():
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
     nip = pr.prove()
-    pr2 = DLRepNotEqualProof([y, g], [y2, g2], [Secret()], binding=True)
+    pr2 = DLRepNotEqualProof([y, g], [y2, g2], Secret(), bind=True)
     assert pr2.verify(nip)
 
 
@@ -1078,8 +1078,8 @@ def test_and_BLAC_NI_direct():
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
-    pr2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
+    pr2 = DLRepNotEqualProof([2 * y, 2 * g], [y2, g2], x, bind=True)
     andp = pr & pr2 & DLRep(y, x * g)
     nip = andp.prove()
     assert andp.verify(nip)
@@ -1090,16 +1090,16 @@ def test_BLAC_NI2():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRep(lhs_tab[0], secrets_aliases[0] * tab_g[0])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[2]],
-        binding=True,
+        secrets_aliases[2],
+        bind=True,
     )
 
     andp = pr1 & pr2 & pr3
@@ -1107,12 +1107,12 @@ def test_BLAC_NI2():
     s0 = Secret()
     s2 = Secret()
     pr11 = DLRepNotEqualProof(
-        [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], [s0], binding=True
+        [lhs_tab[0], tab_g[0]], [lhs_tab[1], tab_g[1]], s0, bind=True
     )
     pr21 = DLRep(lhs_tab[0], s0 * tab_g[0])
 
     pr31 = DLRepNotEqualProof(
-        [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], [s2], binding=True
+        [lhs_tab[2], tab_g[2]], [lhs_tab[1], tab_g[1]], s2, bind=True
     )
 
     andp1 = pr11 & pr21 & pr31
@@ -1128,7 +1128,7 @@ def test_sim_DLRNE():
     y2 = 397474 * g
     g2 = 1397 * g
 
-    pr = DLRepNotEqualProof([y, g], [y2, g2], [x], binding=True)
+    pr = DLRepNotEqualProof([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     tr = pr.simulate()
     assert pr.verify_simulation_consistency(tr) and not pr.verify(tr)
@@ -1140,22 +1140,22 @@ def test_sim_multiDLRNE():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=False,
+        secrets_aliases[0],
+        bind=False,
     )
     pr2 = DLRep(lhs_tab[2], secrets_aliases[2] * tab_g[2])
 
     pr3 = DLRepNotEqualProof(
         [lhs_tab[2], tab_g[2]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[2]],
-        binding=True,
+        secrets_aliases[2],
+        bind=True,
     )
     pr4 = DLRepNotEqualProof(
         [lhs_tab[1], tab_g[1]],
         [lhs_tab[3], tab_g[3]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
 
     andp = pr1 & pr2 & pr3 & pr4
@@ -1170,11 +1170,11 @@ def test_DLRNE_sim_binding():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[0]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[0]
     )
     andp = pr1 & pr2
     tr = andp.simulate()
@@ -1188,11 +1188,11 @@ def test_or_DLRNE():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1]
     )
     orp = OrProof(pr1, pr2)
     prov = orp.get_prover(secrets_values)
@@ -1212,20 +1212,20 @@ def test_or_or_DLRNE():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr11 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1]
     )
     pr3 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]]
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1]
     )
     orpp = OrProof(pr1, pr2)
     orp = OrProof(orpp, pr11, pr3)
@@ -1246,11 +1246,11 @@ def test_or_and_DLRNE():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1], bind=True
     )
     orpp = AndProof(pr1, pr2)
     orp = OrProof(orpp, pr1, pr2)
@@ -1271,11 +1271,11 @@ def test_or_NI_DLRNE():
     pr1 = DLRepNotEqualProof(
         [lhs_tab[0], tab_g[0]],
         [lhs_tab[1], tab_g[1]],
-        [secrets_aliases[0]],
-        binding=True,
+        secrets_aliases[0],
+        bind=True,
     )
     pr2 = DLRepNotEqualProof(
-        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], [secrets_aliases[1]], binding=True
+        [lhs_tab[1], tab_g[1]], [y3, tab_g[3]], secrets_aliases[1], bind=True
     )
     orp = pr1 | pr2
     nip = orp.prove(secrets_values)
@@ -1433,12 +1433,12 @@ def test_signature_and_DLRNE():
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
     andp = sigproof & dneq
 
     sec = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(sec, pk)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), sec[1], bind=True)
     andp1 = sigproof1 & dneq1
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
@@ -1480,11 +1480,11 @@ def test_wrong_signature_and_DLRNE1():
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
 
     sec = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(sec, pk, signature)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), sec[1], bind=True)
 
     andp = sigproof & dneq
     andp1 = sigproof1 & dneq1
@@ -1705,12 +1705,12 @@ def test_signature_or_DLRNE():
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
-    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), [s], binding=True)
+    dneq = DLRepNotEqualProof((pg1, g1), (pg2, g2), s, bind=True)
     andp = sigproof | dneq
 
     sec = [Secret() for _ in range(5)]
     sigproof1 = SignatureProof(sec, pk)
-    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), [sec[1]], binding=True)
+    dneq1 = DLRepNotEqualProof((pg1, g1), (pg2, g2), sec[1], bind=True)
     andp1 = sigproof1 | dneq1
     prov = andp.get_prover(secret_dict)
     ver = andp1.get_verifier()
