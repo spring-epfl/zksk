@@ -46,7 +46,8 @@ class DLRepNotEqualProof(ExtendedProof):
 
     def precommit(self):
         """
-        Generates the precommitments needed to build the inner constructed proof, in this case the left-hand side of the second term.
+        Generates the precommitments needed to build the inner constructed
+        proof, in this case the left-hand side of the second term.
         """
         order = self.generators[0].group.order()
         blinder = order.random()
@@ -55,9 +56,7 @@ class DLRepNotEqualProof(ExtendedProof):
         self.alpha.value = self.x.value * blinder % order
         self.beta.value = -blinder % order
 
-        precommitment = {}
-        precommitment["com"] = blinder * (self.x.value * self.generators[1] - self.lhs[1])
-
+        precommitment = blinder * (self.x.value * self.generators[1] - self.lhs[1])
         return precommitment
 
     def construct_proof(self, precommitment):
@@ -66,7 +65,7 @@ class DLRepNotEqualProof(ExtendedProof):
         """
         infty = self.generators[0].group.infinite()
         p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
-        p2 = DLRep(precommitment["com"], self.alpha * self.generators[1] + self.beta * self.lhs[1])
+        p2 = DLRep(precommitment, self.alpha * self.generators[1] + self.beta * self.lhs[1])
         proofs = [p1, p2]
 
         if self.bind:
@@ -81,13 +80,12 @@ class DLRepNotEqualProof(ExtendedProof):
         """
         Verifies the second part of the constructed proof is indeed about to prove the secret is not the discrete logarithm.
         """
-        return self.precommitment["com"] != self.generators[0].group.infinite()
+        return self.precommitment != self.generators[0].group.infinite()
 
     def simulate_precommit(self):
         """
         Draws a base at random (not unity) from the generators' group.
         """
         group = self.generators[0].group
-        precommitment = {}
-        precommitment["com"] = group.order().random() * group.generator()
+        precommitment = group.order().random() * group.generator()
         return precommitment
