@@ -5,7 +5,7 @@ You can also easily define your own proof primitives and use them in new proofs.
 The library already uses this technique to define several new proof primitives.
 In this guide we will see how to define our own primitives.
 
-A primitive for proving knowledge of an ElGamal plaintext
+A Primitive for Proving Knowledge of an ElGamal Plaintext
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We start with a simple new primitive. Consider an additive ElGamal ciphertext
@@ -44,7 +44,7 @@ Next, we define which statement corresponds to our new primitive.
 Which is a direct translation of the Camenischh-Stadler notation defined above. This function must
 take an extra argument ``precommitment``. But this argument is not used here. 
 
-A primitive for proving inequality of discrete logarithms
+A Primitive for Proving Inequality of Discrete Logarithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The previous primitive was very simple. We can also define more complicated
@@ -60,16 +60,18 @@ to :math:`h_1`.
 Let :math:`x` be the private input of the prover such that :math:`H_0 = x \cdot h_0`. To prove the
 above statement in zero-knowledge, we must proceed as follows [HG13]_:
 
- 1. The prover picks a blinding factor :math:`r`, computes the auxiliary commitment
-     :math:`C = r (x h_1 - H_1)`, and sends :math:`C` to the verifier.
+1. The prover picks a blinding factor :math:`r`, computes the auxiliary commitment
+   :math:`C = r (x h_1 - H_1)`, and sends :math:`C` to the verifier.
 
- 2. The prover and the verifier then engage in the zero-knowledge proof
+2. The prover and the verifier then engage in the zero-knowledge proof
 
-    .. math:: PK\{ (\alpha, \beta): 1 = \alpha \cdot h_0 + \beta \cdot H_0 \land C = \alpha \cdot h_1 + \beta \cdot H_1 \}
+   .. math::
+   
+      PK\{ (\alpha, \beta): 1 = \alpha \cdot h_0 + \beta \cdot H_0 \land C = \alpha \cdot h_1 + \beta \cdot H_1 \},
 
-    where the prover uses :math:`\alpha = x r \mod q` and :math:`\beta = -r \mod q`.
+   where the prover uses :math:`\alpha = x r \mod q` and :math:`\beta = -r \mod q`.
 
- 3. Finally, the verifier accepts if the proof in step 2 succeeds, and if the commitment :math:`C \neq 1`.
+3. Finally, the verifier accepts if the proof in step 2 succeeds, and if the commitment :math:`C \neq 1`.
 
 This protocol is indeed a zero-knowledge proof. And, by combining steps 1 and 3 into step 2, can be
 seen as a Sigma protocol. Internally, we still use a standard sigma protocol. However, we notice two
