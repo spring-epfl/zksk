@@ -7,7 +7,7 @@ from zksk.pairings import BilinearGroupPair
 
 from zksk import DLRep
 from zksk.composition import OrProofStmt, AndProofStmt
-from zksk.exceptions import VerificationError
+from zksk.exceptions import ValidationError
 from zksk.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
 from zksk.primitives.dl_notequal import DLNotEqual
 from zksk.utils.debug import SigmaProtocol
@@ -223,7 +223,7 @@ def test_signature_and_dlrne_fails_on_wrong_secret():
 
     challenge = ver.send_challenge(commitment)
     responses = prov.compute_response(challenge)
-    with pytest.raises(VerificationError):
+    with pytest.raises(ValidationError):
         ver.verify(responses)
 
 
@@ -477,7 +477,8 @@ def test_and_dlrne_fails_on_same_dl():
 
     andp_prime = p1_prime & p2_prime
     protocol = SigmaProtocol(andp_prime.get_verifier(), andp.get_prover(secret_dict))
-    assert not protocol.verify()
+    with pytest.raises(ValidationError):
+        protocol.verify()
 
 
 # DLREP & DLNE
@@ -575,7 +576,7 @@ def test_dlrep_and_dlrne_fails_on_same_dl_when_binding():
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
 
-    with pytest.raises(VerificationError):
+    with pytest.raises(ValidationError):
         ver.verify(resp)
 
 
@@ -616,7 +617,7 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
     prov.subs[1].secret_values[secrets[0]] = secret_values[1]
 
     protocol = SigmaProtocol(andp_prime.get_verifier(), prov)
-    with pytest.raises(VerificationError):
+    with pytest.raises(ValidationError):
         protocol.verify()
 
 
@@ -767,7 +768,7 @@ def test_multiple_and_dlrep_fails_on_bad_secret_when_binding():
     prov.subs[1].secret_values[secrets[0]] = secret_values[1]
 
     protocol = SigmaProtocol(andp1.get_verifier(), prov)
-    with pytest.raises(VerificationError):
+    with pytest.raises(ValidationError):
         protocol.verify()
 
 

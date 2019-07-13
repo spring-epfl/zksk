@@ -76,11 +76,9 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         else:
             self.is_prover = False
 
-        # TODO: not clear how and why to set these
-        self.generators = [g, h]
-
         self.com = com
-        self.g, self.h = g, h
+        self.bases = [g, h]
+        self.order = g.group.order()
         self.num_bits = num_bits
 
         # The constructed proofs need extra randomizers as secrets
@@ -94,15 +92,14 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         """
         Must return: precommitment
         """
-        g, h = self.g, self.h
-        order = self.g.group.order()
+        g, h = self.bases
 
         value = self.secret_vars[0].value
         value_as_bits = decompose_into_n_bits(value, self.num_bits)
 
         # Set true value to computed secrets
         for rand in self.randomizers:
-            rand.value = order.random()
+            rand.value = self.order.random()
 
         precommitment = {}
         precommitment["Cs"] = [ b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)]
@@ -111,17 +108,15 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         rand = Bn(0)
         power = Bn(1)
         for r in self.randomizers:
-            rand = rand.mod_add(r.value * power, order)
+            rand = rand.mod_add(r.value * power, self.order)
             power *= 2
-        rand = rand.mod_sub(self.secret_vars[1].value, order)
+        rand = rand.mod_sub(self.secret_vars[1].value, self.order)
         precommitment["rand"] = rand
 
         return precommitment
 
-    def construct_proof(self, precommitment):
-        # TODO: Why is this essential? and not automatic?
-        self.precommitment = precommitment
-
+    def construct_stmt(self, precommitment):
+        g, h = self.bases
         if self.is_prover:
             # Indicators that tell us which or-clause is true
             value = self.secret_vars[0].value
@@ -131,8 +126,8 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         bit_proofs = []
         for i in range(self.num_bits):
-            p0 = DLRep(precommitment["Cs"][i], self.randomizers[i] * self.h)
-            p1 = DLRep(precommitment["Cs"][i] - self.g, self.randomizers[i] * self.h)
+            p0 = DLRep(precommitment["Cs"][i], self.randomizers[i] * h)
+            p1 = DLRep(precommitment["Cs"][i] - g, self.randomizers[i] * h)
 
             # When we are a prover, mark which disjunct is true
             if self.is_prover:
@@ -141,23 +136,18 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
             bit_proofs.append(p0 | p1)
 
-        self.constructed_proof = AndProofStmt(*bit_proofs)
-
-        return self.constructed_proof
+        return AndProofStmt(*bit_proofs)
 
     # TODO: name of check is too specific, e.g., for range proofs we need another post check
-    def is_valid(self):
-        """TODO (internal)
-
-        """
-        rand = self.precommitment["rand"]
+    def validate(self, precommitment):
+        rand = precommitment["rand"]
 
         # Combine bit commitments into value commitment
-        combined = self.g.group.infinite()
+        combined = self.bases[0].group.infinite()
         power = Bn(1)
-        for c in self.precommitment["Cs"]:
+        for c in precommitment["Cs"]:
             combined += power * c
             power *= 2
 
-        return combined == self.com + rand * self.h
+        return combined == self.com + rand * self.bases[1]
 

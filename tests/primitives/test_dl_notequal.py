@@ -4,7 +4,7 @@ from petlib.bn import Bn
 
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
-
+from zksk.exceptions import ValidationError
 from zksk.primitives.dl_notequal import DLNotEqual
 
 
@@ -25,7 +25,7 @@ def test_dlne_interactive(group):
     challenge = verifier.send_challenge(commitment)
     responses = prover.compute_response(challenge)
 
-    assert verifier.proof.is_valid()
+    verifier.stmt.full_validate()
     assert verifier.verify(responses)
 
 
@@ -76,7 +76,8 @@ def test_dlne_fails_when_non_binding(group):
     challenge = verifier.send_challenge(commitment)
     responses = prover.compute_response(challenge)
 
-    assert not verifier.verify(responses)
+    with pytest.raises(ValidationError):
+        verifier.verify(responses)
 
 
 def test_dlne_simulate(group):

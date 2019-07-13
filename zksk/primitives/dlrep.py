@@ -37,7 +37,7 @@ class DLRepVerifier(Verifier):
 
         Args:
             response: List of responses
-            responses_dict: Mapping from secrets or secret names to responses
+            responses_dict: Mapping from secrets to responses
 
         Returns:
             bool: True if responses are consistent, False otherwise.
@@ -45,8 +45,8 @@ class DLRepVerifier(Verifier):
         if responses_dict is None:
             responses_dict = {}
 
-        for i in range(len(self.proof.secret_vars)):
-            s = self.proof.secret_vars[i]
+        for i in range(len(self.stmt.secret_vars)):
+            s = self.stmt.secret_vars[i]
             if s in responses_dict.keys():
                 if responses[i] != responses_dict[s]:
                     warnings.warn("Values are {}. Should be {}".format(responses[i],
@@ -84,17 +84,17 @@ class DLRep(ComposableProofStmt):
 
     def __init__(self, lhs, expr):
         if isinstance(expr, Expression):
-            self.generators = list(expr.bases)
+            self.bases = list(expr.bases)
             self.secret_vars = list(expr.secrets)
         else:
             raise TypeError("Expected an Expression. Got: {}".format(expr))
 
         # Check all the generators live in the same group
-        test_group = self.generators[0].group
-        for g in self.generators:
+        test_group = self.bases[0].group
+        for g in self.bases:
             if g.group != test_group:
                 raise InvalidExpression(
-                    "All generators should come from the same group", g.group
+                    "All bases should come from the same group", g.group
                 )
 
         # Construct a dictionary with the secret values we already know
@@ -149,7 +149,7 @@ class DLRep(ComposableProofStmt):
         Returns:
             str: Proof ID
         """
-        return ("DLRep", self.lhs, self.generators)
+        return ("DLRep", self.lhs, self.bases)
 
     def get_randomizers(self):
         """
@@ -167,7 +167,7 @@ class DLRep(ComposableProofStmt):
                 of the proof.
         """
         output = {}
-        order = self.generators[0].group.order()
+        order = self.bases[0].group.order()
         for sec in set(self.secret_vars):
             output.update({sec: order.random()})
         return output
@@ -186,13 +186,10 @@ class DLRep(ComposableProofStmt):
             The required commitment matching the parameters.
         """
 
-        leftside = (
-            self.lhs.group.wsum(responses, self.generators) + (-challenge) * self.lhs
+        commitment = (
+            self.lhs.group.wsum(responses, self.bases) + (-challenge) * self.lhs
         )
-        return leftside
-
-    def prepare_simulate_proof(self):
-        pass
+        return commitment
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -214,13 +211,6 @@ class DLRep(ComposableProofStmt):
 
         return SimulationTranscript(commitment=commitment, challenge=challenge, responses=responses)
 
-    def get_secret_vars(self):
-        return self.secret_vars
-
-    def get_generators(self):
-        return self.generators
-
-
 
 class DLRepProver(Prover):
     """The prover in a discrete logarithm proof."""
@@ -237,18 +227,18 @@ class DLRepProver(Prover):
             A single commitment---sum of bases, weighted by the corresponding randomizers
         """
         # Fill the missing positions of the randomizers dictionary
-        randomizers_dict = self.proof.update_randomizers(randomizers_dict)
+        randomizers_dict = self.stmt.update_randomizers(randomizers_dict)
 
         # Compute an ordered list of randomizers mirroring the Secret objects
-        self.ks = [randomizers_dict[sec] for sec in self.proof.secret_vars]
-        subcommits = [a * b for a, b in zip(self.ks, self.proof.generators)]
+        self.ks = [randomizers_dict[sec] for sec in self.stmt.secret_vars]
+        subcommits = [a * b for a, b in zip(self.ks, self.stmt.bases)]
 
-        # We build the commitment doing the product g1^k1 g2^k2...
-        sum_ = self.proof.generators[0].group.infinite()
+        # We build the commitment doing the product k0 * g0 + k1 * g1...
+        result = self.stmt.bases[0].group.infinite()
         for com in subcommits:
-            sum_ = sum_ + com
+            result = result + com
 
-        return sum_
+        return result
 
     def compute_response(self, challenge):
         """
@@ -263,9 +253,9 @@ class DLRepProver(Prover):
         Returns:
             A list of responses
         """
-        order = self.proof.generators[0].group.order()
+        order = self.stmt.bases[0].group.order()
         resps = [
-            (self.secret_values[self.proof.secret_vars[i]] * challenge + self.ks[i])
+            (self.secret_values[self.stmt.secret_vars[i]] * challenge + self.ks[i])
             % order
             for i in range(len(self.ks))
         ]

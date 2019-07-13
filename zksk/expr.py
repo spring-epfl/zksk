@@ -15,8 +15,6 @@ Tiny expression language suitable for expressing statements on discrete logarith
 import struct
 import hashlib
 
-from collections import defaultdict
-
 from zksk.exceptions import InvalidExpression, IncompleteValuesError
 
 
@@ -195,38 +193,4 @@ def update_secret_values(secrets_dict):
         secrets_dict: A mapping from :py:class:`Secret` objects to their expected values.
     """
     for k, v in secrets_dict.items(): k.value = v
-
-
-def check_groups(secrets, generators):
-    """
-    Check that if two secrets are the same, their generators induce groups of same order.
-
-    The primary goal is to ensure same responses for same secrets will not yield false negatives of
-    :py:meth:`base.Verifier.check_responses_consistency` due to different group-order modular reductions.
-
-    TODO: Consider deactivating in the future as this forbids using different groups in one proof.
-    TODO: Update docs, variable names.
-
-    Args:
-        secrets: :py:class:`expr.Secret` objects.
-        generators: Generators, Elliptic curve points.
-    """
-    # We map the unique secrets to the indices where they appear
-    mydict = defaultdict(list)
-    for idx, word in enumerate(secrets):
-        mydict[word].append(idx)
-
-    # Now we use this dictionary to check all the generators related to a particular secret live in
-    # the same group
-    for (word, gen_idx) in mydict.items():
-        # Word is the key, gen_idx is the value = a list of indices
-        ref_order = generators[gen_idx[0]].group.order()
-
-        for index in gen_idx:
-            if generators[index].group.order() != ref_order:
-                raise InvalidExpression(
-                    "A shared secret has generators which yield different group orders: ", word,
-                )
-
-    return True
 

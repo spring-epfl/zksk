@@ -185,8 +185,8 @@ class SignatureStmt(ExtendedProofStmt):
             secret_vars = [Secret(), Secret()] + secret_vars
 
         # We need L+1 generators for L messages. secret_vars are messages plus 'e' and 's'
-        self.generators = pk.generators[: len(secret_vars)]
-        self.constructed_proof = None
+        self.bases = pk.generators[: len(secret_vars)]
+        self.order = self.bases[0].group.order()
 
         # The prover will compute the following secrets:
         self.r1, self.r2, self.delta1, self.delta2 = Secret(), Secret(), Secret(), Secret()
@@ -208,29 +208,28 @@ class SignatureStmt(ExtendedProofStmt):
         Returned value is to be processed on the verifier side by verifier.process_precommitment( )
         """
         if self.signature is None:
-            raise Exception("No signature given!")
-        # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
+            raise ValueException("No signature given!")
 
+        # Compute auxiliary commitments A1,A2 as mentioned in the paper. Needs two random values r1,r2 and associated delta1,delta2
         # Set true value to computed secrets
-        order = self.generators[0].group.order()
-        r1, r2 = order.random(), order.random()
+        r1, r2 = self.order.random(), self.order.random()
         self.r1.value, self.r2.value = r1, r2
-        self.delta1.value = r1 * self.signature.e % order
-        self.delta2.value = r2 * self.signature.e % order
+        self.delta1.value = r1 * self.signature.e % self.order
+        self.delta2.value = r2 * self.signature.e % self.order
 
         precommitment = {}
-        precommitment["A1"] = r1 * self.generators[1] + r2 * self.generators[2]
-        precommitment["A2"] = r1 * self.generators[2] + self.signature.A
+        precommitment["A1"] = r1 * self.bases[1] + r2 * self.bases[2]
+        precommitment["A2"] = r1 * self.bases[2] + self.signature.A
 
         return precommitment
 
-    def construct_proof(self, precommitment):
+    def construct_stmt(self, precommitment):
         """
         A template for the proof of knowledge of a signature pi5 detailed on page 7 of the following paper : https://eprint.iacr.org/2008/136.pdf
         :param precommitment: the A1 and A2 parameters which depend on the secret signature and the Prover's randomness.
         """
         self.A1, self.A2 = precommitment["A1"], precommitment["A2"]
-        g0, g1, g2 = self.generators[0], self.generators[1], self.generators[2]
+        g0, g1, g2 = self.bases[0], self.bases[1], self.bases[2]
 
         dl1 = DLRep(self.A1, self.r1 * g1 + self.r2 * g2)
         dl2 = DLRep(
@@ -241,12 +240,12 @@ class SignatureStmt(ExtendedProofStmt):
         )
 
         self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * self.pk.gen_pairs[0])
-        generators = [
+        bases = [
             -1 * (self.A2.pair(self.pk.h0)),
-            self.generators[2].pair(self.pk.w),
+            self.bases[2].pair(self.pk.w),
             self.pk.gen_pairs[2],
         ]
-        generators.extend(self.pk.gen_pairs[1 : len(self.generators)])
+        bases.extend(self.pk.gen_pairs[1 : len(self.bases)])
 
         # Build secret names [e, r1, delta1, s, m_i]
         new_secret_vars = (
@@ -254,21 +253,21 @@ class SignatureStmt(ExtendedProofStmt):
             + [self.r1, self.delta1]
             + self.secret_vars[1:]
         )
-        pairings_proof = DLRep(
-            self.pair_lhs, wsum_secrets(new_secret_vars, generators)
+        pairings_stmt = DLRep(
+            self.pair_lhs, wsum_secrets(new_secret_vars, bases)
         )
 
-        self.constructed_proof = AndProofStmt(dl1, dl2, pairings_proof)
-        self.constructed_proof.lhs = [
-            subp.lhs for subp in self.constructed_proof.subproofs
+        constructed_stmt = AndProofStmt(dl1, dl2, pairings_stmt)
+        constructed_stmt.lhs = [
+            p.lhs for p in constructed_stmt.subproofs
         ]
-        return self.constructed_proof
+        return constructed_stmt
 
     def simulate_precommit(self):
         """
         Draws A1, A2 at random.
         """
-        group = self.generators[0].group
+        group = self.bases[0].group
 
         precommitment = {}
         precommitment["A1"] = group.order().random() * group.generator()

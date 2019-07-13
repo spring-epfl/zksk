@@ -14,5 +14,14 @@ class StatementMismatch(Exception):
 class StatementSpecError(Exception):
     """Statement not fully specified."""
 
+class InvalidSecretsError(Exception):
+    """Secrets re-occur in an unsupported manner."""
+
+class GroupMismatchError(Exception):
+    """Generator groups mismatch."""
+
 class VerificationError(Exception):
     """Error during verification."""
+
+class ValidationError(Exception):
+    """Error during validation."""

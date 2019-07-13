@@ -13,7 +13,7 @@ import attr
 
 from zksk.utils import get_random_num
 from zksk.consts import CHALLENGE_LENGTH
-from zksk.exceptions import VerificationError
+from zksk.exceptions import ValidationError
 
 
 @attr.s
@@ -31,7 +31,7 @@ class NITranscript:
 @attr.s
 class SimulationTranscript:
     """
-    Simulated proof transcript
+    Simulated stmt transcript
     """
 
     commitment = attr.ib()
@@ -44,21 +44,22 @@ class SimulationTranscript:
 class Prover(metaclass=abc.ABCMeta):
     """
     An abstract interface representing Prover used in sigma protocols
+
+    Args:
+        stmt: The Proof instance from which we draw the Prover.
+        secret_values: The values of the secrets as a dict.
     """
 
-    def __init__(self, proof, secret_values):
+    def __init__(self, stmt, secret_values):
         """
-        Constructs a Prover. Called by Proof.get_prover(), either by directly the user or by a composition Prover such as AndProver, OrProver.
-        :param proof: The Proof instance from which we draw the Prover.
-        :param secret_values: The values of the secrets as a dict.
         """
-        self.proof = proof
+        self.stmt = stmt
         self.secret_values = secret_values
 
     @abc.abstractmethod
     def compute_response(self, challenge):
         """
-        Computes the responses associated to each Secret object in the proof, and returns the list.
+        Computes the responses associated to each Secret object in the stmt, and returns the list.
         """
         pass
 
@@ -70,7 +71,7 @@ class Prover(metaclass=abc.ABCMeta):
 
     def commit(self, randomizers_dict=None):
         """
-        Gathers the commitment of the instantiated prover, and appends a hash of the proof statement
+        Gathers the commitment of the instantiated prover, and appends a hash of the stmt statement
         to it. Returns the tuple.
 
         Args:
@@ -78,7 +79,7 @@ class Prover(metaclass=abc.ABCMeta):
                 to a secret.
         """
         return (
-            self.proof.prehash_statement().digest(),
+            self.stmt.prehash_statement().digest(),
             self.internal_commit(randomizers_dict),
         )
 
@@ -91,26 +92,26 @@ class Prover(metaclass=abc.ABCMeta):
 
     def get_NI_proof(self, message=""):
         """
-        Construct a non-interactive proof transcript using Fiat-Shamir heuristic.
+        Construct a non-interactive stmt transcript using Fiat-Shamir heuristic.
 
         The transcript contains only the challenge and the responses, as the commitment can be
         deterministically recomputed.
 
-        The challenge is a hash of the commitment, the proof statement and all the bases in the
-        proof (including the left-hand-side).
+        The challenge is a hash of the commitment, the stmt statement and all the bases in the
+        stmt (including the left-hand-side).
 
         Args:
-            message (str): Optional message to make a signature proof of knowledge.
+            message (str): Optional message to make a signature stmt of knowledge.
         """
         # Precommit to gather encapsulated precommitments. They are already included in their
-        # respective proof statement.
+        # respective stmt statement.
         precommitment = self.precommit()
-        commitment = self.proof.ec_encode(self.internal_commit())
+        commitment = encode(self.internal_commit())
 
-        # Create a hash object with proof statement.
-        prehash = self.proof.prehash_statement()
+        # Create a hash object with stmt statement.
+        prehash = self.stmt.prehash_statement()
 
-        # Save a hash of the proof statement only
+        # Save a hash of the stmt statement only
         statement = prehash.digest()
 
         # Start building the complete hash for the challenge
@@ -128,8 +129,8 @@ class Verifier(metaclass=abc.ABCMeta):
     An abstract interface representing Prover used in sigma protocols
     """
 
-    def __init__(self, proof):
-        self.proof = proof
+    def __init__(self, stmt):
+        self.stmt = stmt
 
     @abc.abstractmethod
     def check_responses_consistency(self, response, response_dict=None):
@@ -141,7 +142,7 @@ class Verifier(metaclass=abc.ABCMeta):
 
     def process_precommitment(self, precommitment):
         """
-        Receives a precommitment and processes it, i.e instantiates a constructed proof if
+        Receives a precommitment and processes it, i.e instantiates a constructed stmt if
         necessary. If not overriden, does nothing.
         """
         pass
@@ -152,15 +153,21 @@ class Verifier(metaclass=abc.ABCMeta):
         between 0 and CHALLENGE_LENGTH (excluded).
 
         Args:
-            commitment: A tuple containing a hash of the proof statement, to be compared against the local statement,
+            commitment: A tuple containing a hash of the stmt statement, to be compared against the local statement,
                 and the commmitment as a (potentially multi-level list of) base(s) of the group.
         """
         statement, self.commitment = commitment
-        self.proof.check_statement(statement)
+        self.stmt.check_statement(statement)
         self.challenge = get_random_num(bits=CHALLENGE_LENGTH)
         return self.challenge
 
-    def verify(self, arg):
+    def pre_verification_validation(self, response, *args, **kwargs):
+        self.stmt.full_validate(*args, **kwargs)
+
+        if not self.check_responses_consistency(response, {}):
+            raise ValidationError("Responses for the same secret name do not match.")
+
+    def verify(self, response, *args, **kwargs):
         """
         Verifies the responses of an interactive sigma protocol. To do so, generates a
         pseudo-commitment based on the stored challenge and the received responses,
@@ -172,17 +179,12 @@ class Verifier(metaclass=abc.ABCMeta):
         Returns:
             bool: True if verification succeeded, False otherwise.
         """
-        # Optional verification criteria.
-        if not self.proof.is_valid():
-            return False
-
-        if not self.check_responses_consistency(arg, {}):
-            raise VerificationError("Responses for the same secret name do not match!")
+        self.pre_verification_validation(response, *args, **kwargs)
 
         # Retrieve the commitment using the verification identity
-        return self.commitment == self.proof.recompute_commitment(self.challenge, arg)
+        return self.commitment == self.stmt.recompute_commitment(self.challenge, response)
 
-    def verify_NI(self, transcript, message="", encoding=None):
+    def verify_NI(self, transcript, message="", *args, **kwargs):
         """
         Verify a non-interactive transcript.
 
@@ -192,34 +194,28 @@ class Verifier(metaclass=abc.ABCMeta):
 
         Args:
             transcript: A instance of :py:`NonInteractiveTranscript`
-            message: A message if a signature proof.
+            message: A message if a signature stmt.
 
         Return:
             bool: True of verification succeeded, False otherwise.
         """
-        # Build the complete proof if necessary.
+        # Build the complete stmt if necessary.
         if transcript.precommitment is not None:
             self.process_precommitment(transcript.precommitment)
 
         # Check the proofs statements match, gather the local statement.
-        prehash = self.proof.check_statement(transcript.statement)
-
-        # Optional verification criteria.
-        if not self.proof.is_valid():
-            return False
-        if not self.check_responses_consistency(transcript.responses, {}):
-            raise Exception("Responses for a same secret name do not match!")
+        prehash = self.stmt.check_statement(transcript.statement)
+        self.pre_verification_validation(transcript.responses, *args, **kwargs)
 
         # Retrieve the commitment using the verification identity.
-        r_guess = self.proof.recompute_commitment(
+        commitment_prime = self.stmt.recompute_commitment(
             transcript.challenge, transcript.responses
         )
 
         # Hash the commitment and the optional message.
-        prehash.update(self.proof.ec_encode(r_guess))
+        prehash.update(encode(commitment_prime))
         prehash.update(message.encode())
         return transcript.challenge == Bn.from_hex(
             binascii.hexlify(prehash.digest()).decode()
         )
-
 

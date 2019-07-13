@@ -6,15 +6,17 @@ import abc
 import copy
 import random
 from hashlib import sha256
+from collections import defaultdict
 
 from petlib.bn import Bn
 from petlib.pack import encode
 
 from zksk.base import Prover, Verifier, SimulationTranscript
-from zksk.expr import check_groups, update_secret_values
+from zksk.expr import update_secret_values
 from zksk.utils import get_random_num, sum_bn_array
 from zksk.consts import CHALLENGE_LENGTH
 from zksk.exceptions import StatementSpecError, StatementMismatch
+from zksk.exceptions import InvalidSecretsError, GroupMismatchError
 
 
 def _find_residual_challenge(subchallenges, challenge, modulus):
@@ -37,18 +39,28 @@ def _find_residual_challenge(subchallenges, challenge, modulus):
 
 class ComposableProofStmt(metaclass=abc.ABCMeta):
     """A composable sigma-protocol proof statement."""
-
-    @abc.abstractmethod
-    def get_secret_vars(self):
-        pass
-
-    @abc.abstractmethod
-    def get_generators(self):
-        pass
-
     @abc.abstractmethod
     def get_proof_id(self):
         pass
+
+    def get_secret_vars(self):
+        """Collect all secrets in this subtree.
+
+        By default tries to get the ``secret_vars`` attribute. Override if needed.
+        """
+        if not hasattr(self, "secret_vars"):
+            raise StatementSpecError("Need to override get_secret_vars or specify secret_vars "
+                    "attribute.")
+        return self.secret_vars
+
+    def get_bases(self):
+        """Collect all base points in this subtree.
+
+        By default tries to get the ``bases`` attribute. Override if needed.
+        """
+        if not hasattr(self, "bases"):
+            raise StatementSpecError("Need to override get_bases or specify bases attribute.")
+        return self.bases
 
     def __and__(self, other):
         """
@@ -85,6 +97,9 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
             return OrProofStmt(*self.subproofs, other)
 
         return OrProofStmt(self, other)
+
+    def prepare_simulate_proof(self):
+        pass
 
     def get_prover_cls(self):
         if hasattr(self, "prover_cls"):
@@ -155,28 +170,32 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         transcript.statement = self.prehash_statement().digest()
         return transcript
 
-    def check_statement(self, statement):
+    def check_statement(self, statement_hash):
         """
         Verify the current proof corresponds to the hash passed as a parameter.
+
         Returns a pre-hash of the current proof, e.g., to be used to verify NI proofs
         """
-        cur_statement = self.prehash_statement()
-        if statement != cur_statement.digest():
+        h = self.prehash_statement()
+        if statement_hash != h.digest():
             raise StatementMismatch("Proof statements mismatch, impossible to verify")
-        return cur_statement
+        return h
 
-    def is_valid(self):
+    def validate(self, *args, **kwargs):
         """
-        Verification criteria to be checked at verification step. Override if needed.
+        Validation criteria to be checked. Override if needed.
 
         Should be overridden if necessary.
 
-        Returns:
-            bool: True by default.
+        Raises:
+            Exception: If statement is invalid.
         """
-        return True
+        pass
 
-    def check_or_flaw(self, forbidden_secrets=None):
+    def full_validate(self, *args, **kwargs):
+        return self.validate(*args, **kwargs)
+
+    def validate_secrets_reoccurence(self, forbidden_secrets=None):
         """
         Check if a secret appears both inside an outside an or-proof. Does nothing if not overriden.
         """
@@ -206,15 +225,9 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
         return randomizers_dict
 
-    def ec_encode(self, data):
-        """
-        Encode points using petlib encoder
-        """
-        return encode(data)
-
     def prehash_statement(self, extra=None):
         """
-        Return a hash of the proof's descriptor.
+        Return a hash of the proof's ID.
 
         .. WARNING::
 
@@ -226,13 +239,12 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
                 proofs). Avoids having to figure out the encoding mode multiple times.
         """
         # TODO: extra is not used.
-        h = sha256(self.ec_encode(str(self.get_proof_id()).encode()))
-        return h
+        return sha256(encode(str(self.get_proof_id())))
 
     def verify_simulation_consistency(self, transcript):
         """Check if the fields of a transcript satisfy the verification equation.
 
-        Useful for debugging purposed.
+        Useful for debugging purposes.
 
         .. WARNING::
 
@@ -253,6 +265,12 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         return str(self.get_proof_id())
 
 
+def get_default_attr(obj, attr, default_value=None):
+    if not hasattr(obj, attr):
+        setattr(obj, attr, default_value)
+    return getattr(obj, attr)
+
+
 class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
     """
     Proof that deals with precommitments.
@@ -261,9 +279,9 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def construct_proof(self):
+    def construct_stmt(self):
         """
-        Construct internal proof for this class
+        Build internal proof statement for this class
 
         This function must be overridden. The function should return a
         constructed proof statement. It can use the values that were computed
@@ -273,7 +291,7 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
 
     def precommit(self):
         """
-        Computes precommitments
+        Compute precommitments. Override if needed.
 
         Override this function to compute precommitments and set corresponding
         secrets that must be computed before the ZK proof itself can be
@@ -286,14 +304,32 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
 
     def simulate_precommit(self):
         """
-        Simulate a precommitment.
+        Simulate a precommitment. Override if needed.
 
-        Override this method to enable using this proof in disjunctions. It should
-        compute the same output as generated by precommit, but without relying on
-        any secrets.
+        Override this method to enable using this proof in or-proofs.
+
+        It should compute the same output as generated by precommit, but without relying on any
+        secrets.
         """
         raise StatementSpecError("Override simulate_precommit in order to "
                                  "use or-proofs and simulations")
+
+    def validate(self, precommitment, *args, **kwargs):
+        """
+        Validate proof's construction. Override if needed.
+        """
+        pass
+
+    def full_validate(self, *args, **kwargs):
+        self.validate(self.precommitment, *args, **kwargs)
+
+    @property
+    def constructed_stmt(self):
+        return get_default_attr(self, "_constructed_stmt")
+
+    @property
+    def precommitment(self):
+        return get_default_attr(self, "_precommitment")
 
     def get_prover(self, secrets_dict=None):
         """
@@ -311,42 +347,39 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         self.secret_values = {}
         self.secret_values.update(secrets_dict)
 
-        return self.get_prover_cls()(self, self.secret_values)
-
-    def get_prover_cls(self):
-        return ExtendedProver
+        return ExtendedProver(self, self.secret_values)
 
     def get_verifier_cls(self):
         return ExtendedVerifier
 
     def recompute_commitment(self, challenge, responses):
         """
-        Recomputes the commitment.
+        Recompute the commitment.
         """
-        return self.constructed_proof.recompute_commitment(challenge, responses)
+        return self.constructed_stmt.recompute_commitment(challenge, responses)
 
     def get_proof_id(self):
         """
-        Generate a proof identifier that captures the order of generators and secrets.
+        Generate a proof identifier that captures the order of bases and secrets.
         """
-        if hasattr(self, "constructed_proof"):
-            st = (
+        if self.constructed_stmt is not None:
+            proof_id = (
                 self.__class__.__name__,
                 self.precommitment,
-                self.constructed_proof.get_proof_id(),
+                self.constructed_stmt.get_proof_id(),
             )
         else:
-            raise ValueError("Proof id unknown before the proof is constructed.")
-        return st
+            raise ValueError("Proof ID unknown before the proof is constructed.")
+        return proof_id
 
-    def _construct_proof(self, precommitment):
-        self.precommitment = precommitment
-        self.constructed_proof =  self.construct_proof(precommitment)
-        return self.constructed_proof
+    def full_construct_stmt(self, precommitment):
+        self._precommitment = precommitment
+        self._constructed_stmt = self.construct_stmt(precommitment)
+        return self.constructed_stmt
 
     def prepare_simulate_proof(self):
-        self.precommitment = self.simulate_precommit()
-        self._construct_proof(self.precommitment)
+        self._precommitment = self.simulate_precommit()
+        self.full_construct_stmt(self.precommitment)
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -356,19 +389,13 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
             responses_dict
             challenge
         """
-        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
-        tr.precommitment = self.precommitment
+        tr = self._constructed_stmt.simulate_proof(responses_dict, challenge)
+        tr.precommitment = self._precommitment
         return tr
 
     def _precommit(self):
-        self.precommitment = self.precommit()
-        return self.precommitment
-
-    def get_secret_vars(self):
-        return self.constructed_proof.get_secret_vars()
-
-    def get_generators(self):
-        return self.constructed_proof.get_generators()
+        self._precommitment = self.precommit()
+        return self._precommitment
 
 
 class ExtendedProver(Prover):
@@ -385,7 +412,7 @@ class ExtendedProver(Prover):
         Transfers the randomizer_dict if passed. It might be used if the binding of the proof is set
         True.
         """
-        if self.proof.constructed_proof is None:
+        if self.stmt.constructed_stmt is None:
             raise StatementSpecError(
                 "You need to pre-commit before commiting. The proofs lack parameters otherwise."
             )
@@ -401,7 +428,7 @@ class ExtendedProver(Prover):
         return self.response
 
     def precommit(self):
-        self.precommitment = self.proof._precommit()
+        self.precommitment = self.stmt._precommit()
         self.process_precommitment()
         return self.precommitment
 
@@ -409,8 +436,8 @@ class ExtendedProver(Prover):
         """
         Triggers the inner proof construction and extracts a prover from it given the secrets.
         """
-        self.proof._construct_proof(self.precommitment)
-        self.constructed_prover = self.proof.constructed_proof.get_prover(
+        self.stmt.full_construct_stmt(self.precommitment)
+        self.constructed_prover = self.stmt._constructed_stmt.get_prover(
             self.secret_values
         )
 
@@ -425,8 +452,8 @@ class ExtendedVerifier(Verifier):
         Receive the precommitment and trigger the inner proof construction.
         """
         self.precommitment = precommitment
-        self.proof._construct_proof(precommitment)
-        self.constructed_verifier = self.proof.constructed_proof.get_verifier()
+        self.stmt.full_construct_stmt(precommitment)
+        self.constructed_verifier = self.stmt.constructed_stmt.get_verifier()
 
     def send_challenge(self, com):
         """
@@ -436,9 +463,9 @@ class ExtendedVerifier(Verifier):
         """
 
         statement, self.commitment = com
-        self.proof.check_statement(statement)
+        self.stmt.check_statement(statement)
         self.challenge = self.constructed_verifier.send_challenge(
-            self.commitment, mute=True
+            self.commitment, ignore_statement_hash_checks=True
         )
         return self.challenge
 
@@ -451,20 +478,52 @@ class ExtendedVerifier(Verifier):
         )
 
 
-class _ComposableProofIdMixin:
+class _CommonComposedMixin:
     def get_secret_vars(self):
         secret_vars = []
         for sub in self.subproofs:
             secret_vars.extend(sub.get_secret_vars())
-
         return secret_vars
 
-    def get_generators(self):
-        generators = []
+    def get_bases(self):
+        bases = []
         for sub in self.subproofs:
-            generators.extend(sub.get_generators())
+            bases.extend(sub.get_bases())
+        return bases
 
-        return generators
+    def validate_group_orders(self):
+        """
+        Check that if two secrets are the same, their bases induce groups of the same order.
+
+        The primary goal is to ensure same responses for same secrets will not yield false negatives of
+        :py:meth:`base.Verifier.check_responses_consistency` due to different group-order modular reductions.
+
+        TODO: Consider deactivating in the future as this forbids using different groups in one proof.
+        TODO: Update docs, variable names.
+
+        Args:
+            secrets: :py:class:`expr.Secret` objects.
+            bases: Elliptic curve base points.
+        """
+        bases = self.get_bases()
+        secrets = self.get_secret_vars()
+
+        # We map the unique secrets to the indices where they appear
+        mydict = defaultdict(list)
+        for idx, word in enumerate(secrets):
+            mydict[word].append(idx)
+
+        # Now we use this dictionary to check all the bases related to a particular secret live in
+        # the same group
+        for (word, gen_idx) in mydict.items():
+            # Word is the key, gen_idx is the value = a list of indices
+            ref_order = bases[gen_idx[0]].group.order()
+
+            for index in gen_idx:
+                if bases[index].group.order() != ref_order:
+                    raise GroupMismatchError(
+                        "A shared secret has bases which yield different group orders: %s" % word,
+                    )
 
     def get_proof_id(self):
         secret_id_map = {}
@@ -480,8 +539,18 @@ class _ComposableProofIdMixin:
         proof_ids = tuple([sub.get_proof_id() for sub in self.subproofs])
         return (self.__class__.__name__, ordered_secret_ids, proof_ids)
 
+    def full_validate(self, *args, **kwargs):
+        """
+        Validate subproofs.
 
-class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
+        For instance, it will return False if a :py:class:`primitives.DLNotEqual` statement is about
+        to prove its components are in fact equal.
+        """
+        for sub in self.subproofs:
+            sub.full_validate(*args, **kwargs)
+
+
+class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
     """
     An disjunction of several subproofs.
 
@@ -500,13 +569,6 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
         self.simulation = False
 
-    def check(self):
-        self.generators = self.get_generators()
-        self.secret_vars = self.get_secret_vars()
-
-        # For now we consider the same constraints as in the and-proof
-        check_groups(self.secret_vars, self.generators)
-
     def recompute_commitment(self, challenge, responses):
         """
         Recompute the commitments, raise an Exception if the global challenge was not respected.
@@ -519,7 +581,6 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
         # We retrieve the challenges, hidden in the responses tuple
         self.or_challenges = responses[0]
         responses = responses[1]
-        comm = []
 
         # We check for challenge consistency i.e the constraint was respected
         if _find_residual_challenge(self.or_challenges, challenge, CHALLENGE_LENGTH) != Bn(0):
@@ -527,12 +588,13 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
 
         # Compute the list of commitments, one for each proof with its challenge and responses
         # (in-order)
+        com = []
         for i in range(len(self.subproofs)):
-            cur_proof = self.subproofs[i]
-            comm.append(
-                cur_proof.recompute_commitment(self.or_challenges[i], responses[i])
+            p = self.subproofs[i]
+            com.append(
+                p.recompute_commitment(self.or_challenges[i], responses[i])
             )
-        return comm
+        return com
 
     def get_prover(self, secrets_dict=None):
         """
@@ -583,40 +645,31 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
     def get_verifier(self):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
-    def check_or_flaw(self, forbidden_secrets=None):
+    def validate_composition(self):
+        self.validate_group_orders()
+
+    def validate_secrets_reoccurence(self, forbidden_secrets=None):
         """
-        Checks for appearance of reoccuring secrets both inside and outside an or-proof.
-        Raises an error if finds any. Method is called from AndProofStmt.check_or_flaw
+        Check for re-occurence of secrets both inside and outside an or-proof.
+
+        Method is called from :py:meth:`AndProofStmt.validate_secrets_reoccurence`.
 
         Args:
             forbidden_secrets: A list of all the secrets in the mother proof.
-        """
-        self.secret_vars = self.get_secret_vars()
 
+        Raises:
+            InvalidSecretsError: If any secrets re-occur in an unsupported way.
+        """
+        secret_vars = self.get_secret_vars()
         if forbidden_secrets is None:
             return
-        for secret in set(self.secret_vars):
-            if forbidden_secrets.count(secret) > self.secret_vars.count(secret):
-                raise Exception(
+
+        for secret in set(secret_vars):
+            if forbidden_secrets.count(secret) > secret_vars.count(secret):
+                raise InvalidSecretsError(
                     "Invalid secrets found. Try to flatten the proof to avoid shared secrets "
-                    "inside and outside the Or."
+                    "inside and outside the or-proof."
                 )
-
-    def is_valid(self):
-        """
-        Check that all the left-hand sides of the proofs have a coherent value.
-
-        TODO: rewrite documentation
-
-        For instance, it will return False if a DLNotEqual statement is in the tree and
-        if it is about to prove its components are in fact equal.
-
-        This enables us to not waste computation time running useless verifications.
-        """
-        for sub in self.subproofs:
-            if not sub.is_valid():
-                return False
-        return True
 
     def prepare_simulate_proof(self):
         for subp in self.subproofs:
@@ -675,8 +728,8 @@ class OrProver(Prover):
 
     def __init__(self, proof, subprover):
         self.subprover = subprover
-        self.proof = proof
-        self.true_prover_idx = self.proof.chosen_idx
+        self.stmt = proof
+        self.true_prover_idx = self.stmt.chosen_idx
 
         # Create a list to store the SimulationTranscripts
         self.simulations = []
@@ -686,10 +739,10 @@ class OrProver(Prover):
         """
         Runs all the required simulations and stores them.
         """
-        for index in range(len(self.proof.subproofs)):
+        for index in range(len(self.stmt.subproofs)):
             if index != self.true_prover_idx:
-                self.proof.subproofs[index].prepare_simulate_proof()
-                cur = self.proof.subproofs[index].simulate_proof()
+                self.stmt.subproofs[index].prepare_simulate_proof()
+                cur = self.stmt.subproofs[index].simulate_proof()
                 self.simulations.append(cur)
 
     def precommit(self):
@@ -699,7 +752,7 @@ class OrProver(Prover):
         Else, returns None.
         """
         precommitment = []
-        for index in range(len(self.proof.subproofs)):
+        for index in range(len(self.stmt.subproofs)):
             if index == self.true_prover_idx:
                 precommitment.append(self.subprover.precommit())
             else:
@@ -722,12 +775,11 @@ class OrProver(Prover):
             randomizers_dict: A dictionary of randomizers to use for responses consistency. Not used
                 in this proof. Parameter kept so all internal_commit methods have the same prototype.
         """
-
         # Now that all proofs have been constructed, we can check
-        self.proof.check()
+        self.stmt.validate_composition()
 
         commitment = []
-        for index in range(len(self.proof.subproofs)):
+        for index in range(len(self.stmt.subproofs)):
             if index == self.true_prover_idx:
                 commitment.append(self.subprover.internal_commit())
             else:
@@ -754,7 +806,7 @@ class OrProver(Prover):
         )
         response = []
         challenges = []
-        for index in range(len(self.proof.subproofs)):
+        for index in range(len(self.stmt.subproofs)):
             if index == self.true_prover_idx:
                 challenges.append(residual_chal)
                 response.append(self.subprover.compute_response(residual_chal))
@@ -776,11 +828,11 @@ class OrVerifier(Verifier):
     """
     Verifier for the or-proof.
 
-    The verifiers is built on a list of subverifiers, which will unpack the received attributes.
+    The verifier is built on a list of subverifiers, which will unpack the received attributes.
     """
     def __init__(self, proof, subverifiers):
         self.subs = subverifiers
-        self.proof = proof
+        self.stmt = proof
 
     def process_precommitment(self, precommitment):
         """
@@ -814,7 +866,7 @@ class OrVerifier(Verifier):
         return True
 
 
-class AndProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
+class AndProofStmt(_CommonComposedMixin, ComposableProofStmt):
     def __init__(self, *subproofs):
         """
         Constructs the And conjunction of several subproofs.
@@ -831,15 +883,9 @@ class AndProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
 
         self.simulation = False
 
-    def check(self):
-        self.generators = self.get_generators()
-        self.secret_vars = self.get_secret_vars()
-
-        # Check reoccuring secrets are related to generators of same group order
-        check_groups(self.secret_vars, self.generators)
-
-        # Raise an error when detecting a secret occuring both inside and outside an Or Proof
-        self.check_or_flaw()
+    def validate_composition(self, *args, **kwargs):
+        self.validate_group_orders()
+        self.validate_secrets_reoccurence()
 
     def recompute_commitment(self, challenge, andresp):
         """
@@ -893,8 +939,8 @@ class AndProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
         random_vals = {}
 
         # Pair each Secret to one generator. Overwrites when a Secret re-occurs but since the
-        # associated generators should yield groups of same order, it's fine.
-        dict_name_gen = {s: g for s, g in zip(self.get_secret_vars(), self.get_generators())}
+        # associated bases should yield groups of same order, it's fine.
+        dict_name_gen = {s: g for s, g in zip(self.get_secret_vars(), self.get_bases())}
 
         # Pair each Secret to a randomizer.
         for u in dict_name_gen:
@@ -940,28 +986,23 @@ class AndProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
         return SimulationTranscript(commitment=com, challenge=challenge, responses=resp,
                 precommitment=precom)
 
-    def check_or_flaw(self, forbidden_secrets=None):
+    def validate_secrets_reoccurence(self, forbidden_secrets=None):
         """
-        Checks for appearance of reoccuring secrets both inside and outside an or-proof.
-        Raises an error if finds any. This method only sets the list of all secrets in the tree and triggers a depth-search first for or-proofs
-        :param forbidden_secrets: A list of all the secrets in the mother proof.
+        Check re-occuring secrets both inside and outside an or-proof.
+
+        This method gets the list of all secrets in the tree and triggers a depth-first search for
+        or-proofs
+
+        Args:
+            forbidden_secrets: A list of all the secrets in the mother proof.
+
+        Raises:
+
         """
         if forbidden_secrets is None:
-            forbidden_secrets = self.secret_vars.copy()
-        for subp in self.subproofs:
-            subp.check_or_flaw(forbidden_secrets)
-
-    def is_valid(self):
-        """
-        Check that all the left-hand sides of the proofs have a coherent value.
-        For instance, it will return False if a DLRepNotEqualProof is in the tree and
-        if it is about to prove its components are in fact equal.
-        This allows to not waste computation time in running useless verifications.
-        """
-        for sub in self.subproofs:
-            if not sub.is_valid():
-                return False
-        return True
+            forbidden_secrets = self.get_secret_vars().copy()
+        for p in self.subproofs:
+            p.validate_secrets_reoccurence(forbidden_secrets)
 
 
 class AndProver(Prover):
@@ -970,7 +1011,7 @@ class AndProver(Prover):
         Constructs a Prover for an and-proof, from a list of valid subprovers.
         """
         self.subs = subprovers
-        self.proof = proof
+        self.stmt = proof
 
     def precommit(self):
         """
@@ -992,15 +1033,15 @@ class AndProver(Prover):
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Computes the commitment i.e a list of the commitments of the subprovers.
-        :param randomizers_dict: Randomizers to enforce to ensure responses consistency, which every subproof must use.
+        Computes the commitment.
+
+        Args:
+            randomizers_dict: Randomizers.
         """
-        # Fill the missing values if necessary
-
         # Now that we have constructed the proofs, validate
-        self.proof.check()
+        self.stmt.validate_composition()
 
-        randomizers_dict = self.proof.update_randomizers(randomizers_dict)
+        randomizers_dict = self.stmt.update_randomizers(randomizers_dict)
         self.commitment = []
         for subp in self.subs:
             self.commitment.append(
@@ -1021,9 +1062,9 @@ class AndVerifier(Verifier):
         Constructs a Verifier for the and-proof, with a list of subverifiers.
         """
         self.subs = subverifiers
-        self.proof = proof
+        self.stmt = proof
 
-    def send_challenge(self, commitment, mute=False):
+    def send_challenge(self, commitment, ignore_statement_hash_checks=False):
         """
         Stores the received commitment and generates a challenge. Checks the received hashed
         statement matches the one of the current proof.  Only called at the highest level or in
@@ -1031,15 +1072,15 @@ class AndVerifier(Verifier):
 
         Args:
             commitment: A tuple (statement, actual_commitment) with actual_commitment a list of commitments, one for each subproof.
-            mute: Optional parameter to deactivate the statement check. In this case, the commitment
+            ignore_statement_hash_checks: Optional parameter to deactivate the statement check. In this case, the commitment
                 parameter is simply the actual commitment. Useful in 2-level proofs for which we don't
                 check the inner statements.
         """
-        if mute:
+        if ignore_statement_hash_checks:
             self.commitment = commitment
         else:
             statement, self.commitment = commitment
-            self.proof.check_statement(statement)
+            self.stmt.check_statement(statement)
         self.challenge = get_random_num(CHALLENGE_LENGTH)
         return self.challenge
 

@@ -6,7 +6,7 @@ from petlib.bn import Bn
 from petlib.ec import EcGroup
 
 from zksk import DLRep, Secret
-from zksk.exceptions import InvalidExpression, VerificationError
+from zksk.exceptions import InvalidExpression, ValidationError, GroupMismatchError
 from zksk.composition import AndProofStmt, OrProofStmt
 from zksk.expr import wsum_secrets
 from zksk.utils import make_generators
@@ -108,11 +108,13 @@ def test_and_proof_fails_when_bases_belong_to_different_groups(group):
 
     p1 = DLRep(y1, wsum_secrets([x], [g1]))
     p2 = DLRep(y2, wsum_secrets([x], [g2]))
-    with pytest.raises(InvalidExpression):
-        # An exception should be raised because of a shared secrets linked to two different groups
-        and_proof = AndProofStmt(p1, p2)
-        prover = and_proof.get_prover()
-        verifier = and_proof.get_verifier()
+
+    and_proof = AndProofStmt(p1, p2)
+    prover = and_proof.get_prover()
+    verifier = and_proof.get_verifier()
+
+    # An exception should be raised because of a shared secrets linked to two different groups
+    with pytest.raises(GroupMismatchError):
         verify(verifier, prover)
 
 
@@ -285,8 +287,8 @@ def test_or_proof_manual(params):
 
 def test_and_or_proof_composition(params):
     p1, p2, secrets = params
-    g1 = 7 * p1.generators[0]
-    g2 = 8 * p1.generators[0]
+    g1 = 7 * p1.bases[0]
+    g2 = 8 * p1.bases[0]
     xb = Secret(name="xb")
     xa = Secret(name="xa")
 
@@ -297,7 +299,7 @@ def test_and_or_proof_composition(params):
     orproof = OrProofStmt(p1, p2)
     andp = AndProofStmt(orproof, p0)
     andp = AndProofStmt(
-        andp, DLRep(15 * p1.generators[0], Secret(value=15) * p1.generators[0])
+        andp, DLRep(15 * p1.bases[0], Secret(value=15) * p1.bases[0])
     )
 
     prover = andp.get_prover(secrets)
@@ -309,8 +311,8 @@ def test_or_and_proof_composition(params):
     p1, p2, secrets = params
     andp = AndProofStmt(p1, p2)
 
-    g1 = 7 * p1.generators[0]
-    g2 = 8 * p1.generators[0]
+    g1 = 7 * p1.bases[0]
+    g2 = 8 * p1.bases[0]
     xb = Secret(name="xb")
     xa = Secret(name="xa")
     p0 = DLRep(7 * g1 + 18 * g2, xb * g1 + xa * g2)
@@ -327,8 +329,8 @@ def test_or_or_proof_composition(params):
     p1, p2, secrets = params
 
     first_or = OrProofStmt(p1, p2)
-    g1 = 7 * p1.generators[0]
-    g2 = 8 * p1.generators[0]
+    g1 = 7 * p1.bases[0]
+    g2 = 8 * p1.bases[0]
     xb = Secret(name="xb")
     xa = Secret(name="xa")
 
@@ -430,6 +432,6 @@ def test_malicious_and_proofs():
     com = prov.commit()
     chal = verif.send_challenge(com)
     resp = prov.compute_response(chal)
-    with pytest.raises(VerificationError):
+    with pytest.raises(ValidationError):
         verif.verify(resp)
 

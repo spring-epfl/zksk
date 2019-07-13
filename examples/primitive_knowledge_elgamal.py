@@ -73,3 +73,4 @@ class AdditiveElgamalPlaintextProof(ExtendedProofStmt):
         part1 = DLRep(self.ctxt[0], self.randomizer * self.pk.g)
         part2 = DLRep(self.ctxt[1], self.randomizer * self.pk.h + self.msg * self.pk.g)
         return part1 & part2
+
