@@ -21,7 +21,7 @@ def _find_residual_challenge(subchallenges, challenge, modulus):
     """
     Determine the complement to a global challenge in a list
 
-    For example, to find :math:`c_1` such that :math:`c = c_1 + c_2 +c_3 \mod k`, we compute
+    For example, to find :math:`c_1` such that :math:`c = c_1 + c_2 + c_3 \mod k`, we compute
     :math:`c_2 + c_3 - c` and take the opposite.
 
     Args:
@@ -604,11 +604,14 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
 
     def is_valid(self):
         """
-        TODO: rewrite documentation
         Check that all the left-hand sides of the proofs have a coherent value.
-        For instance, it will return False if a DLRepNotEqualProof is in the tree and
+
+        TODO: rewrite documentation
+
+        For instance, it will return False if a DLNotEqual statement is in the tree and
         if it is about to prove its components are in fact equal.
-        This allows to not waste computation time in running useless verifications.
+
+        This enables us to not waste computation time running useless verifications.
         """
         for sub in self.subproofs:
             if not sub.is_valid():
@@ -621,10 +624,11 @@ class OrProofStmt(_ComposableProofIdMixin, ComposableProofStmt):
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
-        Simulates an or-proof. To do so, simulates the N-1 first subproofs, computes the
-        complementary challenge and simulates the last proof using this challenge. Does not use the
-        responses_dict passed as parameter since inside an or-proof responses consistency is not
-        required between subproofs.
+        Simulate the or-proof.
+
+        To do so, simulates the n-1 first subproofs, computes the complementary challenge and
+        simulates the last proof using this challenge. Does not use the responses_dict passed as
+        parameter since inside an or-proof responses consistency is not required between subproofs.
 
         Args:
             challenge: The global challenge, equal to the sum of all the subchallenges mod chal

@@ -1,18 +1,22 @@
 Included Primitives
 -------------------
 
-``dlrep_notequal``: Inequality of Two Discrete Logarithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``dl_notequal``: Inequality of Two Discrete Logarithms
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To prove knowledge of ``x`` such that Y1 = x \* G1 and Y2 != x \* G2.
+This primitive represents a proof of knowledge of :math:`x` such that two
+DL representations are not equal:
 
-The associated class is ``DLRepNotEqual`` and is constructed as follows,
-for x = 12 for example:
+.. math::
+
+   PK\{ Y_0 = x \* G_0 and Y_2 != x G_1 \}
+
+The associated class ``DLNotEqual`` is constructed as follows:
 
 .. code:: python
 
     x = Secret(value = 12)
-    proof = DLRepNotEqual([Y1, G1], [Y2, G2], x)
+    proof = DLNotEqual([Y1, G1], [Y2, G2], x)
 
     Due to the internal proof construction, this proof does not bind the
     secret value ``x`` by default. To enable this feature, the proof
@@ -27,9 +31,9 @@ apply.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We provide a way to obtain blind signatures over a set of
-messages/credentials, along with a ``SignatureProof`` primitive (to use
+messages/credentials, along with a ``SignatureStmt`` primitive (to use
 much like the ``DLRep`` seen before). This protocol uses group
-pairings as defined in bplib. The interface has been wrapped so the
+pairings as defined from bplib package. The interface has been wrapped so the
 pairings behave as usual EcPt (additive points)
 
 Obtaining a Signature
@@ -79,7 +83,7 @@ calling
 
     e, s = Secret(value=signature.e), Secret(value=signature.s)
     messages = [Secret(value=m1)..., Secret(value=mn)]
-    proof = SignatureProof([e, s, *messages], pk, signature)
+    proof = SignatureStmt([e, s, *messages], pk, signature)
 
 The ``e`` and ``s`` Secret instances are necessary so the proof can bind
 them to an other proof, e.g. in an ``And`` conjunction. If you do not
@@ -89,7 +93,7 @@ only pass the messages and set a ``binding`` keyword argument to False.
 .. code:: python
 
     messages = [Secret(value=m1)..., Secret(value=mn)]
-    proof = SignatureProof(messages, pk, signature, binding=False)
+    proof = SignatureStmt(messages, pk, signature, binding=False)
 
 The ``signature`` argument is required for the proving side. Of course,
 the verifying side would call
@@ -98,7 +102,7 @@ the verifying side would call
 
     e, s = Secret(), Secret()   # Omitted if not binding
     messages = [Secret()..., Secret()]
-    proof = SignatureProof([e, s, *messages], pk)
+    proof = SignatureStmt([e, s, *messages], pk)
 
 From this Proof objects, one can run the usual methods ``get_prover()``,
 ``get_verifier()``, ``prove()``, ``verify()``, etc.

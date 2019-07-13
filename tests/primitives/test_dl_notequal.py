@@ -5,18 +5,18 @@ from petlib.bn import Bn
 from zkbuilder import Secret
 from zkbuilder.pairings import BilinearGroupPair
 
-from zkbuilder.primitives.dlrep_notequal import DLRepNotEqual
+from zkbuilder.primitives.dl_notequal import DLNotEqual
 
 
-def test_dlrne_interactive(group):
+def test_dlne_interactive(group):
     g = group.generator()
     x = Secret()
     y = 3 * g
     y2 = 397474 * g
     g2 = 1397 * g
 
-    p1 = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
-    p2 = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
+    p1 = DLNotEqual([y, g], [y2, g2], x, bind=True)
+    p2 = DLNotEqual([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     prover = p1.get_prover(secret_dict)
     verifier = p2.get_verifier()
@@ -29,34 +29,34 @@ def test_dlrne_interactive(group):
     assert verifier.verify(responses)
 
 
-def test_dlrne_non_interactive_1(group):
+def test_dlne_non_interactive_1(group):
     g = group.generator()
     x = Secret()
     y = 3 * g
     y2 = 397474 * g
     g2 = 1397 * g
 
-    p1 = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
+    p1 = DLNotEqual([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     tr = p1.prove(secret_dict)
-    p2 = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
+    p2 = DLNotEqual([y, g], [y2, g2], x, bind=True)
     assert p2.verify(tr)
 
 
-def test_dlrne_non_interactive_2(group):
+def test_dlne_non_interactive_2(group):
     g = group.generator()
     x = Secret(value=3)
     y = 3 * g
     y2 = 397474 * g
     g2 = 1397 * g
 
-    p1 = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
+    p1 = DLNotEqual([y, g], [y2, g2], x, bind=True)
     tr = p1.prove()
-    p2 = DLRepNotEqual([y, g], [y2, g2], Secret(), bind=True)
+    p2 = DLNotEqual([y, g], [y2, g2], Secret(), bind=True)
     assert p2.verify(tr)
 
 
-def test_dlrne_fails_when_non_binding(group):
+def test_dlne_fails_when_non_binding(group):
     """
     TODO: Describe what is being tested here.
     """
@@ -66,8 +66,8 @@ def test_dlrne_fails_when_non_binding(group):
     g2 = 1397 * g
     y2 = 3 * g2
 
-    p1 = DLRepNotEqual([y, g], [y2, g2], x)
-    p2 = DLRepNotEqual([y, g], [y2, g2], x)
+    p1 = DLNotEqual([y, g], [y2, g2], x)
+    p2 = DLNotEqual([y, g], [y2, g2], x)
     secret_dict = {x: 3}
     prover = p1.get_prover(secret_dict)
     verifier = p2.get_verifier()
@@ -79,14 +79,14 @@ def test_dlrne_fails_when_non_binding(group):
     assert not verifier.verify(responses)
 
 
-def test_dlrep_notequal_simulate(group):
+def test_dlne_simulate(group):
     g = group.generator()
     x = Secret()
     y = 3 * g
     y2 = 397474 * g
     g2 = 1397 * g
 
-    p = DLRepNotEqual([y, g], [y2, g2], x, bind=True)
+    p = DLNotEqual([y, g], [y2, g2], x, bind=True)
     secret_dict = {x: 3}
     tr = p.simulate()
     assert p.verify_simulation_consistency(tr)

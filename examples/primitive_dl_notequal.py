@@ -1,5 +1,5 @@
 """
-Simplified version of the real DLRepNotEqualProof defined in ``primitives``.
+Simplified version of the real DLNotEqual defined in ``primitives``.
 
 This version is here to support the tutorial.
 """
@@ -9,7 +9,7 @@ from zkbuilder.composition import ExtendedProofStmt
 from zkbuilder.primitives.dlrep import DLRep
 
 
-class DLRepNotEqualProof(ExtendedProofStmt):
+class DLNotEqual(ExtendedProofStmt):
     def __init__(self, valid_tuple, invalid_tuple, x):
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]

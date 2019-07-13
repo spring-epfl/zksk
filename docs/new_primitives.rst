@@ -83,14 +83,14 @@ We again first determine the inputs to the primitive. The public inputs are the 
 h_0)` and :math:`(H_1, h_1)`. The prover takes as private input the secret :math:`x` such that
 :math:`H_0 = x \cdot h_0`. Again we override ``ExtendedProof`` and store the inputs:
 
-.. literalinclude:: ../examples/primitive_dlrep_notequal.py
+.. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 13-21
 
 Note that the constructor also defines the secrets ``alpha`` and ``beta`` that will be used in the
 constructed proof from step 2 above. The compute the commitment :math:`C` we override the
 ``precommit(self)`` method to compute a precommitment containing :math:`C`:
 
-.. literalinclude:: ../examples/primitive_dlrep_notequal.py
+.. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 23-32
 
 Recall from before that the secrets :math:`\alpha` and :math:`\beta` depend on the user's secret
@@ -106,7 +106,7 @@ The ``precommit(self)`` method is only called by the prover. The verifier will i
 precommitment from the prover before constructing the proof. As above, we override
 ``construct_proof(self, precommitment)`` to define how to do so:
 
-.. literalinclude:: ../examples/primitive_dlrep_notequal.py
+.. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 34-38
 
 Note that the constructed proof is a straightforward interpretation of the zero-knowledge proof from
@@ -116,13 +116,13 @@ respectively verify the constructed proof that we just defined.
 Finally, the verifier must ensure that the commitment :math:`C` is not the identity element. To
 ensure that, we additionally override ``is_valid(self)``:
 
-.. literalinclude:: ../examples/primitive_dlrep_notequal.py
+.. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 40-41
 
 If defined, the verifier will run the checks in ``is_valid`` before accepting the proof. And that is
 it, our new primitive can now be used in bigger proofs.
 
-The full implementation in the library of ``DLRepNotEqual`` is a little bit more complicated. Note
+The full implementation in the library of ``DLNotEqual`` is a little bit more complicated. Note
 that in the above protocol, the secret ``x`` is not actually used directly in the proof. The full
 version allows explicit binding of the secret ``x``.
 
@@ -136,7 +136,7 @@ necessary to override ``simulate_precommit(self)`` to enable proper simulations.
 For example, in the above proof of inequality of discrete logarithms the commitment :math:`C` is
 just a random group element. Therefore, we can set:
 
-.. literalinclude:: ../examples/primitive_dlrep_notequal.py
+.. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 43-45
 
 References

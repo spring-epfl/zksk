@@ -13,7 +13,7 @@ from zkbuilder.composition import ExtendedProofStmt, ExtendedVerifier, AndProofS
 from zkbuilder.primitives.dlrep import DLRep
 
 
-class DLRepNotEqual(ExtendedProofStmt):
+class DLNotEqual(ExtendedProofStmt):
     r"""
     ZK-proof statement of inequality of two discrete logarithms.
 
@@ -61,7 +61,7 @@ class DLRepNotEqual(ExtendedProofStmt):
 
     def construct_proof(self, precommitment):
         """
-        Builds the internal AndProofStmt associated to a DLRepNotEqual. See formula in Protocol 1 of the BLAC paper.
+        Builds the internal AndProofStmt associated to a DLNotEqual. See formula in Protocol 1 of the BLAC paper.
         """
         infty = self.generators[0].group.infinite()
         p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
