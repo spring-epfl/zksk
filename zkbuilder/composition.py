@@ -2,12 +2,37 @@
 TODO: Fix docs of and/or proofs.
 """
 
-from zkbuilder.base import *
-from zkbuilder.utils import check_groups
+import abc
+import copy
+import random
+from hashlib import sha256
+
+from petlib.bn import Bn
+from petlib.pack import encode
+
+from zkbuilder.base import Prover, Verifier, SimulationTranscript
+from zkbuilder.expr import check_groups, update_secret_values
+from zkbuilder.utils import get_random_num, sum_bn_array
+from zkbuilder.consts import CHALLENGE_LENGTH
 from zkbuilder.exceptions import StatementSpecError, StatementMismatch
 
-import copy
-import abc
+
+def _find_residual_challenge(subchallenges, challenge, modulus):
+    """
+    Determine the complement to a global challenge in a list
+
+    For example, to find :math:`c_1` such that :math:`c = c_1 + c_2 +c_3 \mod k`, we compute
+    :math:`c_2 + c_3 - c` and take the opposite.
+
+    Args:
+        subchallenges: The array of subchallenges :math:`c_2`, c_3, ...`
+        challenge: The global challenge to reach
+        modulus: the modulus :math:`k`
+    """
+    modulus = Bn(2).pow(modulus)
+    temp_arr = subchallenges.copy()
+    temp_arr.append(-challenge)
+    return -sum_bn_array(temp_arr, modulus)
 
 
 class Proof(metaclass=abc.ABCMeta):
@@ -497,7 +522,7 @@ class OrProof(_ComposedProofIdMixin, Proof):
         comm = []
 
         # We check for challenge consistency i.e the constraint was respected
-        if find_residual_chal(self.or_challenges, challenge, CHALLENGE_LENGTH) != Bn(0):
+        if _find_residual_challenge(self.or_challenges, challenge, CHALLENGE_LENGTH) != Bn(0):
             raise Exception("Inconsistent challenge")
 
         # Compute the list of commitments, one for each proof with its challenge and responses
@@ -608,7 +633,7 @@ class OrProof(_ComposedProofIdMixin, Proof):
                 Useless hiere, kept to have the same prototype for all simulate_proof methods.
         """
         if challenge is None:
-            challenge = chal_randbits(CHALLENGE_LENGTH)
+            challenge = get_random_num(bits=CHALLENGE_LENGTH)
         com = []
         resp = []
         or_chals = []
@@ -623,7 +648,7 @@ class OrProof(_ComposedProofIdMixin, Proof):
             precom.append(transcript.precommitment)
 
         # Generate the last simulation.
-        final_chal = find_residual_chal(or_chals, challenge, CHALLENGE_LENGTH)
+        final_chal = _find_residual_challenge(or_chals, challenge, CHALLENGE_LENGTH)
         or_chals.append(final_chal)
         trfinal = self.subproofs[index + 1].simulate_proof(challenge=final_chal)
         com.append(trfinal.commitment)
@@ -720,7 +745,7 @@ class OrProver(Prover):
         Args:
             challenge: The global challenge to use. All subchallenges must add to this one.
         """
-        residual_chal = find_residual_chal(
+        residual_chal = _find_residual_challenge(
             [el.challenge for el in self.simulations], challenge, CHALLENGE_LENGTH
         )
         response = []
@@ -895,7 +920,7 @@ class AndProof(_ComposedProofIdMixin, Proof):
         responses_dict = self.update_randomizers(responses_dict)
 
         if challenge is None:
-            challenge = chal_randbits(CHALLENGE_LENGTH)
+            challenge = get_random_num(CHALLENGE_LENGTH)
         com = []
         resp = []
         precom = []
@@ -1011,7 +1036,7 @@ class AndVerifier(Verifier):
         else:
             statement, self.commitment = commitment
             self.proof.check_statement(statement)
-        self.challenge = chal_randbits(CHALLENGE_LENGTH)
+        self.challenge = get_random_num(CHALLENGE_LENGTH)
         return self.challenge
 
     def check_responses_consistency(self, responses, responses_dict=None):

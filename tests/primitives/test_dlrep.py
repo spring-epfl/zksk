@@ -11,12 +11,7 @@ from zkbuilder.expr import wsum_secrets
 from zkbuilder.exceptions import StatementMismatch, InvalidExpression
 from zkbuilder.primitives.dlrep import DLRep, DLRepProver
 from zkbuilder.utils.debug import SigmaProtocol
-from zkbuilder.utils import DEFAULT_GROUP, get_generators, get_random_point
-
-
-@pytest.fixture
-def group():
-    return DEFAULT_GROUP
+from zkbuilder.utils import make_generators, get_random_point
 
 
 def test_dlrep_interactive_1(group):
@@ -32,7 +27,7 @@ def test_dlrep_interactive_1(group):
 
 
 def test_dlrep_interactive_2(group):
-    g, h = get_generators(2, group)
+    g, h = make_generators(2, group)
     x, y = Secret(), Secret()
 
     p = DLRep(10 * g + 15 * h, x * g + y * h)
@@ -60,7 +55,7 @@ def test_dlrep_interactive_3(group):
 
 
 def test_dlrep_non_interactive_1(group):
-    g, h = get_generators(2, group)
+    g, h = make_generators(2, group)
     expr = Secret(value=3) * g + Secret(value=4) * h
     p = DLRep(expr.eval(), expr)
     tr = p.prove()
@@ -69,7 +64,7 @@ def test_dlrep_non_interactive_1(group):
 
 
 def test_dlrep_non_interactive_2(group):
-    g, = get_generators(1, group)
+    g, = make_generators(1, group)
     x = Secret()
     p = DLRep(4 * g, x * g)
     tr = p.prove({x: 4})
@@ -77,7 +72,7 @@ def test_dlrep_non_interactive_2(group):
 
 
 def test_dlrep_non_interactive_with_message(group):
-    g, h = get_generators(2, group)
+    g, h = make_generators(2, group)
 
     expr = Secret(value=3) * g + Secret(value=4) * h
     p = DLRep(expr.eval(), expr)
@@ -87,7 +82,7 @@ def test_dlrep_non_interactive_with_message(group):
 
 
 def test_dlrep_bad_hash(group):
-    g, h = get_generators(2, group=group)
+    g, h = make_generators(2, group=group)
     x, y = Secret(), Secret()
     secret_dict = {x: 2, y: 3}
     p1 = DLRep(2 * g + 3 * h, x * g + y * h)
@@ -114,7 +109,7 @@ def test_dlrep_wrong_secrets(group):
 
 
 def test_dlrep_wrong_public_elements(group):
-    g, h = get_generators(2, group=group)
+    g, h = make_generators(2, group=group)
     x, y = Secret(value=3), Secret(value=4)
     expr = x * g + y * h
 
@@ -128,7 +123,7 @@ def test_dlrep_wrong_public_elements(group):
 
 
 def test_dlrep_wrong_response_non_interactive(group):
-    g, h = get_generators(2, group=group)
+    g, h = make_generators(2, group=group)
     x, y = Secret(value=3), Secret(value=4)
     expr = x * g + y * h
 
@@ -142,7 +137,7 @@ def test_dlrep_wrong_response_non_interactive(group):
 
 
 def test_dlrep_simulation(group):
-    g, h = get_generators(2, group=group)
+    g, h = make_generators(2, group=group)
     x, y = Secret(value=3), Secret(value=4)
     expr = x * g + y * h
     p = DLRep(expr.eval(), expr)
@@ -152,7 +147,7 @@ def test_dlrep_simulation(group):
 
 
 def test_diff_groups_dlrep(group):
-    g, h = get_generators(2, group)
+    g, h = make_generators(2, group)
     x, y = Secret(), Secret()
 
     # Precondition for the test.
@@ -168,7 +163,7 @@ def test_diff_groups_dlrep(group):
 
 @pytest.mark.parametrize("num", [2, 10])
 def test_generators_sharing_a_secret(group, num):
-    generators = get_generators(num, group)
+    generators = make_generators(num, group)
     unique_secret = 4
 
     x = Secret()
@@ -186,7 +181,7 @@ def test_generators_sharing_a_secret(group, num):
 
 @pytest.mark.parametrize("num", [2, 10])
 def test_get_many_different_provers(group, num):
-    generators = get_generators(num, group)
+    generators = make_generators(num, group)
 
     secrets  = [Secret(name="secret_%i" % i) for i in range(num)]
     secrets_vals = [Bn(i) for i in range(num)]
@@ -202,7 +197,7 @@ def test_get_many_different_provers(group, num):
 
 
 def test_same_random_values_in_commitments(group):
-    g, = get_generators(1, group)
+    g, = make_generators(1, group)
     generators = [g, g, g]
 
     pub = group.wsum([Bn(100), Bn(100), Bn(100)], generators)

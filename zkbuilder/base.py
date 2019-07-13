@@ -1,11 +1,3 @@
-"""
-
-Known limitations :
-        - In a non-interactive proof, if the prover and the verifier use two mathematically equivalent yet syntaxically
-            different expressions (e.g "p1 & p2" and "p2 & p1"), the verification fails because of the get_proof_id routine not aware of
-            distributivity and commutativity.
-"""
-
 import abc
 import random
 import string
@@ -19,10 +11,9 @@ from hashlib import sha256
 from collections import defaultdict
 import attr
 
+from zkbuilder.utils import get_random_num
+from zkbuilder.consts import CHALLENGE_LENGTH
 from zkbuilder.exceptions import VerificationError
-
-
-CHALLENGE_LENGTH = Bn(128)
 
 
 @attr.s
@@ -100,27 +91,36 @@ class Prover(metaclass=abc.ABCMeta):
 
     def get_NI_proof(self, message=""):
         """
-        Constructs a non-interactive proof transcript embedding only a challenge and responses, since the commitment can be recomputed (deterministic).
-        The challenge is a hash of the commitment, the proof statement and all the bases in the proof (including the left-hand-side).
-        :param message: An optional string message.
-        """
-        # precommit to gather encapsulated precommitments. They are already included in their respective proof statement.
-        precommitment = self.precommit()
+        Construct a non-interactive proof transcript using Fiat-Shamir heuristic.
 
+        The transcript contains only the challenge and the responses, as the commitment can be
+        deterministically recomputed.
+
+        The challenge is a hash of the commitment, the proof statement and all the bases in the
+        proof (including the left-hand-side).
+
+        Args:
+            message (str): Optional message to make a signature proof of knowledge.
+        """
+        # Precommit to gather encapsulated precommitments. They are already included in their
+        # respective proof statement.
+        precommitment = self.precommit()
         commitment = self.proof.ec_encode(self.internal_commit())
 
-        # Create a SHA-256 hash object with proof statement.
+        # Create a hash object with proof statement.
         prehash = self.proof.prehash_statement()
+
         # Save a hash of the proof statement only
         statement = prehash.digest()
+
         # Start building the complete hash for the challenge
         prehash.update(commitment)
         prehash.update(message.encode())
-
         challenge = Bn.from_hex(binascii.hexlify(prehash.digest()).decode())
 
         responses = self.compute_response(challenge)
-        return NITranscript(challenge=challenge, responses=responses, precommitment=precommitment, statement=statement)
+        return NITranscript(challenge=challenge, responses=responses, precommitment=precommitment,
+                statement=statement)
 
 
 class Verifier(metaclass=abc.ABCMeta):
@@ -157,7 +157,7 @@ class Verifier(metaclass=abc.ABCMeta):
         """
         statement, self.commitment = commitment
         self.proof.check_statement(statement)
-        self.challenge = chal_randbits(CHALLENGE_LENGTH)
+        self.challenge = get_random_num(bits=CHALLENGE_LENGTH)
         return self.challenge
 
     def verify(self, arg):
@@ -223,69 +223,20 @@ class Verifier(metaclass=abc.ABCMeta):
         )
 
 
-def chal_randbits(bitlength=CHALLENGE_LENGTH):
+def find_residual_chal(subchallenges, challenge, modulus):
     """
-    Draws a random number of given bitlength.
-    """
-    order = Bn(2).pow(bitlength)
-    return order.random()
+    Determine the complement to a global challenge in a list
 
+    For example, to find :math:`c_1` such that :math:`c = c_1 + c_2 +c_3 \mod k`, we compute
+    :math:`c_2 + c_3 - c` and take the opposite.
 
-def get_secret_vars(subproofs):
+    Args:
+        subchallenges: The array of subchallenges :math:`c_2`, c_3, ...`
+        challenge: The global challenge to reach
+        modulus: the modulus :math:`k`
     """
-    Gathers all Secret objects in a list of Proofs.
-    """
-    secrets = []
-    # TODO: rewrite following ugly list comprehension
-    [secrets.extend(elem.get_secret_vars()) for elem in subproofs]
-    return secrets
-
-
-def get_generators(sub_list):
-    """
-    Gathers all generators in a list of Proofs.
-    """
-    generators = []
-    [generators.extend(elem.generators) for elem in sub_list]
-    return generators
-
-
-def add_Bn_array(arr, modulus):
-    """
-    Sum elements an array under a modulus. Used in OrProof.
-    """
-    if not isinstance(modulus, Bn):
-        modulus = Bn(modulus)
-    res = Bn(0)
-    for elem in arr:
-        if not isinstance(elem, Bn):
-            elem = Bn(elem)
-        res = res.mod_add(elem, modulus)
-    return res
-
-
-def enc_GXpt(obj):
-    """
-    Custom encode for petlib.pack module. Used to pack points which are not instances of petlib.ec.EcPt
-    """
-    return msgpack.ExtType(10, obj.__repr__().encode())
-
-
-def find_residual_chal(arr, challenge, chal_length):
-    """
-    Tool function to determine the complement to a global challenge in a list, i.e:
-    To find c1 such that c = c1 + c2 +c3 mod k,
-    We compute c2 + c3 -c and take the opposite
-    :param arr: The array of subchallenges c2, c3...
-    :param challenge: The global challenge to reach
-    :param chal_length: the modulus to reduce to
-    """
-    modulus = Bn(2).pow(chal_length)
-    temp_arr = arr.copy()
+    modulus = Bn(2).pow(modulus)
+    temp_arr = subchallenges.copy()
     temp_arr.append(-challenge)
-    return -add_Bn_array(temp_arr, modulus)
+    return -sum_bn_array(temp_arr, modulus)
 
-
-def update_secret_values(secrets_dict):
-    for k,v in secrets_dict.items():
-        k.value = v

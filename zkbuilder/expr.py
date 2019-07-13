@@ -15,6 +15,8 @@ Tiny expression language suitable for expressing statements on discrete logarith
 import struct
 import hashlib
 
+from collections import defaultdict
+
 from zkbuilder.exceptions import InvalidExpression, IncompleteValuesError
 
 
@@ -102,9 +104,9 @@ class Secret:
     Args
         name: String to enforce as name of the Secret. Useful for debugging.
         value: Optional secret value.
-
     """
 
+    # Number of bytes in a randomly-generated name of a secret.
     NUM_NAME_BYTES = 8
 
     def __init__(self, value=None, name=None):
@@ -119,11 +121,13 @@ class Secret:
 
     def __mul__(self, base):
         """
+        Construct an expression that represents this secrets multipled by the base.
+
         Args:
             base: Base point on an elliptic curve.
 
         Returns:
-            Expression: Fresh instance abstracting the multiplication between this Secret and base
+            Expression
         """
         return Expression(self, base)
 
@@ -143,20 +147,28 @@ class Secret:
         return hash(("Secret", self.name))
 
     def __eq__(self, other):
-        """Compare two secrets.
-
-        .. WARNING ::
-
-            Secrets are considered the same here if names match.
-            Even if values are different, this will return True.
-
-        """
         return (hash(self) == hash(other)) and self.value == other.value
 
 
 def wsum_secrets(secrets, generators):
     """
-    Build expression as a dot product of given secrets and generators.
+    Build expression representing a dot product of given secrets and generators.
+
+    >>> from zkbuilder.utils import make_generators
+    >>> x, y = Secret(), Secret()
+    >>> g, h = make_generators(2)
+    >>> expr = wsum_secrets([x, y], [g, h])
+    >>> expr.bases == (g, h)
+    True
+    >>> expr.secrets == (x, y)
+    True
+
+    Args:
+        secrets: :py:class:`Secret` objects :math`s_i`
+        generators: Group generators :math:`g_i`
+
+    Returns:
+        Expression: :math:`s_0 g_0 + s_1 g_1 + ... + s_n g_n`
     """
     if len(secrets) != len(generators):
         raise ValueError("Should have as many secrets as generators.")
@@ -165,3 +177,56 @@ def wsum_secrets(secrets, generators):
     for idx in range(len(generators) - 1):
         result = result + secrets[idx + 1] * generators[idx + 1]
     return result
+
+
+def update_secret_values(secrets_dict):
+    """
+    Update values of secrets according to the given mapping.
+
+    >>> x, y = Secret(), Secret()
+    >>> secrets_dict = {x: 1, y: 2}
+    >>> update_secret_values(secrets_dict)
+    >>> x.value
+    1
+    >>> y.value
+    2
+
+    Args:
+        secrets_dict: A mapping from :py:class:`Secret` objects to their expected values.
+    """
+    for k, v in secrets_dict.items(): k.value = v
+
+
+def check_groups(secrets, generators):
+    """
+    Check that if two secrets are the same, their generators induce groups of same order.
+
+    The primary goal is to ensure same responses for same secrets will not yield false negatives of
+    :py:meth:`base.Verifier.check_responses_consistency` due to different group-order modular reductions.
+
+    TODO: Consider deactivating in the future as this forbids using different groups in one proof.
+    TODO: Update docs, variable names.
+
+    Args:
+        secrets: :py:class:`expr.Secret` objects.
+        generators: Generators, Elliptic curve points.
+    """
+    # We map the unique secrets to the indices where they appear
+    mydict = defaultdict(list)
+    for idx, word in enumerate(secrets):
+        mydict[word].append(idx)
+
+    # Now we use this dictionary to check all the generators related to a particular secret live in
+    # the same group
+    for (word, gen_idx) in mydict.items():
+        # Word is the key, gen_idx is the value = a list of indices
+        ref_order = generators[gen_idx[0]].group.order()
+
+        for index in gen_idx:
+            if generators[index].group.order() != ref_order:
+                raise InvalidExpression(
+                    "A shared secret has generators which yield different group orders: ", word,
+                )
+
+    return True
+

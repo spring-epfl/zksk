@@ -15,9 +15,10 @@ from zkbuilder.primitives.dlrep import *
 
 
 class DLRepNotEqualProof(ExtendedProof):
-    """
-    TODO: update documentation
+    r"""
     ZK-proof statement of inequality of two discrete logarithms.
+
+    TODO: update documentation
 
     Using the notation from the BLAC paper:
 

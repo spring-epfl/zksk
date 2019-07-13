@@ -3,9 +3,9 @@ import pytest
 
 from petlib.ec import EcPt
 
-from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
 from zkbuilder.expr import Secret, Expression, wsum_secrets
-from zkbuilder.utils import DEFAULT_GROUP, get_generators
+from zkbuilder.utils import make_generators
+from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
 
 
 def test_secret_named():
@@ -89,7 +89,7 @@ def test_expr_invalid_expression(group, other):
 @pytest.mark.parametrize("num", [2, 10])
 def test_expr_repr(group, num):
     secrets = [Secret() for _ in range(num)]
-    generators = get_generators(num, group)
+    generators = make_generators(num, group)
     expr = wsum_secrets(secrets, generators)
 
     expected_repr = " + ".join(

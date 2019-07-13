@@ -145,7 +145,7 @@ As before, we initialize the points :math:`G_i` and the secrets :math:`x_i`.
 
 .. Tip ::
 
-   If you need several group generators, as above, you can use the :py:func:`utils.get_generators`
+   If you need several group generators, as above, you can use the :py:func:`utils.make_generators`
    function.
 
 Then, we can create the "and"-proof like this:

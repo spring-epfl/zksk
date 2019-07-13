@@ -12,10 +12,15 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
     ftp://ftp.inf.ethz.ch/pub/crypto/publications/CamSta97b.pdf
 
 """
+from hashlib import sha256
 
-from zkbuilder.base import *
+from petlib.bn import Bn
+
+from zkbuilder.base import Verifier, Prover, SimulationTranscript
 from zkbuilder.expr import Secret, Expression
-from zkbuilder.composition import *
+from zkbuilder.utils import get_random_num
+from zkbuilder.consts import CHALLENGE_LENGTH
+from zkbuilder.composition import Proof
 from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
 
 import warnings
@@ -201,7 +206,7 @@ class DLRep(Proof):
         # Fill the missing positions of the responses dictionary
         responses_dict = self.update_randomizers(responses_dict)
         if challenge is None:
-            challenge = chal_randbits(CHALLENGE_LENGTH)
+            challenge = get_random_num(CHALLENGE_LENGTH)
 
         responses = [responses_dict[m] for m in self.secret_vars]
         # Random responses, the same for shared secrets

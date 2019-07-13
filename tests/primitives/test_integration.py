@@ -11,14 +11,16 @@ from zkbuilder.exceptions import VerificationError
 from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureProof
 from zkbuilder.primitives.dlrep_notequal import DLRepNotEqualProof
 from zkbuilder.utils.debug import SigmaProtocol
-from zkbuilder.utils import get_generators
+from zkbuilder.utils import make_generators
+
+# TODO: Add test for signature simulation and or signature, when or with DLRNE is fixed
 
 
 @pytest.fixture(params=[2, 10])
 def proof_params(request):
     num = request.param
     secrets = [Secret() for _ in range(num)]
-    generators = get_generators(num)
+    generators = make_generators(num)
     return secrets, generators
 
 
@@ -28,9 +30,11 @@ def get_secrets(num):
     secret_dict = {x: v for x, v in zip(secrets, secret_values)}
     return secrets, secret_values, secret_dict
 
+
 def get_secrets_new(num):
     secrets = [Secret(i * 1337 + i) for i in range(num)]
     return secrets
+
 
 # BBS+ & BBS+
 def test_bbsplus_and_proof():
@@ -406,7 +410,7 @@ def test_signature_or_dlrne():
 # DLRNE & DLRNE
 def test_and_dlrne():
     secrets, secret_values, secret_dict = get_secrets(3)
-    generators = get_generators(3)
+    generators = make_generators(3)
 
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
     p1 = DLRepNotEqualProof(
@@ -441,7 +445,7 @@ def test_and_dlrne_fails_on_same_dl():
     Second subproof is not correct as the two members have the same DL
     """
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
 
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
     y3 = secret_values[1] * generators[3]
@@ -479,7 +483,7 @@ def test_and_dlrne_fails_on_same_dl():
 # DLREP & DLRNE
 def test_and_dlrne_binding_1():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     p1 = DLRepNotEqualProof(
@@ -511,7 +515,7 @@ def test_and_dlrne_does_not_fail_on_same_dl_when_not_binding():
     binding is off by default.
     """
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -541,7 +545,7 @@ def test_dlrep_and_dlrne_fails_on_same_dl_when_binding():
     binding is on.
     """
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -582,7 +586,7 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
     cheating, a contradiction). Should be detected as binding is on.
     """
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -624,7 +628,7 @@ def test_and_dlrep_partial_binding():
     cheating, a contradiction).  Should be undetected as binding is off in at least one proof
     """
     secrets = get_secrets_new(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
     y3 = secrets[2].value * generators[3]
@@ -658,7 +662,7 @@ def test_and_dlrep_partial_binding():
 # DLRNE & DLREP & DLRNE & DLRNE
 def test_multiple_and_dlrep_binding():
     secrets = get_secrets_new(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x.value * g for x, g in zip(secrets, generators)]
 
     p1 = DLRepNotEqualProof(
@@ -710,7 +714,7 @@ def test_multiple_and_dlrep_binding():
 # DLRNE & DLREP & DLRNE & DLRNE
 def test_multiple_and_dlrep_fails_on_bad_secret_when_binding():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     p1 = DLRepNotEqualProof(
@@ -785,7 +789,7 @@ def test_and_dlrne_non_interactive_1(group):
 # DLRNE & DLRNE & DLREP
 def test_and_dlrne_non_interactive_2():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     p1 = DLRepNotEqualProof(
@@ -825,7 +829,7 @@ def test_and_dlrne_non_interactive_2():
 # DLRNE & DLREP & DLRNE & DLRNE
 def test_multiple_dlrne_simulation():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     p1 = DLRepNotEqualProof(
@@ -858,7 +862,7 @@ def test_multiple_dlrne_simulation():
 # DLRNE & DLRNE
 def test_dlrne_simulation_binding():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -880,7 +884,7 @@ def test_dlrne_simulation_binding():
 # DLRNE | DLRNE
 def test_or_dlrne():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -907,7 +911,7 @@ def test_or_dlrne():
 # DLRNE | DLRNE
 def test_or_dlrne_non_interactive():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -928,7 +932,7 @@ def test_or_dlrne_non_interactive():
 # (DLRNE | DLRNE) | DLRNE | DLRNE
 def test_or_or_dlrne():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]
@@ -965,7 +969,7 @@ def test_or_or_dlrne():
 # (DLRNE & DLRNE) | DLRNE | DLRNE
 def test_or_and_dlrne():
     secrets, secret_values, secret_dict = get_secrets(4)
-    generators = get_generators(4)
+    generators = make_generators(4)
     lhs_values = [x * g for x, g in zip(secret_values, generators)]
 
     y3 = secret_values[2] * generators[3]

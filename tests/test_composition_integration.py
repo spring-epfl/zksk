@@ -9,17 +9,15 @@ from zkbuilder import DLRep, Secret
 from zkbuilder.exceptions import InvalidExpression, VerificationError
 from zkbuilder.composition import AndProof, OrProof
 from zkbuilder.expr import wsum_secrets
-from zkbuilder.utils import get_generators
-
-# TODO: add test for signature simulation and or signature, when or with DLRNE is fixed
+from zkbuilder.utils import make_generators
 
 
 @pytest.fixture
 def params(group):
     n1 = 3
     n2 = 4
-    generators1 = get_generators(n1)
-    generators2 = get_generators(n2)
+    generators1 = make_generators(n1)
+    generators2 = make_generators(n2)
     x0 = Secret()
     x1 = Secret()
     x2 = Secret()
@@ -85,7 +83,7 @@ def test_and_proof_different_environments(params):
 
 
 def test_and_proof_partially_defined_secrets():
-    generators = get_generators(2)
+    generators = make_generators(2)
     x = Secret(value=4)
     x2 = Secret()
     p1 = DLRep(4 * generators[0], x * generators[0])
@@ -159,7 +157,7 @@ def test_and_proof_simulation_1(group):
     n = 3
     secret_values = [Bn(i) for i in range(n)]
     secrets = [Secret() for _ in range(n)]
-    generators = get_generators(n, group)
+    generators = make_generators(n, group)
     lhs = group.wsum(secret_values, generators)
 
     subproof1 = DLRep(lhs, wsum_secrets(secrets, generators))
@@ -175,7 +173,7 @@ def test_and_proof_simulation_2(group):
     n = 3
     secret_values = [Bn(i) for i in range(n)]
     secrets = [Secret() for _ in range(n)]
-    generators = get_generators(n, group)
+    generators = make_generators(n, group)
     lhs = group.wsum(secret_values, generators)
 
     subproof1 = DLRep(lhs, wsum_secrets(secrets, generators))
@@ -414,7 +412,7 @@ def test_malicious_and_proofs():
     x0 = Secret()
     x2 = Secret()
     x1 = Secret()
-    generators = get_generators(3)
+    generators = make_generators(3)
     g1 = generators[0]
     g2 = generators[1]
     g3 = generators[2]
