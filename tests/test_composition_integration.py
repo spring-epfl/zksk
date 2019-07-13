@@ -7,7 +7,7 @@ from petlib.ec import EcGroup
 
 from zkbuilder import DLRep, Secret
 from zkbuilder.exceptions import InvalidExpression, VerificationError
-from zkbuilder.composition import AndProof, OrProof
+from zkbuilder.composition import AndProofStmt, OrProofStmt
 from zkbuilder.expr import wsum_secrets
 from zkbuilder.utils import make_generators
 
@@ -66,7 +66,7 @@ def verify_proof(proof, secrets):
 
 def test_and_proof_same_environment(params):
     p1, p2, secrets_dict = params
-    and_proof = AndProof(p1, p2)
+    and_proof = AndProofStmt(p1, p2)
 
     prover = and_proof.get_prover(secrets_dict)
     verifier = and_proof.get_verifier()
@@ -76,7 +76,7 @@ def test_and_proof_same_environment(params):
 def test_and_proof_different_environments(params):
     x, y = Secret(), Secret()
     p1, p2, secrets_dict = params
-    and_proof = AndProof(p1, p2)
+    and_proof = AndProofStmt(p1, p2)
     prover = and_proof.get_prover(secrets_dict)
     verifier = and_proof.get_verifier()
     assert verify(verifier, prover)
@@ -110,7 +110,7 @@ def test_and_proof_fails_when_bases_belong_to_different_groups(group):
     p2 = DLRep(y2, wsum_secrets([x], [g2]))
     with pytest.raises(InvalidExpression):
         # An exception should be raised because of a shared secrets linked to two different groups
-        and_proof = AndProof(p1, p2)
+        and_proof = AndProofStmt(p1, p2)
         prover = and_proof.get_prover()
         verifier = and_proof.get_verifier()
         verify(verifier, prover)
@@ -118,7 +118,7 @@ def test_and_proof_fails_when_bases_belong_to_different_groups(group):
 
 def test_and_proof_fails_when_secret_is_wrong(params, group):
     p1, p2, secrets_dict = params
-    and_proof = AndProof(p1, p2)
+    and_proof = AndProofStmt(p1, p2)
     sec = secrets_dict.copy()
     u = list(sec.keys())
     sec[u[0]] = group.order().random()
@@ -129,7 +129,7 @@ def test_and_proof_fails_when_secret_is_wrong(params, group):
 
 def test_multiple_and_proofs(params):
     p1, p2, secrets_dict = params
-    and_proof = AndProof(p1, p2, p2, p1, p1, p1, p2)
+    and_proof = AndProofStmt(p1, p2, p2, p1, p1, p1, p2)
     prover = and_proof.get_prover(secrets_dict)
     verifier = and_proof.get_verifier()
     assert verify(verifier, prover)
@@ -137,8 +137,8 @@ def test_multiple_and_proofs(params):
 
 def test_compose_and_proofs_1(params):
     p1, p2, secrets_dict = params
-    p3 = AndProof(p1, p2)
-    p4 = AndProof(AndProof(p1, p2), p1)
+    p3 = AndProofStmt(p1, p2)
+    p4 = AndProofStmt(AndProofStmt(p1, p2), p1)
     prover = p4.get_prover(secrets_dict)
     verifier = p4.get_verifier()
     assert verify(verifier, prover)
@@ -146,8 +146,8 @@ def test_compose_and_proofs_1(params):
 
 def test_compose_and_proofs_2(params):
     p1, p2, secrets_dict = params
-    p3 = AndProof(p1, p2)
-    p = AndProof(AndProof(p1, AndProof(p3, AndProof(p1, p2))), p2)
+    p3 = AndProofStmt(p1, p2)
+    p = AndProofStmt(AndProofStmt(p1, AndProofStmt(p3, AndProofStmt(p1, p2))), p2)
     prover = p.get_prover(secrets_dict)
     verifier = p.get_verifier()
     assert verify(verifier, prover)
@@ -162,7 +162,7 @@ def test_and_proof_simulation_1(group):
 
     subproof1 = DLRep(lhs, wsum_secrets(secrets, generators))
     subproof2 = DLRep(lhs, wsum_secrets(secrets, generators))
-    andp = AndProof(subproof1, subproof2)
+    andp = AndProofStmt(subproof1, subproof2)
     andv = andp.get_verifier()
     tr = andp.simulate_proof()
     tr.statement = andp.prehash_statement().digest()
@@ -178,7 +178,7 @@ def test_and_proof_simulation_2(group):
 
     subproof1 = DLRep(lhs, wsum_secrets(secrets, generators))
     subproof2 = DLRep(lhs, wsum_secrets(secrets, generators))
-    andp = AndProof(subproof1, subproof2)
+    andp = AndProofStmt(subproof1, subproof2)
     tr = andp.simulate()
     assert andp.verify_simulation_consistency(tr)
     assert not andp.verify(tr)
@@ -186,7 +186,7 @@ def test_and_proof_simulation_2(group):
 
 def test_and_proof_non_interactive(params):
     p1, p2, secrets = params
-    p = AndProof(p1, p2)
+    p = AndProofStmt(p1, p2)
     message = "whatever"
     tr = p.prove(secrets, message=message)
     assert p.verify(tr, message=message)
@@ -194,7 +194,7 @@ def test_and_proof_non_interactive(params):
 
 def test_and_proof_non_interactive_fails_when_wrong_secrets(params, group):
     p1, p2, secrets = params
-    andp = AndProof(p1, p2)
+    andp = AndProofStmt(p1, p2)
 
     bad_secrets = secrets.copy()
     u = list(bad_secrets.keys())
@@ -231,7 +231,7 @@ def test_and_proof_with_complex_expression(group):
 
 def test_or_proof(params):
     p1, p2, secrets = params
-    orproof = OrProof(p1, p2, p1, p2, p1, p2)
+    orproof = OrProofStmt(p1, p2, p1, p2, p1, p2)
     prov = orproof.get_prover(secrets)
     verif = orproof.get_verifier()
     com = prov.commit()
@@ -248,7 +248,7 @@ def test_or_proof_manual(params):
     TODO: Clarify what is being tested here.
     """
     p1, p2, secrets = params
-    orproof = OrProof(p1, p2, p1, p2, p1, p2)
+    orproof = OrProofStmt(p1, p2, p1, p2, p1, p2)
 
     subproofs = orproof.subproofs
     rep = 0
@@ -294,9 +294,9 @@ def test_and_or_proof_composition(params):
     secrets[xb] = 7
     secrets[xa] = 18
 
-    orproof = OrProof(p1, p2)
-    andp = AndProof(orproof, p0)
-    andp = AndProof(
+    orproof = OrProofStmt(p1, p2)
+    andp = AndProofStmt(orproof, p0)
+    andp = AndProofStmt(
         andp, DLRep(15 * p1.generators[0], Secret(value=15) * p1.generators[0])
     )
 
@@ -307,7 +307,7 @@ def test_and_or_proof_composition(params):
 
 def test_or_and_proof_composition(params):
     p1, p2, secrets = params
-    andp = AndProof(p1, p2)
+    andp = AndProofStmt(p1, p2)
 
     g1 = 7 * p1.generators[0]
     g2 = 8 * p1.generators[0]
@@ -317,7 +317,7 @@ def test_or_and_proof_composition(params):
     secrets[xa] = 7
     secrets[Secret(name="xc")] = 18
 
-    orproof = OrProof(p0, andp)
+    orproof = OrProofStmt(p0, andp)
     prover = orproof.get_prover(secrets)
     verifier = orproof.get_verifier()
     assert verify(verifier, prover)
@@ -326,7 +326,7 @@ def test_or_and_proof_composition(params):
 def test_or_or_proof_composition(params):
     p1, p2, secrets = params
 
-    first_or = OrProof(p1, p2)
+    first_or = OrProofStmt(p1, p2)
     g1 = 7 * p1.generators[0]
     g2 = 8 * p1.generators[0]
     xb = Secret(name="xb")
@@ -336,7 +336,7 @@ def test_or_or_proof_composition(params):
     secrets[xa] = 7
     secrets[Secret()] = 18
 
-    orproof = OrProof(p0, first_or)
+    orproof = OrProofStmt(p0, first_or)
     prover = orproof.get_prover(secrets)
     verifier = orproof.get_verifier()
     assert verify(verifier, prover)
@@ -344,7 +344,7 @@ def test_or_or_proof_composition(params):
 
 def test_or_proof_simulation(params):
     p1, p2, secrets = params
-    first_or = OrProof(p1, p2)
+    first_or = OrProofStmt(p1, p2)
     tr = first_or.simulate()
     assert first_or.verify_simulation_consistency(tr)
     assert not first_or.verify(tr)
@@ -355,7 +355,7 @@ def test_multiple_or_proofs(group, params):
     g = group.generator()
     x10 = Secret()
     secrets.update({x10: 13})
-    orproof = OrProof(p1, OrProof(p2, DLRep(13 * g, x10 * g)))
+    orproof = OrProofStmt(p1, OrProofStmt(p2, DLRep(13 * g, x10 * g)))
     assert verify_proof(orproof, secrets)
 
 
@@ -364,9 +364,9 @@ def test_multiple_or_proofs_composition(group, params):
     g = group.generator()
     x10 = Secret()
     secrets.update({x10: 13})
-    orp1 = OrProof(p2, p1)
-    orp2 = OrProof(p1, DLRep(13 * g, x10 * g))
-    orproof = OrProof(orp1, p2, orp2)
+    orp1 = OrProofStmt(p2, p1)
+    orp2 = OrProofStmt(p1, DLRep(13 * g, x10 * g))
+    orproof = OrProofStmt(orp1, p2, orp2)
     assert verify_proof(orproof, secrets)
 
 
@@ -387,7 +387,7 @@ def test_multiple_or_proof_infix_operator(group, params):
 
 def test_or_non_interactive(params):
     p1, p2, secrets = params
-    p = OrProof(p1, p2)
+    p = OrProofStmt(p1, p2)
     message = "whatever"
     tr = p.prove(secrets, message=message)
     assert p.verify(tr, message=message)
@@ -395,7 +395,7 @@ def test_or_non_interactive(params):
 
 def test_or_non_interactive_fails_on_wrong_secrets(group, params):
     p1, p2, secrets = params
-    p = OrProof(p1, p2)
+    p = OrProofStmt(p1, p2)
     bad_secrets = secrets.copy()
     u = list(bad_secrets.keys())
     bad_secrets[u[0]] = group.order().random()
@@ -418,7 +418,7 @@ def test_malicious_and_proofs():
     g3 = generators[2]
     secret_dict = {x0: 3, x2: 50, x1: 12}
     mal_secret_dict = {x0: 3, x2: 51}
-    andp = AndProof(
+    andp = AndProofStmt(
         DLRep(12 * g1 + 50 * g2, x1 * g1 + x2 * g2),
         DLRep(3 * g3 + 51 * g2, x0 * g1 + x2 * g2),
     )

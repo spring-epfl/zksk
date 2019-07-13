@@ -223,20 +223,3 @@ class Verifier(metaclass=abc.ABCMeta):
         )
 
 
-def find_residual_chal(subchallenges, challenge, modulus):
-    """
-    Determine the complement to a global challenge in a list
-
-    For example, to find :math:`c_1` such that :math:`c = c_1 + c_2 +c_3 \mod k`, we compute
-    :math:`c_2 + c_3 - c` and take the opposite.
-
-    Args:
-        subchallenges: The array of subchallenges :math:`c_2`, c_3, ...`
-        challenge: The global challenge to reach
-        modulus: the modulus :math:`k`
-    """
-    modulus = Bn(2).pow(modulus)
-    temp_arr = subchallenges.copy()
-    temp_arr.append(-challenge)
-    return -sum_bn_array(temp_arr, modulus)
-

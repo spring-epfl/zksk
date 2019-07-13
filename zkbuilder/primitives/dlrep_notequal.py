@@ -8,13 +8,12 @@ Blacklisting`_" by Henry and Goldberg, 2013:
     Blacklisting`: https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
 
-from zkbuilder.base import *
 from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import *
-from zkbuilder.primitives.dlrep import *
+from zkbuilder.composition import ExtendedProofStmt, ExtendedVerifier, AndProofStmt
+from zkbuilder.primitives.dlrep import DLRep
 
 
-class DLRepNotEqualProof(ExtendedProof):
+class DLRepNotEqual(ExtendedProofStmt):
     r"""
     ZK-proof statement of inequality of two discrete logarithms.
 
@@ -62,7 +61,7 @@ class DLRepNotEqualProof(ExtendedProof):
 
     def construct_proof(self, precommitment):
         """
-        Builds the internal AndProof associated to a DLRepNotEqualProof. See formula in Protocol 1 of the BLAC paper.
+        Builds the internal AndProofStmt associated to a DLRepNotEqual. See formula in Protocol 1 of the BLAC paper.
         """
         infty = self.generators[0].group.infinite()
         p1 = DLRep(infty, self.alpha * self.generators[0] + self.beta * self.lhs[0])
@@ -74,7 +73,7 @@ class DLRepNotEqualProof(ExtendedProof):
             # the first member without randomizing the secret.
             proofs.append(DLRep(self.lhs[0], self.x * self.generators[0]))
 
-        return AndProof(*proofs)
+        return AndProofStmt(*proofs)
 
     def is_valid(self):
         """

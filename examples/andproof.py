@@ -9,7 +9,7 @@ WARNING: if you update this file, update the line numbers in the documentation.
 from petlib.ec import EcGroup
 
 from zkbuilder import Secret, DLRep
-from zkbuilder.composition import AndProof
+from zkbuilder.composition import AndProofStmt
 
 group = EcGroup()
 
@@ -39,7 +39,7 @@ stmt = DLRep(y1, x0 * g0 + x1 * g1) \
 stmt_1 = DLRep(y1, x0 * g0 + x1 * g1)
 stmt_2 = DLRep(y2, x0 * g2 + x2 * g3)
 
-equivalent_stmt = AndProof(stmt_1, stmt_2)
+equivalent_stmt = AndProofStmt(stmt_1, stmt_2)
 
 assert stmt.get_proof_id() == equivalent_stmt.get_proof_id()
 

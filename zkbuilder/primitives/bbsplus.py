@@ -5,11 +5,9 @@ ZK proof for a BBS+ signature.
 # TODO: Fix the docs.
 
 
-from zkbuilder.base import *
 from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import *
-from zkbuilder.pairings import *
-from zkbuilder.primitives.dlrep import *
+from zkbuilder.composition import ExtendedProofStmt, AndProofStmt
+from zkbuilder.primitives.dlrep import DLRep
 
 
 class Signature:
@@ -60,8 +58,10 @@ class UserCommitmentMessage:
 
 class SignatureCreator:
     """
-    Construct a UserCommitment, i.e., the pre-signed product along if blind with a proof of correct
-    construction (non-interactive).
+    Pre-signed product along with a NIZK proof of correct construction.
+
+    Args:
+        pk (PublicKey): Public key.
     """
 
     def __init__(self, pk):
@@ -106,7 +106,7 @@ class Keypair:
     A public-private key pair, along with a list of canonical bases to use in proofs.
 
     Args
-        bilinearpair (:py:class:`BiliniearGroupPair`: Bilinear group pair.
+        bilinearpair (:py:class:`pairings.BilinearGroupPair`): Bilinear group pair.
         length: Upper bound on the number of generators needed to compute the proof.
             Should be at least 2 + the number of messages.
     """
@@ -164,14 +164,14 @@ class SecretKey:
         return Signature(A, e, s2)
 
 
-class SignatureProof(ExtendedProof):
+class SignatureStmt(ExtendedProofStmt):
     """
     Proof of knowledge of a (A,e,s) signature over a set (known length) of (hidden) messages.
     """
 
     def __init__(self, secret_vars, pk, signature=None, binding=True):
         """
-        Instantiates a Signature Proof which is an augmented version of AndProof allowing to access additional parameters.
+        Instantiates a Signature Proof which is an augmented version of AndProofStmt allowing to access additional parameters.
         If the object is used for proving, it requires a signature argument.
         If binding keyord argument is set to True, the constructor will parse the two first elements of secret_vars as the Secret variables for the e and s attributes of the signature.
         Else, will internally declare its own.
@@ -258,7 +258,7 @@ class SignatureProof(ExtendedProof):
             self.pair_lhs, wsum_secrets(new_secret_vars, generators)
         )
 
-        self.constructed_proof = AndProof(dl1, dl2, pairings_proof)
+        self.constructed_proof = AndProofStmt(dl1, dl2, pairings_proof)
         self.constructed_proof.lhs = [
             subp.lhs for subp in self.constructed_proof.subproofs
         ]

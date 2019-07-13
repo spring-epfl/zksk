@@ -2,7 +2,7 @@ from petlib.bn import Bn
 
 from zkbuilder import Secret
 from zkbuilder.pairings import BilinearGroupPair
-from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureProof
+from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
 
 
 def test_signature_setup():
@@ -44,9 +44,9 @@ def test_signature_proof():
         m3: messages[2],
     }
 
-    p = SignatureProof([e, s, m1, m2, m3], pk, signature)
+    p = SignatureStmt([e, s, m1, m2, m3], pk, signature)
     prover = p.get_prover(secret_dict)
-    p1 = SignatureProof([Secret() for _ in range(5)], pk)
+    p1 = SignatureStmt([Secret() for _ in range(5)], pk)
     verifier = p1.get_verifier()
     pc = prover.precommit()
     verifier.process_precommitment(pc)
@@ -77,8 +77,8 @@ def test_signature_non_interactive_proof():
         m3: messages[2],
     }
 
-    p = SignatureProof([e, s, m1, m2, m3], pk, signature)
+    p = SignatureStmt([e, s, m1, m2, m3], pk, signature)
     tr = p.prove(secret_dict)
-    p1 = SignatureProof([Secret() for _ in range(5)], pk)
+    p1 = SignatureStmt([Secret() for _ in range(5)], pk)
     assert p1.verify(tr)
 

@@ -3,12 +3,12 @@
     https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 
 """
-import os, sys
 
-from zkbuilder.primitives.dlrep import *
-from zkbuilder.base import *
-from zkbuilder.composition import *
-from zkbuilder.pairings import *
+from petlib.bn import Bn
+
+from zkbuilder import Secret
+from zkbuilder.primitives.dlrep import DLRep
+from zkbuilder.composition import ExtendedProofStmt, AndProofStmt
 
 
 def decompose_into_n_bits(value, n):
@@ -27,7 +27,7 @@ def to_Bn(num):
         return Bn(num)
 
 
-class RangeProof(ExtendedProof):
+class RangeStmt(ExtendedProofStmt):
     r"""
     A range proof statement.
 
@@ -50,7 +50,7 @@ class RangeProof(ExtendedProof):
         self.num_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
 
 
-class PowerTwoRangeProof(ExtendedProof):
+class PowerTwoRangeStmt(ExtendedProofStmt):
     r"""
     A power-two range proof statement.
 
@@ -141,7 +141,7 @@ class PowerTwoRangeProof(ExtendedProof):
 
             bit_proofs.append(p0 | p1)
 
-        self.constructed_proof = AndProof(*bit_proofs)
+        self.constructed_proof = AndProofStmt(*bit_proofs)
 
         return self.constructed_proof
 

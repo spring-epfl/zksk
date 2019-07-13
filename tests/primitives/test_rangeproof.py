@@ -9,7 +9,7 @@ from petlib.bn import Bn
 
 from zkbuilder import Secret
 from zkbuilder.pairings import BilinearGroupPair
-from zkbuilder.primitives.rangeproof import PowerTwoRangeProof
+from zkbuilder.primitives.rangeproof import PowerTwoRangeStmt
 from zkbuilder.utils.debug import SigmaProtocol
 
 
@@ -26,14 +26,14 @@ def test_rangeproof():
 
     com = value * g + randomizer * h
 
-    p1 = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    p2 = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
+    p1 = PowerTwoRangeStmt(com.eval(), g, h, limit, value, randomizer)
+    p2 = PowerTwoRangeStmt(com.eval(), g, h, limit, Secret(), Secret())
 
     tr = p1.prove()
     assert(p2.verify(tr))
 
-    p1 = PowerTwoRangeProof(com.eval(), g, h, limit, value, randomizer)
-    p2 = PowerTwoRangeProof(com.eval(), g, h, limit, Secret(), Secret())
+    p1 = PowerTwoRangeStmt(com.eval(), g, h, limit, value, randomizer)
+    p2 = PowerTwoRangeStmt(com.eval(), g, h, limit, Secret(), Secret())
 
     prover = p1.get_prover()
     verifier = p2.get_verifier()

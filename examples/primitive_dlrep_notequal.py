@@ -1,15 +1,15 @@
 """
 Simplified version of the real DLRepNotEqualProof defined in ``primitives``.
-This version is here to support the tutorial
+
+This version is here to support the tutorial.
 """
 
-from zkbuilder.base import *
 from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import *
-from zkbuilder.primitives.dlrep import *
+from zkbuilder.composition import ExtendedProofStmt
+from zkbuilder.primitives.dlrep import DLRep
 
 
-class DLRepNotEqualProof(ExtendedProof):
+class DLRepNotEqualProof(ExtendedProofStmt):
     def __init__(self, valid_tuple, invalid_tuple, x):
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
         self.generators = [valid_tuple[1], invalid_tuple[1]]

@@ -20,7 +20,7 @@ from zkbuilder.base import Verifier, Prover, SimulationTranscript
 from zkbuilder.expr import Secret, Expression
 from zkbuilder.utils import get_random_num
 from zkbuilder.consts import CHALLENGE_LENGTH
-from zkbuilder.composition import Proof
+from zkbuilder.composition import ComposableProofStmt
 from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
 
 import warnings
@@ -57,7 +57,7 @@ class DLRepVerifier(Verifier):
         return True
 
 
-class DLRep(Proof):
+class DLRep(ComposableProofStmt):
     """
     Proof statement for a discrete-logarithm representation proof.
 

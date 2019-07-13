@@ -157,13 +157,13 @@ This syntax enables us to almost copy the mathematical expression of the proof i
 Camenisch-Stadler notation.
 
 We can also instantiate subproofs separately and pass them to the
-:py:class:`composition.AndProof`. In fact, the above is just a simplified way of writing
+:py:class:`composition.AndProofStmt`. In fact, the above is just a simplified way of writing
 the following:
 
 .. literalinclude:: ../examples/andproof.py
    :lines: 39-42
 
-The two ways to construct the AndProof are equivalent and work with an arbitrary number of
+The two ways to construct the AndProofStmt are equivalent and work with an arbitrary number of
 parameters.
 
 Composing proofs takes into consideration the re-occuring secrets. The following are two **not**
@@ -199,7 +199,7 @@ First, we set up the proof:
    y2 = x2.value * g2
    proof = DLRepProof(y1, x1 * g1) | DLRepProof(y2, x2 * g2)
 
-Or use an ``OrProof()`` constructor exactly as for the And statement seen above.
+Or use an ``OrProofStmt()`` constructor exactly as for the And statement seen above.
 
 The rest is the same as above, that is you still have to create a Prover and a Verifier by calling
 the ``get_prover()`` and ``get_verifier()`` methods of the Proof object. The OrProver will in fact

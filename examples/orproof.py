@@ -8,7 +8,7 @@ WARNING: if you update this file, update the line numbers in the documentation.
 from petlib.ec import EcGroup
 
 from zkbuilder import Secret, DLRep
-from zkbuilder.composition import OrProof
+from zkbuilder.composition import OrProofStmt
 
 group = EcGroup()
 
@@ -34,7 +34,7 @@ stmt = DLRep(y0, x0 * g0) | DLRep(y1, x1 * g1)
 stmt_1 = DLRep(y0, x0 * g0)
 stmt_2 = DLRep(y1, x1 * g1)
 
-equivalent_stmt = OrProof(stmt_1, stmt_2)
+equivalent_stmt = OrProofStmt(stmt_1, stmt_2)
 
 assert stmt.get_proof_id() == equivalent_stmt.get_proof_id()
 

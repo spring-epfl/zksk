@@ -9,7 +9,7 @@ WARNING: if you update this file, update the line numbers in the documentation.
 from petlib.ec import EcGroup
 from petlib.bn import Bn
 
-from zkbuilder.composition import ExtendedProof
+from zkbuilder.composition import ExtendedProofStmt
 from zkbuilder import Secret, DLRep
 
 import attr
@@ -25,7 +25,7 @@ class PublicKey:
     h = attr.ib()
 
 
-class AdditiveElgamalPlaintextProof(ExtendedProof):
+class AdditiveElgamalPlaintextProof(ExtendedProofStmt):
     r"""
     Proof of plaintext knowledge of an additive ElGamal ciphertext
 
