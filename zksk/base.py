@@ -120,8 +120,12 @@ class Prover(metaclass=abc.ABCMeta):
         challenge = Bn.from_hex(binascii.hexlify(prehash.digest()).decode())
 
         responses = self.compute_response(challenge)
-        return NITranscript(challenge=challenge, responses=responses, precommitment=precommitment,
-                statement=statement)
+        return NITranscript(
+            challenge=challenge,
+            responses=responses,
+            precommitment=precommitment,
+            statement=statement,
+        )
 
 
 class Verifier(metaclass=abc.ABCMeta):
@@ -182,7 +186,9 @@ class Verifier(metaclass=abc.ABCMeta):
         self.pre_verification_validation(response, *args, **kwargs)
 
         # Retrieve the commitment using the verification identity
-        return self.commitment == self.stmt.recompute_commitment(self.challenge, response)
+        return self.commitment == self.stmt.recompute_commitment(
+            self.challenge, response
+        )
 
     def verify_NI(self, transcript, message="", *args, **kwargs):
         """
@@ -218,4 +224,3 @@ class Verifier(metaclass=abc.ABCMeta):
         return transcript.challenge == Bn.from_hex(
             binascii.hexlify(prehash.digest()).decode()
         )
-

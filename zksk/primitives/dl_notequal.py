@@ -92,4 +92,3 @@ class DLNotEqual(ExtendedProofStmt):
         group = self.bases[0].group
         precommitment = group.order().random() * group.generator()
         return precommitment
-

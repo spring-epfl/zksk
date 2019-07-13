@@ -66,6 +66,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         value: Value for which we construct a range proof (prover only)
         randomizer: Randomizer of the commitment (prover only)
     """
+
     def __init__(self, com, g, h, num_bits, value=None, randomizer=None):
         if not value.value is None and not randomizer.value is None:
             # Not sure why we need these here? To do the order checks?
@@ -102,7 +103,9 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
             rand.value = self.order.random()
 
         precommitment = {}
-        precommitment["Cs"] = [ b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)]
+        precommitment["Cs"] = [
+            b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)
+        ]
 
         # Compute revealed randomizer
         rand = Bn(0)
@@ -150,4 +153,3 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
             power *= 2
 
         return combined == self.com + rand * self.bases[1]
-

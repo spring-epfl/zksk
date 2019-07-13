@@ -384,7 +384,13 @@ def test_signature_or_dlrne():
     presignature = sk.sign(lhs.commitment_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
-    secret_dict = {e: signature.e, s: signature.s, m1: messages[0], m2: messages[1], m3: messages[2]}
+    secret_dict = {
+        e: signature.e,
+        s: signature.s,
+        m1: messages[0],
+        m2: messages[1],
+        m3: messages[2],
+    }
 
     sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
@@ -453,26 +459,20 @@ def test_and_dlrne_fails_on_same_dl():
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
         secrets[0],
-        bind=True
+        bind=True,
     )
-    p2 = DLNotEqual(
-        [lhs_values[1], generators[1]],
-        [y3, generators[3]],
-        secrets[1],
-    )
+    p2 = DLNotEqual([lhs_values[1], generators[1]], [y3, generators[3]], secrets[1])
 
     andp = p1 & p2
     p1_prime = DLNotEqual(
         [lhs_values[0], generators[0]],
         [lhs_values[1], generators[1]],
         secrets[0],
-        bind=True
+        bind=True,
     )
 
     p2_prime = DLNotEqual(
-        [lhs_values[1], generators[1]],
-        [y3, generators[3]],
-        secrets[1]
+        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
     )
 
     andp_prime = p1_prime & p2_prime
@@ -527,8 +527,9 @@ def test_and_dlrne_does_not_fail_on_same_dl_when_not_binding():
     andp = p1 & p2
 
     s0_prime = Secret(name=secrets[0].name)
-    p1_prime = DLNotEqual([lhs_values[0], generators[0]], [lhs_values[1], generators[1]],
-            s0_prime)
+    p1_prime = DLNotEqual(
+        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0_prime
+    )
     p2_prime = DLRep(lhs_values[2], s0_prime * generators[2])
     andp_prime = p1_prime & p2_prime
 
@@ -562,7 +563,10 @@ def test_dlrep_and_dlrne_fails_on_same_dl_when_binding():
     # Twin proof
     s0_prime = Secret(name=secrets[0].name)
     p1_prime = DLNotEqual(
-        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0_prime, bind=True
+        [lhs_values[0], generators[0]],
+        [lhs_values[1], generators[1]],
+        s0_prime,
+        bind=True,
     )
     p2_prime = DLRep(lhs_values[2], s0_prime * generators[2])
     andp_prime = p1_prime & p2_prime
@@ -619,7 +623,6 @@ def test_and_dlrne_fails_on_contradiction_when_binding():
     protocol = SigmaProtocol(andp_prime.get_verifier(), prov)
     with pytest.raises(ValidationError):
         protocol.verify()
-
 
 
 # DLNE & DLNE
@@ -692,10 +695,7 @@ def test_multiple_and_dlrep_binding():
     s0 = Secret()
     s2 = Secret()
     p1prime = DLNotEqual(
-        [lhs_values[0], generators[0]],
-        [lhs_values[1], generators[1]],
-        s0,
-        bind=False,
+        [lhs_values[0], generators[0]], [lhs_values[1], generators[1]], s0, bind=False
     )
     p2prime = DLRep(lhs_values[2], s2 * generators[2])
 
@@ -873,9 +873,7 @@ def test_dlrne_simulation_binding():
         secrets[0],
         bind=True,
     )
-    p2 = DLNotEqual(
-        [lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]]
-    )
+    p2 = DLNotEqual([lhs_values[1], generators[1]], [y3, generators[3]], [secrets[0]])
     andp = p1 & p2
     tr = andp.simulate()
     assert andp.verify_simulation_consistency(tr)
@@ -895,9 +893,7 @@ def test_or_dlrne():
         secrets[0],
         bind=True,
     )
-    p2 = DLNotEqual(
-        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
-    )
+    p2 = DLNotEqual([lhs_values[1], generators[1]], [y3, generators[3]], secrets[1])
     orp = OrProofStmt(p1, p2)
     prov = orp.get_prover(secret_dict)
     ver = orp.get_verifier()
@@ -949,12 +945,8 @@ def test_or_or_dlrne():
         secrets[0],
         bind=True,
     )
-    p2 = DLNotEqual(
-        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
-    )
-    p3 = DLNotEqual(
-        [lhs_values[1], generators[1]], [y3, generators[3]], secrets[1]
-    )
+    p2 = DLNotEqual([lhs_values[1], generators[1]], [y3, generators[3]], secrets[1])
+    p3 = DLNotEqual([lhs_values[1], generators[1]], [y3, generators[3]], secrets[1])
     orp_nested = OrProofStmt(p1, p2)
     orp = OrProofStmt(orp_nested, p11, p3)
     prov = orp.get_prover(secret_dict)
@@ -993,4 +985,3 @@ def test_or_and_dlrne():
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
-

@@ -1,4 +1,3 @@
-
 """
 Tiny expression language suitable for expressing statements on discrete logarithm representations
 
@@ -115,7 +114,7 @@ class Secret:
 
     def _generate_unique_name(self):
         h = struct.pack(">q", super().__hash__())
-        return hashlib.sha256(h).hexdigest()[:self.NUM_NAME_BYTES * 4]
+        return hashlib.sha256(h).hexdigest()[: self.NUM_NAME_BYTES * 4]
 
     def __mul__(self, base):
         """
@@ -192,5 +191,5 @@ def update_secret_values(secrets_dict):
     Args:
         secrets_dict: A mapping from :py:class:`Secret` objects to their expected values.
     """
-    for k, v in secrets_dict.items(): k.value = v
-
+    for k, v in secrets_dict.items():
+        k.value = v

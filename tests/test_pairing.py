@@ -11,7 +11,8 @@ def test_pack_unpack_g1():
     data = pack.encode(pt1)
     pt2 = pack.decode(data)
 
-    assert(pt1 == pt2)
+    assert pt1 == pt2
+
 
 # Testing packing and unpacking g2 element
 def test_pack_unpack_g2():
@@ -23,7 +24,8 @@ def test_pack_unpack_g2():
     data = pack.encode(pt1)
     pt2 = pack.decode(data)
 
-    assert(pt1 == pt2)
+    assert pt1 == pt2
+
 
 # Testing packing and unpacking g2 element
 def test_pack_unpack_gt():
@@ -35,4 +37,4 @@ def test_pack_unpack_gt():
     data = pack.encode(pt1)
     pt2 = pack.decode(data)
 
-    assert(pt1 == pt2)
+    assert pt1 == pt2

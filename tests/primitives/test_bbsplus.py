@@ -81,4 +81,3 @@ def test_signature_non_interactive_proof():
     tr = p.prove(secret_dict)
     p1 = SignatureStmt([Secret() for _ in range(5)], pk)
     assert p1.verify(tr)
-

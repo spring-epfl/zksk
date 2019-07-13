@@ -189,7 +189,12 @@ class SignatureStmt(ExtendedProofStmt):
         self.order = self.bases[0].group.order()
 
         # The prover will compute the following secrets:
-        self.r1, self.r2, self.delta1, self.delta2 = Secret(), Secret(), Secret(), Secret()
+        self.r1, self.r2, self.delta1, self.delta2 = (
+            Secret(),
+            Secret(),
+            Secret(),
+            Secret(),
+        )
 
         # Below is boilerplate
         # TODO: handle secret_vars in super constructor
@@ -234,9 +239,7 @@ class SignatureStmt(ExtendedProofStmt):
         dl1 = DLRep(self.A1, self.r1 * g1 + self.r2 * g2)
         dl2 = DLRep(
             g0.group.infinite(),
-            self.delta1 * g1
-            + self.delta2 * g2
-            + self.secret_vars[0] * (-1 * self.A1),
+            self.delta1 * g1 + self.delta2 * g2 + self.secret_vars[0] * (-1 * self.A1),
         )
 
         self.pair_lhs = self.A2.pair(self.pk.w) + (-1 * self.pk.gen_pairs[0])
@@ -249,18 +252,12 @@ class SignatureStmt(ExtendedProofStmt):
 
         # Build secret names [e, r1, delta1, s, m_i]
         new_secret_vars = (
-            self.secret_vars[:1]
-            + [self.r1, self.delta1]
-            + self.secret_vars[1:]
+            self.secret_vars[:1] + [self.r1, self.delta1] + self.secret_vars[1:]
         )
-        pairings_stmt = DLRep(
-            self.pair_lhs, wsum_secrets(new_secret_vars, bases)
-        )
+        pairings_stmt = DLRep(self.pair_lhs, wsum_secrets(new_secret_vars, bases))
 
         constructed_stmt = AndProofStmt(dl1, dl2, pairings_stmt)
-        constructed_stmt.lhs = [
-            p.lhs for p in constructed_stmt.subproofs
-        ]
+        constructed_stmt.lhs = [p.lhs for p in constructed_stmt.subproofs]
         return constructed_stmt
 
     def simulate_precommit(self):
@@ -273,4 +270,3 @@ class SignatureStmt(ExtendedProofStmt):
         precommitment["A1"] = group.order().random() * group.generator()
         precommitment["A2"] = group.order().random() * group.generator()
         return precommitment
-

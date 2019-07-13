@@ -36,7 +36,9 @@ def params(group):
         ]
     )
 
-    sum_1 = group.wsum([secrets_dict[x0], secrets_dict[x1], secrets_dict[x2]], generators1)
+    sum_1 = group.wsum(
+        [secrets_dict[x0], secrets_dict[x1], secrets_dict[x2]], generators1
+    )
     secrets_2 = [secrets_dict[x0]]
     for i in range(3, 6):
         secrets_2.append(secrets_dict[secrets[i]])
@@ -298,9 +300,7 @@ def test_and_or_proof_composition(params):
 
     orproof = OrProofStmt(p1, p2)
     andp = AndProofStmt(orproof, p0)
-    andp = AndProofStmt(
-        andp, DLRep(15 * p1.bases[0], Secret(value=15) * p1.bases[0])
-    )
+    andp = AndProofStmt(andp, DLRep(15 * p1.bases[0], Secret(value=15) * p1.bases[0]))
 
     prover = andp.get_prover(secrets)
     verifier = andp.get_verifier()
@@ -434,4 +434,3 @@ def test_malicious_and_proofs():
     resp = prov.compute_response(chal)
     with pytest.raises(ValidationError):
         verif.verify(resp)
-

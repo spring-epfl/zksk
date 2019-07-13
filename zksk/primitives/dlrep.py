@@ -27,7 +27,6 @@ import warnings
 
 
 class DLRepVerifier(Verifier):
-
     def check_responses_consistency(self, responses, responses_dict=None):
         """
         Check if reoccuring secrets indeed yield the same responses.
@@ -49,8 +48,11 @@ class DLRepVerifier(Verifier):
             s = self.stmt.secret_vars[i]
             if s in responses_dict.keys():
                 if responses[i] != responses_dict[s]:
-                    warnings.warn("Values are {}. Should be {}".format(responses[i],
-                        responses_dict[s]))
+                    warnings.warn(
+                        "Values are {}. Should be {}".format(
+                            responses[i], responses_dict[s]
+                        )
+                    )
                     return False
             else:
                 responses_dict.update({s: responses[i]})
@@ -80,6 +82,7 @@ class DLRep(ComposableProofStmt):
             For example: ``Secret("x") * g`` represents :math:`PK\{ x: y = x G \}`.
         lhs: "Left-hand side." Value of :math:`y`.
     """
+
     verifier_cls = DLRepVerifier
 
     def __init__(self, lhs, expr):
@@ -209,7 +212,9 @@ class DLRep(ComposableProofStmt):
         # Random responses, the same for shared secrets
         commitment = self.recompute_commitment(challenge, responses)
 
-        return SimulationTranscript(commitment=commitment, challenge=challenge, responses=responses)
+        return SimulationTranscript(
+            commitment=commitment, challenge=challenge, responses=responses
+        )
 
 
 class DLRepProver(Prover):
@@ -260,4 +265,3 @@ class DLRepProver(Prover):
             for i in range(len(self.ks))
         ]
         return resps
-

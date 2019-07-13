@@ -73,11 +73,7 @@ def test_expr_eval_no_values_specified(group):
         rhs.eval()
 
 
-@pytest.mark.parametrize("other", [
-    Secret(),
-    2,
-    "gibberish"
-])
+@pytest.mark.parametrize("other", [Secret(), 2, "gibberish"])
 def test_expr_invalid_expression(group, other):
     g = group.generator()
     expr = Secret() * g

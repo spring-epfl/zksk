@@ -21,7 +21,7 @@ def test_rangeproof():
     randomizer = Secret(value=group.order().random())
 
     g = group.generator()
-    h = 10 * group.generator() # FIXME
+    h = 10 * group.generator()  # FIXME
     limit = 20
 
     com = value * g + randomizer * h
@@ -30,7 +30,7 @@ def test_rangeproof():
     p2 = PowerTwoRangeStmt(com.eval(), g, h, limit, Secret(), Secret())
 
     tr = p1.prove()
-    assert(p2.verify(tr))
+    assert p2.verify(tr)
 
     p1 = PowerTwoRangeStmt(com.eval(), g, h, limit, value, randomizer)
     p2 = PowerTwoRangeStmt(com.eval(), g, h, limit, Secret(), Secret())

@@ -2,6 +2,7 @@
 Utils that can be useful for debugging.
 """
 
+
 class SigmaProtocol:
     """
     Sigma-protocol runner.
@@ -36,4 +37,3 @@ class SigmaProtocol:
                 print("Not verified for {0}".format(victor.__class__.__name__))
 
         return result
-

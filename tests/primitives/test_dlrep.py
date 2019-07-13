@@ -183,14 +183,11 @@ def test_generators_sharing_a_secret(group, num):
 def test_get_many_different_provers(group, num):
     generators = make_generators(num, group)
 
-    secrets  = [Secret(name="secret_%i" % i) for i in range(num)]
+    secrets = [Secret(name="secret_%i" % i) for i in range(num)]
     secrets_vals = [Bn(i) for i in range(num)]
     secret_dict = {secret: val for secret, val in zip(secrets, secrets_vals)}
 
-    p = DLRep(
-        group.wsum(secrets_vals, generators),
-        wsum_secrets(secrets, generators)
-    )
+    p = DLRep(group.wsum(secrets_vals, generators), wsum_secrets(secrets, generators))
     prover = p.get_prover(secret_dict)
     _, commitment = prover.commit()
     assert isinstance(commitment, EcPt)
@@ -205,4 +202,3 @@ def test_same_random_values_in_commitments(group):
     p = DLRep(pub, wsum_secrets([x, x, x], generators))
     prover = p.get_prover({x: 100})
     commitments = prover.commit()
-
