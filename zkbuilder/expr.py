@@ -150,9 +150,9 @@ class Secret:
         return (hash(self) == hash(other)) and self.value == other.value
 
 
-def wsum_secrets(secrets, generators):
+def wsum_secrets(secrets, bases):
     """
-    Build expression representing a dot product of given secrets and generators.
+    Build expression representing a dot product of given secrets and bases.
 
     >>> from zkbuilder.utils import make_generators
     >>> x, y = Secret(), Secret()
@@ -164,18 +164,18 @@ def wsum_secrets(secrets, generators):
     True
 
     Args:
-        secrets: :py:class:`Secret` objects :math`s_i`
-        generators: Group generators :math:`g_i`
+        secrets: :py:class:`Secret` objects :math`x_i`
+        bases: Elliptic curve points :math:`G_i`
 
     Returns:
-        Expression: :math:`s_0 g_0 + s_1 g_1 + ... + s_n g_n`
+        Expression: :math:`x_0 G_0 + x_1 G_1 + ... + x_n G_n`
     """
-    if len(secrets) != len(generators):
-        raise ValueError("Should have as many secrets as generators.")
+    if len(secrets) != len(bases):
+        raise ValueError("Should have as many secrets as bases.")
 
-    result = secrets[0] * generators[0]
-    for idx in range(len(generators) - 1):
-        result = result + secrets[idx + 1] * generators[idx + 1]
+    result = secrets[0] * bases[0]
+    for idx in range(len(bases) - 1):
+        result = result + secrets[idx + 1] * bases[idx + 1]
     return result
 
 
