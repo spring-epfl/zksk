@@ -7,8 +7,8 @@ WARNING: if you update this file, update the line numbers in the documentation.
 
 from petlib.ec import EcGroup
 
-from zkbuilder import Secret, DLRep
-from zkbuilder.composition import OrProofStmt
+from zksk import Secret, DLRep
+from zksk.composition import OrProofStmt
 
 group = EcGroup()
 

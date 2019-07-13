@@ -16,12 +16,12 @@ from hashlib import sha256
 
 from petlib.bn import Bn
 
-from zkbuilder.base import Verifier, Prover, SimulationTranscript
-from zkbuilder.expr import Secret, Expression
-from zkbuilder.utils import get_random_num
-from zkbuilder.consts import CHALLENGE_LENGTH
-from zkbuilder.composition import ComposableProofStmt
-from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
+from zksk.base import Verifier, Prover, SimulationTranscript
+from zksk.expr import Secret, Expression
+from zksk.utils import get_random_num
+from zksk.consts import CHALLENGE_LENGTH
+from zksk.composition import ComposableProofStmt
+from zksk.exceptions import IncompleteValuesError, InvalidExpression
 
 import warnings
 
@@ -76,7 +76,7 @@ class DLRep(ComposableProofStmt):
     >>> proof = stmt.prove()
 
     Args:
-        expr (:py:class:`zkbuilder.base.Expression`): Proof statement.
+        expr (:py:class:`zksk.base.Expression`): Proof statement.
             For example: ``Secret("x") * g`` represents :math:`PK\{ x: y = x G \}`.
         lhs: "Left-hand side." Value of :math:`y`.
     """

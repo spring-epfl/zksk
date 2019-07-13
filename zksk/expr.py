@@ -17,7 +17,7 @@ import hashlib
 
 from collections import defaultdict
 
-from zkbuilder.exceptions import InvalidExpression, IncompleteValuesError
+from zksk.exceptions import InvalidExpression, IncompleteValuesError
 
 
 class Expression:
@@ -154,7 +154,7 @@ def wsum_secrets(secrets, bases):
     """
     Build expression representing a dot product of given secrets and bases.
 
-    >>> from zkbuilder.utils import make_generators
+    >>> from zksk.utils import make_generators
     >>> x, y = Secret(), Secret()
     >>> g, h = make_generators(2)
     >>> expr = wsum_secrets([x, y], [g, h])

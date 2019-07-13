@@ -1,6 +1,6 @@
 import pytest
 
-from zkbuilder.consts import DEFAULT_GROUP
+from zksk.consts import DEFAULT_GROUP
 
 
 @pytest.fixture

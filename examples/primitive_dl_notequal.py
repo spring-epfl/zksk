@@ -4,9 +4,9 @@ Simplified version of the real DLNotEqual defined in ``primitives``.
 This version is here to support the tutorial.
 """
 
-from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import ExtendedProofStmt
-from zkbuilder.primitives.dlrep import DLRep
+from zksk.expr import Secret, wsum_secrets
+from zksk.composition import ExtendedProofStmt
+from zksk.primitives.dlrep import DLRep
 
 
 class DLNotEqual(ExtendedProofStmt):

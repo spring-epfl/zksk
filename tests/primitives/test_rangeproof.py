@@ -7,10 +7,10 @@ TODO: Add tests for failure conditions.
 
 from petlib.bn import Bn
 
-from zkbuilder import Secret
-from zkbuilder.pairings import BilinearGroupPair
-from zkbuilder.primitives.rangeproof import PowerTwoRangeStmt
-from zkbuilder.utils.debug import SigmaProtocol
+from zksk import Secret
+from zksk.pairings import BilinearGroupPair
+from zksk.primitives.rangeproof import PowerTwoRangeStmt
+from zksk.utils.debug import SigmaProtocol
 
 
 def test_rangeproof():

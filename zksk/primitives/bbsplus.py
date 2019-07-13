@@ -5,9 +5,9 @@ ZK proof for a BBS+ signature.
 # TODO: Fix the docs.
 
 
-from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import ExtendedProofStmt, AndProofStmt
-from zkbuilder.primitives.dlrep import DLRep
+from zksk.expr import Secret, wsum_secrets
+from zksk.composition import ExtendedProofStmt, AndProofStmt
+from zksk.primitives.dlrep import DLRep
 
 
 class Signature:

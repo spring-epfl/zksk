@@ -3,9 +3,9 @@ import pytest
 
 from petlib.ec import EcPt
 
-from zkbuilder.expr import Secret, Expression, wsum_secrets
-from zkbuilder.utils import make_generators
-from zkbuilder.exceptions import IncompleteValuesError, InvalidExpression
+from zksk.expr import Secret, Expression, wsum_secrets
+from zksk.utils import make_generators
+from zksk.exceptions import IncompleteValuesError, InvalidExpression
 
 
 def test_secret_named():

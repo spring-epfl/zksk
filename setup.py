@@ -5,7 +5,7 @@ import re
 from setuptools import setup
 
 
-PACKAGE_NAME = "zkbuilder"
+PACKAGE_NAME = "zksk"
 
 INSTALL_REQUIRES = ["petlib", "bplib"]
 
@@ -34,7 +34,7 @@ setup(
     long_description=long_description,
     author=__author__,
     author_email=__email__,
-    packages=["zkbuilder"],
+    packages=[PACKAGE_NAME],
     license=__license__,
     url=__url__,
     install_requires=INSTALL_REQUIRES,

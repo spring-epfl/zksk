@@ -5,11 +5,11 @@ import pytest
 from petlib.bn import Bn
 from petlib.ec import EcGroup
 
-from zkbuilder import DLRep, Secret
-from zkbuilder.exceptions import InvalidExpression, VerificationError
-from zkbuilder.composition import AndProofStmt, OrProofStmt
-from zkbuilder.expr import wsum_secrets
-from zkbuilder.utils import make_generators
+from zksk import DLRep, Secret
+from zksk.exceptions import InvalidExpression, VerificationError
+from zksk.composition import AndProofStmt, OrProofStmt
+from zksk.expr import wsum_secrets
+from zksk.utils import make_generators
 
 
 @pytest.fixture

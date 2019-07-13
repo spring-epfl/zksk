@@ -4,7 +4,7 @@ import importlib
 
 import pytest
 
-PACKAGE_NAME = "zkbuilder"
+PACKAGE_NAME = "zksk"
 EXAMPLES_MOD = "examples"
 BASE_PATH = dir_path = os.path.dirname(os.path.realpath(__file__))
 EXAMPLES_DIR = os.path.join(BASE_PATH, "..", EXAMPLES_MOD)

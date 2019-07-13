@@ -8,9 +8,9 @@ Blacklisting`_" by Henry and Goldberg, 2013:
     Blacklisting`: https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 """
 
-from zkbuilder.expr import Secret, wsum_secrets
-from zkbuilder.composition import ExtendedProofStmt, ExtendedVerifier, AndProofStmt
-from zkbuilder.primitives.dlrep import DLRep
+from zksk.expr import Secret, wsum_secrets
+from zksk.composition import ExtendedProofStmt, ExtendedVerifier, AndProofStmt
+from zksk.primitives.dlrep import DLRep
 
 
 class DLNotEqual(ExtendedProofStmt):

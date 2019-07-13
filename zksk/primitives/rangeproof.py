@@ -6,9 +6,9 @@
 
 from petlib.bn import Bn
 
-from zkbuilder import Secret
-from zkbuilder.primitives.dlrep import DLRep
-from zkbuilder.composition import ExtendedProofStmt, AndProofStmt
+from zksk import Secret
+from zksk.primitives.dlrep import DLRep
+from zksk.composition import ExtendedProofStmt, AndProofStmt
 
 
 def decompose_into_n_bits(value, n):

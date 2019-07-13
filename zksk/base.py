@@ -11,9 +11,9 @@ from hashlib import sha256
 from collections import defaultdict
 import attr
 
-from zkbuilder.utils import get_random_num
-from zkbuilder.consts import CHALLENGE_LENGTH
-from zkbuilder.exceptions import VerificationError
+from zksk.utils import get_random_num
+from zksk.consts import CHALLENGE_LENGTH
+from zksk.exceptions import VerificationError
 
 
 @attr.s

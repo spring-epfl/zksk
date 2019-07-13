@@ -1,5 +1,5 @@
 #########
-zkbuilder
+zksk
 #########
 
 .. start-description-marker-do-not-remove
@@ -15,7 +15,7 @@ Getting started
 
 .. start-getting-started-marker-do-not-remove
 
-You can install zkbuilder using pip:
+You can install zksk using pip:
 
 .. code-block:: bash
 

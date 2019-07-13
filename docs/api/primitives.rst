@@ -4,7 +4,7 @@ Primitives
 Discrete Logarithm representation
 ---------------------------------
 
-.. automodule:: zkbuilder.primitives.dlrep
+.. automodule:: zksk.primitives.dlrep
    :members:
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
@@ -12,7 +12,7 @@ Discrete Logarithm representation
 BBS+
 ----
 
-.. automodule:: zkbuilder.primitives.bbsplus
+.. automodule:: zksk.primitives.bbsplus
    :members:
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
@@ -20,7 +20,7 @@ BBS+
 Range proofs
 ----
 
-.. automodule:: zkbuilder.primitives.rangeproof
+.. automodule:: zksk.primitives.rangeproof
    :members:
    :special-members:
    :exclude-members: __weakref__, __repr_

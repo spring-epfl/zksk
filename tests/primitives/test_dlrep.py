@@ -6,12 +6,12 @@ import pytest
 from petlib.bn import Bn
 from petlib.ec import EcGroup, EcPt
 
-from zkbuilder import Secret
-from zkbuilder.expr import wsum_secrets
-from zkbuilder.exceptions import StatementMismatch, InvalidExpression
-from zkbuilder.primitives.dlrep import DLRep, DLRepProver
-from zkbuilder.utils.debug import SigmaProtocol
-from zkbuilder.utils import make_generators, get_random_point
+from zksk import Secret
+from zksk.expr import wsum_secrets
+from zksk.exceptions import StatementMismatch, InvalidExpression
+from zksk.primitives.dlrep import DLRep, DLRepProver
+from zksk.utils.debug import SigmaProtocol
+from zksk.utils import make_generators, get_random_point
 
 
 def test_dlrep_interactive_1(group):

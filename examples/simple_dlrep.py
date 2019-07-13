@@ -7,7 +7,7 @@ WARNING: if you update this file, update the line numbers in the documentation.
 
 from petlib.ec import EcGroup
 
-from zkbuilder import Secret, DLRep
+from zksk import Secret, DLRep
 
 group = EcGroup()
 

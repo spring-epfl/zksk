@@ -2,8 +2,8 @@ import os
 
 from petlib.bn import Bn
 
-from zkbuilder.consts import DEFAULT_GROUP
-from zkbuilder.exceptions import InvalidExpression
+from zksk.consts import DEFAULT_GROUP
+from zksk.exceptions import InvalidExpression
 
 
 def get_random_point(group=None, random_bits=256):

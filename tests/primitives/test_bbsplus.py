@@ -1,8 +1,8 @@
 from petlib.bn import Bn
 
-from zkbuilder import Secret
-from zkbuilder.pairings import BilinearGroupPair
-from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
+from zksk import Secret
+from zksk.pairings import BilinearGroupPair
+from zksk.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
 
 
 def test_signature_setup():

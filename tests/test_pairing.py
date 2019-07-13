@@ -1,4 +1,4 @@
-from zkbuilder.pairings import *
+from zksk.pairings import *
 import petlib.pack as pack
 
 # Testing packing and unpacking g1 element

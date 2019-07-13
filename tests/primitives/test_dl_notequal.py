@@ -2,10 +2,10 @@ import pytest
 
 from petlib.bn import Bn
 
-from zkbuilder import Secret
-from zkbuilder.pairings import BilinearGroupPair
+from zksk import Secret
+from zksk.pairings import BilinearGroupPair
 
-from zkbuilder.primitives.dl_notequal import DLNotEqual
+from zksk.primitives.dl_notequal import DLNotEqual
 
 
 def test_dlne_interactive(group):

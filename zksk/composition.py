@@ -10,11 +10,11 @@ from hashlib import sha256
 from petlib.bn import Bn
 from petlib.pack import encode
 
-from zkbuilder.base import Prover, Verifier, SimulationTranscript
-from zkbuilder.expr import check_groups, update_secret_values
-from zkbuilder.utils import get_random_num, sum_bn_array
-from zkbuilder.consts import CHALLENGE_LENGTH
-from zkbuilder.exceptions import StatementSpecError, StatementMismatch
+from zksk.base import Prover, Verifier, SimulationTranscript
+from zksk.expr import check_groups, update_secret_values
+from zksk.utils import get_random_num, sum_bn_array
+from zksk.consts import CHALLENGE_LENGTH
+from zksk.exceptions import StatementSpecError, StatementMismatch
 
 
 def _find_residual_challenge(subchallenges, challenge, modulus):

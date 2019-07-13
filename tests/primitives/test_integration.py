@@ -2,16 +2,16 @@ import pytest
 
 from petlib.bn import Bn
 
-from zkbuilder import Secret
-from zkbuilder.pairings import BilinearGroupPair
+from zksk import Secret
+from zksk.pairings import BilinearGroupPair
 
-from zkbuilder import DLRep
-from zkbuilder.composition import OrProofStmt, AndProofStmt
-from zkbuilder.exceptions import VerificationError
-from zkbuilder.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
-from zkbuilder.primitives.dl_notequal import DLNotEqual
-from zkbuilder.utils.debug import SigmaProtocol
-from zkbuilder.utils import make_generators
+from zksk import DLRep
+from zksk.composition import OrProofStmt, AndProofStmt
+from zksk.exceptions import VerificationError
+from zksk.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
+from zksk.primitives.dl_notequal import DLNotEqual
+from zksk.utils.debug import SigmaProtocol
+from zksk.utils import make_generators
 
 # TODO: Add test for signature simulation and or signature, when or with DLNE is fixed
 
