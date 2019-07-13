@@ -144,7 +144,7 @@ class DLRep(Proof):
         Returns:
             str: Proof ID
         """
-        return str(["DLRep", self.lhs, self.generators])
+        return ("DLRep", self.lhs, self.generators)
 
     def get_randomizers(self):
         """
