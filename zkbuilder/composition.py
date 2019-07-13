@@ -544,7 +544,7 @@ class OrProof(_ComposedProofIdMixin, Proof):
         self.chosen_idx = random_gen.choice(possible)
 
         # Feed the selected proof the secrets it needs if we have them, and try to get_prover
-        valid_prover = sub_proof_prover(self.subproofs[self.chosen_idx], secrets_dict)
+        valid_prover = self.subproofs[self.chosen_idx].get_prover(secrets_dict)
         while valid_prover is None:
             possible.remove(self.chosen_idx)
             # If there is no proof left, abort and say we cannot get a prover
@@ -552,9 +552,7 @@ class OrProof(_ComposedProofIdMixin, Proof):
                 self.chosen_idx = None
                 return None
             self.chosen_idx = random_gen.choice(possible)
-            valid_prover = sub_proof_prover(
-                self.subproofs[self.chosen_idx], secrets_dict
-            )
+            valid_prover = self.subproofs[self.chosen_idx].get_prover(secrets_dict)
         return OrProver(self, valid_prover)
 
     def get_verifier(self):
@@ -842,7 +840,7 @@ class AndProof(_ComposedProofIdMixin, Proof):
             return None
 
         subs = [
-            sub_proof_prover(sub_proof, secrets_dict) for sub_proof in self.subproofs
+            sub_proof.get_prover(secrets_dict) for sub_proof in self.subproofs
         ]
 
         if None in subs:

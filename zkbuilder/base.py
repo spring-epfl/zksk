@@ -286,23 +286,6 @@ def find_residual_chal(arr, challenge, chal_length):
     return -add_Bn_array(temp_arr, modulus)
 
 
-def sub_proof_prover(sub_proof, secrets_dict):
-    """
-    Tool function used in both Or and And proofs to get a prover from a subproof
-    by giving it only the secrets it should know and not more.
-    :param sub_proof: The proof from which to get a prover
-    :param secrets_dict: The secret values to filter out before passing them to the prover
-
-    TODO: aargh, do we need this?
-    """
-    # keys = set(sub_proof.get_secret_vars())
-    # secrets_for_prover = {}
-    #for s_name in secrets_dict.keys():
-    #    if s_name in keys:
-    #        secrets_for_prover[s_name] = secrets_dict[s_name]
-    return sub_proof.get_prover(secrets_dict)
-
-
 def update_secret_values(secrets_dict):
     for k,v in secrets_dict.items():
         k.value = v
