@@ -13,10 +13,25 @@ def test_secret_named():
     assert x.name == "x"
 
 
+def test_secret_same_names():
+    x, y = Secret(name="same"), Secret(name="same")
+    assert x.name == y.name
+    assert hash(x) == hash(y)
+    assert x == y
+
+
+def test_secret_same_names_different_values():
+    x, y = Secret(name="same"), Secret(name="same", value=100)
+    assert x.name == y.name
+    assert hash(x) == hash(y)
+    assert x != y
+
+
 def test_secret_different_anonymous_secrets():
     x, y = Secret(), Secret()
     assert x.name != y.name
     assert hash(x) != hash(y)
+    assert x != y
 
 
 @pytest.mark.parametrize(

@@ -114,7 +114,7 @@ class Secret:
         self.value = value
 
     def _generate_unique_name(self):
-        h = struct.pack(">q", hash(self))
+        h = struct.pack(">q", super().__hash__())
         return hashlib.sha256(h).hexdigest()[:self.NUM_NAME_BYTES * 4]
 
     def __mul__(self, base):
@@ -140,10 +140,18 @@ class Secret:
             return "Secret({}, {})".format(self.value, repr(self.name))
 
     def __hash__(self):
-        if hasattr(self, "name"):
-            return hash(("Secret", self.name))
-        else:
-            return super().__hash__()
+        return hash(("Secret", self.name))
+
+    def __eq__(self, other):
+        """Compare two secrets.
+
+        .. WARNING ::
+
+            Secrets are considered the same here if names match.
+            Even if values are different, this will return True.
+
+        """
+        return (hash(self) == hash(other)) and self.value == other.value
 
 
 def wsum_secrets(secrets, generators):

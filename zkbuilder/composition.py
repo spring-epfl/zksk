@@ -10,11 +10,19 @@ import copy
 import abc
 
 
-class Proof:
+class Proof(metaclass=abc.ABCMeta):
     """A composable sigma-protocol proof statement."""
 
     @abc.abstractmethod
-    def get_randomizers(self):
+    def get_secret_vars(self):
+        pass
+
+    @abc.abstractmethod
+    def get_generators(self):
+        pass
+
+    @abc.abstractmethod
+    def get_proof_id(self):
         pass
 
     def __and__(self, other):
@@ -193,8 +201,8 @@ class Proof:
                 proofs). Avoids having to figure out the encoding mode multiple times.
         """
         # TODO: extra is not used.
-        ppp = sha256(self.ec_encode(self.get_proof_id()))
-        return ppp
+        h = sha256(self.ec_encode(str(self.get_proof_id()).encode()))
+        return h
 
     def verify_simulation_consistency(self, transcript):
         """Check if the fields of a transcript satisfy the verification equation.
@@ -219,14 +227,6 @@ class Proof:
     def __repr__(self):
         return str(self.get_proof_id())
 
-    @abc.abstractmethod
-    def get_secret_vars(self):
-        pass
-
-    @abc.abstractmethod
-    def get_generators(self):
-        pass
-
 
 class ExtendedProof(Proof,abc.ABC):
     """
@@ -234,83 +234,6 @@ class ExtendedProof(Proof,abc.ABC):
 
     TODO: More details.
     """
-
-    def get_prover(self, secrets_dict=None):
-        """
-        Get a prover object.
-
-        Returns:
-            Prover object if all secret values are known, None otherwise.
-        """
-
-        if secrets_dict is None:
-            secrets_dict = {}
-
-        for k,v in secrets_dict.items():
-            k.value = v
-
-        self.secret_values = {}
-        self.secret_values.update(secrets_dict)
-
-        return self.get_prover_cls()(self, self.secret_values)
-
-    def get_prover_cls(self):
-        return ExtendedProver
-
-    def get_verifier_cls(self):
-        return ExtendedVerifier
-
-    def recompute_commitment(self, challenge, responses):
-        """
-        Recomputes the commitment.
-        """
-        return self.constructed_proof.recompute_commitment(challenge, responses)
-
-    def get_proof_id(self):
-        """
-        Packs the proof statement as the proof name, the list of generators and the precommitment.
-        """
-        # TODO: undo hhasattr test, try and make default
-        if hasattr(self, "constructed_proof") and self.constructed_proof is not None:
-            st = [
-                self.__class__.__name__,
-                self.precommitment,
-                self.constructed_proof.get_proof_id(),
-            ]
-        else:
-            st = [self.__class__.__name__, self.generators]
-        return st
-
-    def _construct_proof(self, precommitment):
-        self.precommitment = precommitment
-        self.constructed_proof =  self.construct_proof(precommitment)
-        return self.constructed_proof
-
-    def prepare_simulate_proof(self):
-        self.precommitment = self.simulate_precommit()
-        self._construct_proof(self.precommitment)
-
-    def simulate_proof(self, responses_dict=None, challenge=None):
-        """
-        Simulate the proof.
-
-        Args:
-            responses_dict
-            challenge
-        """
-        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
-        tr.precommitment = self.precommitment
-        return tr
-
-    def _precommit(self):
-        self.precommitment = self.precommit()
-        return self.precommitment
-
-    def get_secret_vars(self):
-        return self.constructed_proof.get_secret_vars()
-
-    def get_generators(self):
-        return self.constructed_proof.get_generators()
 
     @abc.abstractmethod
     def construct_proof(self):
@@ -347,6 +270,81 @@ class ExtendedProof(Proof,abc.ABC):
         raise Exception("Override ExtendedProof.simulate_precommit() in order to"
                         "use or proof and simulations")
 
+    def get_prover(self, secrets_dict=None):
+        """
+        Get a prover object.
+
+        Returns:
+            Prover object if all secret values are known, None otherwise.
+        """
+        if secrets_dict is None:
+            secrets_dict = {}
+
+        for k,v in secrets_dict.items():
+            k.value = v
+
+        self.secret_values = {}
+        self.secret_values.update(secrets_dict)
+
+        return self.get_prover_cls()(self, self.secret_values)
+
+    def get_prover_cls(self):
+        return ExtendedProver
+
+    def get_verifier_cls(self):
+        return ExtendedVerifier
+
+    def recompute_commitment(self, challenge, responses):
+        """
+        Recomputes the commitment.
+        """
+        return self.constructed_proof.recompute_commitment(challenge, responses)
+
+    def get_proof_id(self):
+        """
+        Generate a proof identifier that captures the order of generators and secrets.
+        """
+        if hasattr(self, "constructed_proof"):
+            st = (
+                self.__class__.__name__,
+                self.precommitment,
+                self.constructed_proof.get_proof_id(),
+            )
+        else:
+            raise ValueError("Proof id unknown before the proof is constructed.")
+        return st
+
+    def _construct_proof(self, precommitment):
+        self.precommitment = precommitment
+        self.constructed_proof =  self.construct_proof(precommitment)
+        return self.constructed_proof
+
+    def prepare_simulate_proof(self):
+        self.precommitment = self.simulate_precommit()
+        self._construct_proof(self.precommitment)
+
+    def simulate_proof(self, responses_dict=None, challenge=None):
+        """
+        Simulate the proof.
+
+        Args:
+            responses_dict
+            challenge
+        """
+        tr = self.constructed_proof.simulate_proof(responses_dict, challenge)
+        tr.precommitment = self.precommitment
+        return tr
+
+    def _precommit(self):
+        self.precommitment = self.precommit()
+        return self.precommitment
+
+    def get_secret_vars(self):
+        return self.constructed_proof.get_secret_vars()
+
+    def get_generators(self):
+        return self.constructed_proof.get_generators()
+
 
 class ExtendedProver(Prover):
     """
@@ -377,12 +375,10 @@ class ExtendedProver(Prover):
         self.response = self.constructed_prover.compute_response(challenge)
         return self.response
 
-
     def precommit(self):
         self.precommitment = self.proof._precommit()
         self.process_precommitment()
         return self.precommitment
-
 
     def process_precommitment(self):
         """
@@ -430,7 +426,37 @@ class ExtendedVerifier(Verifier):
         )
 
 
-class OrProof(Proof):
+class _ComposedProofIdMixin:
+    def get_secret_vars(self):
+        secret_vars = []
+        for sub in self.subproofs:
+            secret_vars.extend(sub.get_secret_vars())
+
+        return secret_vars
+
+    def get_generators(self):
+        generators = []
+        for sub in self.subproofs:
+            generators.extend(sub.get_generators())
+
+        return generators
+
+    def get_proof_id(self):
+        secret_id_map = {}
+        counter = 0
+        secrets = self.get_secret_vars()
+        # Assign each secret a consecutive identifier, unique per name.
+        for secret in secrets:
+            if secret.name not in secret_id_map:
+                secret_id_map[secret.name] = counter
+                counter += 1
+
+        ordered_secret_ids = tuple([secret_id_map[s.name] for s in secrets])
+        proof_ids = tuple([sub.get_proof_id() for sub in self.subproofs])
+        return (self.__class__.__name__, ordered_secret_ids, proof_ids)
+
+
+class OrProof(_ComposedProofIdMixin, Proof):
     """
     An disjunction of several subproofs.
 
@@ -449,16 +475,12 @@ class OrProof(Proof):
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
         self.simulation = False
 
-
     def check(self):
         self.generators = self.get_generators()
         self.secret_vars = self.get_secret_vars()
 
         # For now we consider the same constraints as in the and-proof
         check_groups(self.secret_vars, self.generators)
-
-    def get_proof_id(self):
-        return ["Or", [sub.get_proof_id() for sub in self.subproofs]]
 
     def recompute_commitment(self, challenge, responses):
         """
@@ -487,11 +509,13 @@ class OrProof(Proof):
             )
         return comm
 
-    def get_prover(self, secrets_dict={}):
+    def get_prover(self, secrets_dict=None):
         """
         Get an OrProver, which is built on one legit prover constructed from a
         subproof picked at random among all possible candidates.
         """
+        if secrets_dict is None:
+            secrets_dict = {}
 
         # First we update the dictionary we have with the additional secrets, and process it
         # TODO: check this secret_values handling totally different
@@ -568,11 +592,9 @@ class OrProof(Proof):
                 return False
         return True
 
-
     def prepare_simulate_proof(self):
         for subp in self.subproofs:
             subp.prepare_simulate_proof()
-
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -613,20 +635,6 @@ class OrProof(Proof):
         # Pack everything into a SimulationTranscript, pack the or-challenges in the response field.
         return SimulationTranscript(
                 commitment=com, challenge=challenge, responses=(or_chals, resp), precommitment=precom)
-
-    def get_secret_vars(self):
-        secret_vars = []
-        for sub in self.subproofs:
-            secret_vars.extend(sub.get_secret_vars())
-
-        return secret_vars
-
-    def get_generators(self):
-        generators = []
-        for sub in self.subproofs:
-            generators.extend(sub.get_generators())
-
-        return generators
 
 
 class OrProver(Prover):
@@ -760,7 +768,7 @@ class OrVerifier(Verifier):
         for idx in range(len(self.subs)):
             self.subs[idx].process_precommitment(precommitment[idx])
 
-    def check_responses_consistency(self, responses, responses_dict={}):
+    def check_responses_consistency(self, responses, responses_dict=None):
         """
         Checks that for a same secret, response are actually the same.
 
@@ -771,13 +779,15 @@ class OrVerifier(Verifier):
             responses: a tuple (subchallenges, actual_responses) from which we extract only the
                 actual responses for each subverifier.
         """
+        if responses_dict is None:
+            responses_dict = {}
         for idx in range(len(self.subs)):
             if not self.subs[idx].check_responses_consistency(responses[1][idx], {}):
                 return False
         return True
 
 
-class AndProof(Proof):
+class AndProof(_ComposedProofIdMixin, Proof):
     def __init__(self, *subproofs):
         """
         Constructs the And conjunction of several subproofs.
@@ -785,7 +795,7 @@ class AndProof(Proof):
         :param subproofs: An arbitrary number of proofs.
         """
         if len(subproofs) < 2:
-            raise Exception("AndProof needs >1 arguments !")
+            raise ValueError("AndProof needs > 1 arguments")
 
         # We make a shallow copy of each subproof so they dont mess with each other.  This step is
         # important in case we have proofs which locally draw random values.  It ensures several
@@ -817,11 +827,14 @@ class AndProof(Proof):
             comm.append(cur_proof.recompute_commitment(challenge, andresp[i]))
         return comm
 
-    def get_prover(self, secrets_dict={}):
+    def get_prover(self, secrets_dict=None):
         """
         Constructs a Prover for the and-proof, which is a list of the Provers related to each subproof, in order.
         If any of the collected Provers is invalid (None), returns None.
         """
+        if secrets_dict is None:
+            secrets_dict = {}
+
         # First we update the dictionary we have with the additional secrets, and process it
         update_secret_values(secrets_dict)
 
@@ -846,9 +859,6 @@ class AndProof(Proof):
         """
         return AndVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
-    def get_proof_id(self):
-        return ["And", [sub.get_proof_id() for sub in self.subproofs]]
-
     def get_randomizers(self):
         """
         Create a dictionary of randomizers by querying the subproofs' maps and merging them.
@@ -857,7 +867,7 @@ class AndProof(Proof):
 
         # Pair each Secret to one generator. Overwrites when a Secret re-occurs but since the
         # associated generators should yield groups of same order, it's fine.
-        dict_name_gen = dict(zip(self.get_secret_vars(), self.get_generators()))
+        dict_name_gen = {s: g for s, g in zip(self.get_secret_vars(), self.get_generators())}
 
         # Pair each Secret to a randomizer.
         for u in dict_name_gen:
@@ -925,20 +935,6 @@ class AndProof(Proof):
             if not sub.is_valid():
                 return False
         return True
-
-    def get_secret_vars(self):
-        secret_vars = []
-        for sub in self.subproofs:
-            secret_vars.extend(sub.get_secret_vars())
-
-        return secret_vars
-
-    def get_generators(self):
-        generators = []
-        for sub in self.subproofs:
-            generators.extend(sub.get_generators())
-
-        return generators
 
 
 class AndProver(Prover):
