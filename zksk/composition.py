@@ -235,9 +235,6 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
         .. WARNING::
 
-            Currently, proofs that mix ``petlib.ec.EcPt`` and :py:class:`pairings.G1Point`` are not
-            supported.
-
         Args:
             extra: Optional additional object to pack, e.g a commitment (for non-interactive
                 proofs). Avoids having to figure out the encoding mode multiple times.
@@ -460,8 +457,9 @@ class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
         for secret in set(secret_vars):
             if forbidden_secrets.count(secret) > secret_vars.count(secret):
                 raise InvalidSecretsError(
-                    "Invalid secrets found. Try to flatten the proof to avoid shared secrets "
-                    "inside and outside the or-proof."
+                    "Invalid secrets found. Try to flatten the proof to avoid "
+                    "using secrets used inside an or-proof in other parts of "
+                    "the proof too (e.g., in other and or or-clauses)"
                 )
 
     def prepare_simulate_proof(self):

@@ -233,4 +233,3 @@ class Verifier(metaclass=abc.ABCMeta):
         challenge_prime = build_fiat_shamir_challenge(prehash, nizk.precommitment,
                 commitment_prime, message=message)
         return nizk.challenge == challenge_prime
-
