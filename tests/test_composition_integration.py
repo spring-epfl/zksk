@@ -6,7 +6,7 @@ from petlib.bn import Bn
 from petlib.ec import EcGroup
 
 from zksk import DLRep, Secret
-from zksk.exceptions import InvalidExpression, ValidationError, GroupMismatchError
+from zksk.exceptions import InvalidExpression, InvalidSecretsError, ValidationError, GroupMismatchError
 from zksk.composition import AndProofStmt, OrProofStmt
 from zksk.expr import wsum_secrets
 from zksk.utils import make_generators
@@ -377,7 +377,6 @@ def test_or_proof_infix_operator(params):
     orproof = p1 | p2
     assert verify_proof(orproof, secrets)
 
-
 def test_multiple_or_proof_infix_operator(group, params):
     p1, p2, secrets = params
     g = group.generator()
@@ -434,3 +433,37 @@ def test_malicious_and_proofs():
     resp = prov.compute_response(chal)
     with pytest.raises(ValidationError):
         verif.verify(resp)
+
+# Secret used both inside and outside of or clause
+def test_invalid_or_composition():
+    r = Secret(10)
+    g1, g2, g3 = make_generators(3)
+    st1 = DLRep(10 * g1, r * g1)
+
+    st21 = DLRep(10 * g2, r * g2)
+    st22 = DLRep(12 * g3, r * g3)
+    st22.simulation = True
+    st2 = st21 | st22
+    st = st1 & st2
+
+    with pytest.raises(InvalidSecretsError):
+        st.prove()
+
+
+# Secret used both inside two different or clauses
+def test_invalid_or_composition_inside_two_or():
+    r = Secret(10)
+    g1, g2, g3, g4 = make_generators(4)
+    st11 = DLRep(r.value * g1, r * g1)
+    st12 = DLRep(2 * g2, r * g2)
+    st12.simulation = True
+    st1 = st11 | st12
+
+    st21 = DLRep(7 * g3, r * g3)
+    st21.simluation = True
+    st22 = DLRep(r.value * g4, r * g4)
+    st2 = st21 | st22
+    st = st1 & st2
+
+    with pytest.raises(InvalidSecretsError):
+        st.prove()
