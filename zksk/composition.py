@@ -12,7 +12,7 @@ from petlib.bn import Bn
 from petlib.pack import encode
 
 from zksk.base import Prover, Verifier, SimulationTranscript
-from zksk.expr import update_secret_values
+from zksk.expr import Secret, update_secret_values
 from zksk.utils import get_random_num, sum_bn_array
 from zksk.consts import CHALLENGE_LENGTH
 from zksk.exceptions import StatementSpecError, StatementMismatch
@@ -37,26 +37,70 @@ def _find_residual_challenge(subchallenges, challenge, modulus):
     return -sum_bn_array(temp_arr, modulus)
 
 
-class ComposableProofStmt(metaclass=abc.ABCMeta):
-    """A composable sigma-protocol proof statement."""
+def _assign_secret_ids(secret_vars):
+    """
+    Assign consecutive identifiers to secrets.
 
-    @abc.abstractmethod
-    def get_proof_id(self):
-        pass
+    Needed for proof statement idenfifiers.
+
+    >>> x, y = Secret(name='x'), Secret(name='y')
+    >>> _assign_secret_ids([x, y, x])
+    {'x': 0, 'y': 1}
+
+    Args:
+        secret_vars: :py:class:`expr.Secret` objects.
+    """
+    secret_id_map = {}
+    counter = 0
+    for secret in secret_vars:
+        if secret.name not in secret_id_map:
+            secret_id_map[secret.name] = counter
+            counter += 1
+    return secret_id_map
+
+
+class ComposableProofStmt(metaclass=abc.ABCMeta):
+    """
+    A composable sigma-protocol proof statement.
+
+    In the composed proof tree, these objects are the atoms/leafs.
+    """
+
+    def get_proof_id(self, secret_id_map=None):
+        """
+        Identifier for the proof statement.
+
+        This identifier is used to check the proof statements on the prover and
+        verifier sides are consistent, and to generate a challenge in non-interactive proofs.
+
+        Args:
+            secret_id_map: A map from secret names to consecutive identifiers.
+
+        Returns:
+            list: Objects that can be used for hashing.
+        """
+        secret_vars = self.get_secret_vars()
+        bases = self.get_bases()
+        if secret_id_map is None:
+            secret_id_map = _assign_secret_ids(secret_vars)
+        ordered_secret_ids = [secret_id_map[s.name] for s in secret_vars]
+        return [self.__class__.__name__, bases, ordered_secret_ids]
 
     def get_secret_vars(self):
-        """Collect all secrets in this subtree.
+        """
+        Collect all secrets in this subtree.
 
         By default tries to get the ``secret_vars`` attribute. Override if needed.
         """
         if not hasattr(self, "secret_vars"):
             raise StatementSpecError(
-                "Need to override get_secret_vars or specify secret_vars " "attribute."
+                "Need to override get_secret_vars or specify secret_vars attribute."
             )
         return self.secret_vars
 
     def get_bases(self):
-        """Collect all base points in this subtree.
+        """
+        Collect all base points in this subtree.
 
         By default tries to get the ``bases`` attribute. Override if needed.
         """
@@ -189,7 +233,8 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         """
         Validation criteria to be checked. Override if needed.
 
-        Should be overridden if necessary.
+        For example, a :py:class:`primitives.DLNotEqual` statement should
+        not validate if its proof components are in fact equal.
 
         Raises:
             Exception: If statement is invalid.
@@ -221,6 +266,8 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         if randomizers_dict is None:
             randomizers_dict = self.get_randomizers()
 
+        # TODO: This can be done easier.
+
         # Fill the dictionary.
         elif any([x not in randomizers_dict for x in self.get_secret_vars()]):
             tmp = self.get_randomizers()
@@ -229,17 +276,10 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
         return randomizers_dict
 
-    def prehash_statement(self, extra=None):
+    def prehash_statement(self):
         """
         Return a hash of the proof's ID.
-
-        .. WARNING::
-
-        Args:
-            extra: Optional additional object to pack, e.g a commitment (for non-interactive
-                proofs). Avoids having to figure out the encoding mode multiple times.
         """
-        # TODO: extra is not used.
         return sha256(encode(str(self.get_proof_id())))
 
     def verify_simulation_consistency(self, transcript):
@@ -263,10 +303,11 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         return verifier.verify(transcript.responses)
 
     def __repr__(self):
+        # TODO: Not a great repr (cannot copy-paste and thus recreate the object).
         return str(self.get_proof_id())
 
 
-class _CommonComposedMixin:
+class _CommonComposedStmtMixin:
     def get_secret_vars(self):
         secret_vars = []
         for sub in self.subproofs:
@@ -314,32 +355,24 @@ class _CommonComposedMixin:
                         % word
                     )
 
-    def get_proof_id(self):
-        secret_id_map = {}
-        counter = 0
-        secrets = self.get_secret_vars()
-        # Assign each secret a consecutive identifier, unique per name.
-        for secret in secrets:
-            if secret.name not in secret_id_map:
-                secret_id_map[secret.name] = counter
-                counter += 1
+    def get_proof_id(self, secret_id_map=None):
+        secret_vars = self.get_secret_vars()
+        bases = self.get_bases()
+        if secret_id_map is None:
+            secret_id_map = _assign_secret_ids(secret_vars)
 
-        ordered_secret_ids = tuple([secret_id_map[s.name] for s in secrets])
-        proof_ids = tuple([sub.get_proof_id() for sub in self.subproofs])
-        return (self.__class__.__name__, ordered_secret_ids, proof_ids)
+        proof_ids = [sub.get_proof_id(secret_id_map) for sub in self.subproofs]
+        return (self.__class__.__name__, proof_ids)
 
     def full_validate(self, *args, **kwargs):
         """
         Validate subproofs.
-
-        For instance, it will return False if a :py:class:`primitives.DLNotEqual` statement is about
-        to prove its components are in fact equal.
         """
         for sub in self.subproofs:
             sub.full_validate(*args, **kwargs)
 
 
-class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
+class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
     """
     An disjunction of several subproofs.
 
@@ -395,13 +428,13 @@ class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
             secrets_dict = {}
 
         # First we update the dictionary we have with the additional secrets, and process it
-        # TODO: check this secret_values handling totally different
+        # TODO: Check this secret_values handling totally different
         update_secret_values(secrets_dict)
 
         if self.simulation == True:
             return None
 
-        # TODO: ADD TEST: simulation must be True/False for all subproofs
+        # TODO: Add a unit test where simulation must be True/False for all subproofs
 
         # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
@@ -436,6 +469,9 @@ class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
         return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
 
     def validate_composition(self):
+        """
+        Validate that composition is done correctly.
+        """
         self.validate_group_orders()
 
     def validate_secrets_reoccurence(self, forbidden_secrets=None):
@@ -662,7 +698,7 @@ class OrVerifier(Verifier):
         return True
 
 
-class AndProofStmt(_CommonComposedMixin, ComposableProofStmt):
+class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
     def __init__(self, *subproofs):
         """
         Constructs the And conjunction of several subproofs.
@@ -680,21 +716,26 @@ class AndProofStmt(_CommonComposedMixin, ComposableProofStmt):
         self.simulation = False
 
     def validate_composition(self, *args, **kwargs):
+        """
+        Validate that composition is done correctly.
+        """
         self.validate_group_orders()
         self.validate_secrets_reoccurence()
 
-    def recompute_commitment(self, challenge, andresp):
+    def recompute_commitment(self, challenge, responses):
         """
         Recomputes the commitment consistent with the given challenge and response, as a list of
         commitments of the subproofs.
-        :param challenge: The challenge to use in the proof
-        :param andresp: A list of responses (themselves being lists), ordered as the list of subproofs.
+
+        Args:
+            challenge: The challenge to use in the proof
+            responses: A list of responses (themselves being lists), ordered as the list of subproofs.
         """
-        comm = []
+        com = []
         for i in range(len(self.subproofs)):
             cur_proof = self.subproofs[i]
-            comm.append(cur_proof.recompute_commitment(challenge, andresp[i]))
-        return comm
+            com.append(cur_proof.recompute_commitment(challenge, responses[i]))
+        return com
 
     def get_prover(self, secrets_dict=None):
         """
@@ -713,10 +754,8 @@ class AndProofStmt(_CommonComposedMixin, ComposableProofStmt):
         subs = [sub_proof.get_prover(secrets_dict) for sub_proof in self.subproofs]
 
         if None in subs:
-            # TODO: It'd be great if we can get rid of the Nones, so we know which
-            # sub proofs are failing
-            print(subs)
-            raise Exception("Failed to construct prover for a conjunct")
+            # TODO: It'd be great to know which one is failing.
+            raise ValueError("Failed to construct prover for a conjunct")
 
         return AndProver(self, subs)
 

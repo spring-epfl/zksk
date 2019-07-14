@@ -71,6 +71,12 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
     def precommitment(self):
         return _get_default_attr(self, "_precommitment")
 
+    def get_secret_vars(self):
+        return self.constructed_stmt.get_secret_vars()
+
+    def get_bases(self):
+        return self.constructed_stmt.get_bases()
+
     def get_prover(self, secrets_dict=None):
         """
         Get a prover object.
@@ -98,16 +104,16 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         """
         return self.constructed_stmt.recompute_commitment(challenge, responses)
 
-    def get_proof_id(self):
+    def get_proof_id(self, secret_id_map=None):
         """
-        Generate a proof identifier that captures the order of bases and secrets.
+        Identifier for the proof statement.
         """
         if self.constructed_stmt is not None:
-            proof_id = (
+            proof_id = [
                 self.__class__.__name__,
                 self.precommitment,
-                self.constructed_stmt.get_proof_id(),
-            )
+                self.constructed_stmt.get_proof_id(secret_id_map),
+            ]
         else:
             raise ValueError("Proof ID unknown before the proof is constructed.")
         return proof_id

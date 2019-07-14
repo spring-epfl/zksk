@@ -142,17 +142,15 @@ class DLRep(ComposableProofStmt):
 
         return DLRepProver(self, secrets_dict)
 
-    def get_proof_id(self):
+    def get_proof_id(self, secret_id_map=None):
         """
-        Get the identifier for the proof.
-
-        This identifier is used to check the proof statements on the prover and
-        verifier sides are consistent, and to generate a challenge in non-interactive proofs.
+        Identifier for the proof statement
 
         Returns:
-            str: Proof ID
+            list: Objects that can be used for hashing.
         """
-        return ("DLRep", self.lhs, self.bases)
+        proof_id = super().get_proof_id(secret_id_map)
+        return proof_id + [self.lhs]
 
     def get_randomizers(self):
         """
