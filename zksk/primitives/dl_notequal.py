@@ -10,7 +10,8 @@ Blacklisting`_" by Henry and Goldberg, 2013:
 
 from zksk.expr import Secret, wsum_secrets
 from zksk.exceptions import ValidationError
-from zksk.composition import ExtendedProofStmt, ExtendedVerifier, AndProofStmt
+from zksk.extended import ExtendedProofStmt, ExtendedVerifier
+from zksk.composition import AndProofStmt
 from zksk.primitives.dlrep import DLRep
 
 

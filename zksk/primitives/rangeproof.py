@@ -8,7 +8,8 @@ from petlib.bn import Bn
 
 from zksk import Secret
 from zksk.primitives.dlrep import DLRep
-from zksk.composition import ExtendedProofStmt, AndProofStmt
+from zksk.extended import ExtendedProofStmt
+from zksk.composition import AndProofStmt
 
 
 def decompose_into_n_bits(value, n):

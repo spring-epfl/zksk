@@ -5,7 +5,7 @@ This version is here to support the tutorial.
 """
 
 from zksk.expr import Secret, wsum_secrets
-from zksk.composition import ExtendedProofStmt
+from zksk.extended import ExtendedProofStmt
 from zksk.primitives.dlrep import DLRep
 
 

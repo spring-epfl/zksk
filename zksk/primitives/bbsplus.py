@@ -6,7 +6,8 @@ ZK proof for a BBS+ signature.
 
 
 from zksk.expr import Secret, wsum_secrets
-from zksk.composition import ExtendedProofStmt, AndProofStmt
+from zksk.extended import ExtendedProofStmt
+from zksk.composition import AndProofStmt
 from zksk.primitives.dlrep import DLRep
 
 

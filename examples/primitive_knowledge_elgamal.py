@@ -9,7 +9,7 @@ WARNING: if you update this file, update the line numbers in the documentation.
 from petlib.ec import EcGroup
 from petlib.bn import Bn
 
-from zksk.composition import ExtendedProofStmt
+from zksk.extended import ExtendedProofStmt
 from zksk import Secret, DLRep
 
 import attr
