@@ -155,14 +155,14 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         if secret_dict is None:
             secret_dict = {}
         prover = self.get_prover(secret_dict)
-        return prover.get_NI_proof(message)
+        return prover.get_nizk_proof(message)
 
-    def verify(self, transcript, message=""):
+    def verify(self, nizk, message=""):
         """
-        Verify the transcript of a non-interactive proof.
+        Verify a non-interactive proof.
         """
         verifier = self.get_verifier()
-        return verifier.verify_NI(transcript, message)
+        return verifier.verify_nizk(nizk, message)
 
     def simulate(self, challenge=None):
         """
@@ -171,14 +171,14 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         self.set_simulate()
         self.prepare_simulate_proof()
         transcript = self.simulate_proof(challenge=challenge)
-        transcript.statement = self.prehash_statement().digest()
+        transcript.stmt_hash = self.prehash_statement().digest()
         return transcript
 
     def check_statement(self, statement_hash):
         """
         Verify the current proof corresponds to the hash passed as a parameter.
 
-        Returns a pre-hash of the current proof, e.g., to be used to verify NI proofs
+        Returns a pre-hash of the current proof, e.g., to be used to verify NIZK proofs.
         """
         h = self.prehash_statement()
         if statement_hash != h.digest():
@@ -258,7 +258,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         """
         verifier = self.get_verifier()
         verifier.process_precommitment(transcript.precommitment)
-        self.check_statement(transcript.statement)
+        self.check_statement(transcript.stmt_hash)
         verifier.commitment, verifier.challenge = (
             transcript.commitment,
             transcript.challenge,
@@ -714,10 +714,10 @@ class OrProofStmt(_CommonComposedMixin, ComposableProofStmt):
         # Generate the last simulation.
         final_chal = _find_residual_challenge(or_chals, challenge, CHALLENGE_LENGTH)
         or_chals.append(final_chal)
-        trfinal = self.subproofs[index + 1].simulate_proof(challenge=final_chal)
-        com.append(trfinal.commitment)
-        resp.append(trfinal.responses)
-        precom.append(trfinal.precommitment)
+        final_transcript = self.subproofs[index + 1].simulate_proof(challenge=final_chal)
+        com.append(final_transcript.commitment)
+        resp.append(final_transcript.responses)
+        precom.append(final_transcript.precommitment)
 
         # Pack everything into a SimulationTranscript, pack the or-challenges in the response field.
         return SimulationTranscript(
@@ -758,7 +758,7 @@ class OrProver(Prover):
 
     def precommit(self):
         """
-        Generate a precommitment for the legit subprover, and gathers the precommitments from the
+        Generate precommitment for the legit subprover, and gather the precommitments from the
         stored simulations.  Outputs a list of the precommitments needed by the subproofs if any.
         Else, returns None.
         """

@@ -169,8 +169,8 @@ def test_and_proof_simulation_1(group):
     andp = AndProofStmt(subproof1, subproof2)
     andv = andp.get_verifier()
     tr = andp.simulate_proof()
-    tr.statement = andp.prehash_statement().digest()
-    assert not andv.verify_NI(tr)
+    tr.stmt_hash = andp.prehash_statement().digest()
+    assert not andv.verify_nizk(tr)
 
 
 def test_and_proof_simulation_2(group):

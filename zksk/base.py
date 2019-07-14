@@ -17,28 +17,54 @@ from zksk.exceptions import ValidationError
 
 
 @attr.s
-class NITranscript:
+class NIZK:
     """
-    Non-interactive proofs transcripts.
+    Non-interactive zero-knowledge proof.
     """
 
     challenge = attr.ib()
     responses = attr.ib()
     precommitment = attr.ib(default=None)
-    statement = attr.ib(default=None)
+    stmt_hash= attr.ib(default=None)
 
 
 @attr.s
 class SimulationTranscript:
     """
-    Simulated stmt transcript
+    Simulated proof transcript
     """
 
     commitment = attr.ib()
     challenge = attr.ib()
     responses = attr.ib()
     precommitment = attr.ib(default=None)
-    statement = attr.ib(default=None)
+    stmt_hash = attr.ib(default=None)
+
+
+def build_fiat_shamir_challenge(stmt_prehash, *args, message=""):
+    """Generate Fiat-Shamir challenge.
+
+    >>> prehash = sha256(b"statement id")
+    >>> commitment = 42 * EcGroup().generator()
+    >>> isinstance(build_fiat_shamir_challenge(prehash, commitment), Bn)
+    True
+
+    Args:
+        prehash: Hash object seeded with Proof ID.
+        args: Items to hash (e.g., commitments)
+        message: Message to make it a signature PK.
+
+    """
+    # Start building the complete hash for the challenge
+    for elem in args:
+        if not isinstance(elem, bytes) and not isinstance(elem, str):
+            encoded = encode(elem)
+        else:
+            encoded = elem
+        stmt_prehash.update(encoded)
+
+    stmt_prehash.update(message.encode())
+    return Bn.from_hex(stmt_prehash.hexdigest())
 
 
 class Prover(metaclass=abc.ABCMeta):
@@ -83,14 +109,7 @@ class Prover(metaclass=abc.ABCMeta):
             self.internal_commit(randomizers_dict),
         )
 
-    def get_secret_values(self):
-        """
-        A simple getter for the secret dictionary. Called by an AndProver/OrProver to gather the
-        secret values of its subproofs.
-        """
-        return self.secret_values
-
-    def get_NI_proof(self, message=""):
+    def get_nizk_proof(self, message=""):
         """
         Construct a non-interactive stmt transcript using Fiat-Shamir heuristic.
 
@@ -104,27 +123,21 @@ class Prover(metaclass=abc.ABCMeta):
             message (str): Optional message to make a signature stmt of knowledge.
         """
         # Precommit to gather encapsulated precommitments. They are already included in their
-        # respective stmt statement.
+        # respective statement.
         precommitment = self.precommit()
-        commitment = encode(self.internal_commit())
+        commitment = self.internal_commit()
 
-        # Create a hash object with stmt statement.
+        # Generate the challenge.
         prehash = self.stmt.prehash_statement()
-
-        # Save a hash of the stmt statement only
-        statement = prehash.digest()
-
-        # Start building the complete hash for the challenge
-        prehash.update(commitment)
-        prehash.update(message.encode())
-        challenge = Bn.from_hex(binascii.hexlify(prehash.digest()).decode())
+        stmt_hash = prehash.digest()
+        challenge = build_fiat_shamir_challenge(prehash, precommitment, commitment, message=message)
 
         responses = self.compute_response(challenge)
-        return NITranscript(
+        return NIZK(
             challenge=challenge,
             responses=responses,
             precommitment=precommitment,
-            statement=statement,
+            stmt_hash=stmt_hash,
         )
 
 
@@ -190,37 +203,34 @@ class Verifier(metaclass=abc.ABCMeta):
             self.challenge, response
         )
 
-    def verify_NI(self, transcript, message="", *args, **kwargs):
+    def verify_nizk(self, nizk, message="", *args, **kwargs):
         """
-        Verify a non-interactive transcript.
+        Verify a non-interactive proofs.
 
         Unpacks the attributes and checks their consistency by computing a pseudo-commitment and
-        drawing from it a pseudo-challenge. Compares the pseudo-challenge with the transcript
+        drawing from it a pseudo-challenge. Compares the pseudo-challenge with the nizk
         challenge.
 
         Args:
-            transcript: A instance of :py:`NonInteractiveTranscript`
-            message: A message if a signature stmt.
+            nizk (:py:class:`NIZK`): Non-interactive proof
+            message: A message if a signature proof.
 
         Return:
             bool: True of verification succeeded, False otherwise.
         """
         # Build the complete stmt if necessary.
-        if transcript.precommitment is not None:
-            self.process_precommitment(transcript.precommitment)
+        if nizk.precommitment is not None:
+            self.process_precommitment(nizk.precommitment)
 
         # Check the proofs statements match, gather the local statement.
-        prehash = self.stmt.check_statement(transcript.statement)
-        self.pre_verification_validation(transcript.responses, *args, **kwargs)
+        prehash = self.stmt.check_statement(nizk.stmt_hash)
+        self.pre_verification_validation(nizk.responses, *args, **kwargs)
 
         # Retrieve the commitment using the verification identity.
         commitment_prime = self.stmt.recompute_commitment(
-            transcript.challenge, transcript.responses
+            nizk.challenge, nizk.responses
         )
+        challenge_prime = build_fiat_shamir_challenge(prehash, nizk.precommitment,
+                commitment_prime, message=message)
+        return nizk.challenge == challenge_prime
 
-        # Hash the commitment and the optional message.
-        prehash.update(encode(commitment_prime))
-        prehash.update(message.encode())
-        return transcript.challenge == Bn.from_hex(
-            binascii.hexlify(prehash.digest()).decode()
-        )
