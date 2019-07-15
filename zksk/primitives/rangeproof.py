@@ -70,16 +70,15 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
     def __init__(self, com, g, h, num_bits, value=None, randomizer=None):
         if not value.value is None and not randomizer.value is None:
-            # Not sure why we need these here? To do the order checks?
-            # TODO: do we need to set secret_vars explicitly? Yes,
-            # But is there a better way to do this? Maybe force overriding?
-            self.secret_vars = [value, randomizer]
+            self.value = value
+            self.randomizer = randomizer
             self.is_prover = True
         else:
             self.is_prover = False
 
         self.com = com
-        self.bases = [g, h]
+        self.g = g
+        self.h = h
         self.order = g.group.order()
         self.num_bits = num_bits
 
@@ -87,13 +86,8 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         self.randomizers = [Secret() for _ in range(self.num_bits)]
 
     def precommit(self):
-        """
-        Must return: precommitment
-        """
-        g, h = self.bases
-
-        value = self.secret_vars[0].value
-        value_as_bits = decompose_into_n_bits(value, self.num_bits)
+        actual_value = self.value.value
+        value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
 
         # Set true value to computed secrets
         for rand in self.randomizers:
@@ -101,7 +95,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         precommitment = {}
         precommitment["Cs"] = [
-            b * g + r.value * h for b, r in zip(value_as_bits, self.randomizers)
+            b * self.g + r.value * self.h for b, r in zip(value_as_bits, self.randomizers)
         ]
 
         # Compute revealed randomizer
@@ -110,24 +104,23 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         for r in self.randomizers:
             rand = rand.mod_add(r.value * power, self.order)
             power *= 2
-        rand = rand.mod_sub(self.secret_vars[1].value, self.order)
+        rand = rand.mod_sub(self.randomizer.value, self.order)
         precommitment["rand"] = rand
 
         return precommitment
 
     def construct_stmt(self, precommitment):
-        g, h = self.bases
         if self.is_prover:
             # Indicators that tell us which or-clause is true
-            value = self.secret_vars[0].value
-            value_as_bits = decompose_into_n_bits(value, self.num_bits)
+            actual_value = self.value.value
+            value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
             zero_simulated = [b == 1 for b in value_as_bits]
             one_simulated = [b == 0 for b in value_as_bits]
 
         bit_proofs = []
         for i in range(self.num_bits):
-            p0 = DLRep(precommitment["Cs"][i], self.randomizers[i] * h)
-            p1 = DLRep(precommitment["Cs"][i] - g, self.randomizers[i] * h)
+            p0 = DLRep(precommitment["Cs"][i], self.randomizers[i] * self.h)
+            p1 = DLRep(precommitment["Cs"][i] - self.g, self.randomizers[i] * self.h)
 
             # When we are a prover, mark which disjunct is true
             if self.is_prover:
@@ -142,11 +135,11 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         rand = precommitment["rand"]
 
         # Combine bit commitments into value commitment
-        combined = self.bases[0].group.infinite()
+        combined = self.g.group.infinite()
         power = Bn(1)
         for c in precommitment["Cs"]:
             combined += power * c
             power *= 2
 
-        return combined == self.com + rand * self.bases[1]
+        return combined == self.com + rand * self.h
 

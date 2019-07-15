@@ -8,7 +8,7 @@ from zksk.pairings import BilinearGroupPair
 from zksk import DLRep
 from zksk.composition import OrProofStmt, AndProofStmt
 from zksk.exceptions import ValidationError
-from zksk.primitives.bbsplus import Keypair, SignatureCreator, SignatureStmt
+from zksk.primitives.bbsplus import BBSPlusKeypair, BBSPlusSignatureCreator, BBSPlusSignatureStmt
 from zksk.primitives.dl_notequal import DLNotEqual
 from zksk.utils.debug import SigmaProtocol
 from zksk.utils import make_generators
@@ -39,15 +39,15 @@ def get_secrets_new(num):
 # BBS+ & BBS+
 def test_bbsplus_and_proof():
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -58,11 +58,11 @@ def test_bbsplus_and_proof():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature2 = sk.sign(lhs.commitment_message)
+    presignature2 = sk.sign(lhs.com_message)
     signature2 = creator.obtain_signature(presignature2)
     e1, s1, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict2 = {
@@ -72,7 +72,7 @@ def test_bbsplus_and_proof():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
+    sigproof1 = BBSPlusSignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
@@ -85,15 +85,15 @@ def test_bbsplus_and_proof():
 # BBS+ & BBS+
 def test_and_sig_non_interactive():
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -104,11 +104,11 @@ def test_and_sig_non_interactive():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature2 = sk.sign(lhs.commitment_message)
+    presignature2 = sk.sign(lhs.com_message)
     signature2 = creator.obtain_signature(presignature2)
 
     e1, s1 = (Secret() for _ in range(2))
@@ -119,7 +119,7 @@ def test_and_sig_non_interactive():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
+    sigproof1 = BBSPlusSignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof & sigproof1
@@ -134,14 +134,14 @@ def test_signature_and_dlrne():
     a proof of non-equality of two DL, one of which is the blinding exponent 's' of the signature.
     """
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -152,7 +152,7 @@ def test_signature_and_dlrne():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
@@ -160,7 +160,7 @@ def test_signature_and_dlrne():
     andp = sigproof & dneq
 
     secrets = [Secret() for _ in range(5)]
-    sigproof1 = SignatureStmt(secrets, pk)
+    sigproof1 = BBSPlusSignatureStmt(secrets, pk)
     dneq1 = DLNotEqual((pg1, g1), (pg2, g2), secrets[1], bind=True)
     andp1 = sigproof1 & dneq1
     prov = andp.get_prover(secret_dict)
@@ -181,14 +181,14 @@ def test_signature_and_dlrne_fails_on_wrong_secret():
     Should be detected and raise an Exception.
     """
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -199,7 +199,7 @@ def test_signature_and_dlrne_fails_on_wrong_secret():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
@@ -207,7 +207,7 @@ def test_signature_and_dlrne_fails_on_wrong_secret():
     dneq = DLNotEqual((pg1, g1), (pg2, g2), s, bind=True)
 
     secrets = [Secret() for _ in range(5)]
-    sigproof1 = SignatureStmt(secrets, pk, signature)
+    sigproof1 = BBSPlusSignatureStmt(secrets, pk, signature)
     dneq1 = DLNotEqual((pg1, g1), (pg2, g2), secrets[1], bind=True)
 
     andp = sigproof & dneq
@@ -235,14 +235,14 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
     """
 
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -252,7 +252,7 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
 
     g1 = mG.G1.generator()
     pg1 = signature.s * g1 + g1
@@ -261,7 +261,7 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
     dneq = DLNotEqual((pg1, g1), (pg2, g2), splus, bind=False)
 
     secrets = [Secret() for _ in range(5)]
-    sigproof1 = SignatureStmt(secrets, pk, signature)
+    sigproof1 = BBSPlusSignatureStmt(secrets, pk, signature)
     # Note difference: dneq above uses an independent secret for dneq,
     # here it is bound to the secret s (secrets[1]) from the signature proof
     dneq1 = DLNotEqual((pg1, g1), (pg2, g2), secrets[1])
@@ -282,15 +282,15 @@ def test_signature_and_dlrne_does_not_fail_on_wrong_secret_when_non_binding():
 # BBS+ | BBS+
 def test_or_signature_non_interactive():
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -301,11 +301,11 @@ def test_or_signature_non_interactive():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature2 = sk.sign(lhs.commitment_message)
+    presignature2 = sk.sign(lhs.com_message)
     signature2 = creator.obtain_signature(presignature2)
 
     e1, s1 = (Secret() for _ in range(2))
@@ -316,7 +316,7 @@ def test_or_signature_non_interactive():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof1 = SignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
+    sigproof1 = BBSPlusSignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof | sigproof1
@@ -327,15 +327,15 @@ def test_or_signature_non_interactive():
 # BBS+ | BBS+
 def test_or_signature_non_interactive():
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
 
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -345,10 +345,10 @@ def test_or_signature_non_interactive():
         m2: messages[1],
         m3: messages[2],
     }
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
-    creator = SignatureCreator(pk)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature2 = sk.sign(lhs.commitment_message)
+    presignature2 = sk.sign(lhs.com_message)
     signature2 = creator.obtain_signature(presignature2)
 
     e1, s1 = (Secret() for _ in range(2))
@@ -358,7 +358,7 @@ def test_or_signature_non_interactive():
         m1: messages[0],
         m2: messages[1],
     }
-    sigproof1 = SignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
+    sigproof1 = BBSPlusSignatureStmt([e1, s1, m1, m2, m3], pk, signature2)
 
     secret_dict.update(secret_dict2)
     andp = sigproof | sigproof1
@@ -374,14 +374,14 @@ def test_signature_or_dlrne():
     a proof of non-equality of two DL, one of which is the blinding exponent 's' of the signature.
     """
     mG = BilinearGroupPair()
-    keypair = Keypair(mG, 9)
+    keypair = BBSPlusKeypair.generate(mG, 9)
     messages = [Bn(30), Bn(31), Bn(32)]
     pk, sk = keypair.pk, keypair.sk
     generators, h0 = keypair.generators, keypair.h0
 
-    creator = SignatureCreator(pk)
+    creator = BBSPlusSignatureCreator(pk)
     lhs = creator.commit(messages)
-    presignature = sk.sign(lhs.commitment_message)
+    presignature = sk.sign(lhs.com_message)
     signature = creator.obtain_signature(presignature)
     e, s, m1, m2, m3 = (Secret() for _ in range(5))
     secret_dict = {
@@ -392,7 +392,7 @@ def test_signature_or_dlrne():
         m3: messages[2],
     }
 
-    sigproof = SignatureStmt([e, s, m1, m2, m3], pk, signature)
+    sigproof = BBSPlusSignatureStmt([e, s, m1, m2, m3], pk, signature)
     g1 = mG.G1.generator()
     pg1 = signature.s * g1
     pg2, g2 = mG.G1.order().random() * g1, mG.G1.order().random() * g1
@@ -400,7 +400,7 @@ def test_signature_or_dlrne():
     andp = sigproof | dneq
 
     secrets = [Secret() for _ in range(5)]
-    sigproof1 = SignatureStmt(secrets, pk)
+    sigproof1 = BBSPlusSignatureStmt(secrets, pk)
     dneq1 = DLNotEqual((pg1, g1), (pg2, g2), secrets[1], bind=True)
     andp1 = sigproof1 | dneq1
     prov = andp.get_prover(secret_dict)

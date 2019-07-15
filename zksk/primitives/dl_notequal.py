@@ -39,10 +39,10 @@ class DLNotEqual(ExtendedProofStmt):
 
         # The internal ZK proof uses two constructed secrets
         self.alpha, self.beta = Secret(), Secret()
-        self.secret_vars = [self.alpha, self.beta]
 
         self.lhs = [valid_tuple[0], invalid_tuple[0]]
-        self.bases = [valid_tuple[1], invalid_tuple[1]]
+        self.g = valid_tuple[1]
+        self.h = invalid_tuple[1]
 
         self.bind = bind
         self.set_simulated(simulated)
@@ -52,29 +52,29 @@ class DLNotEqual(ExtendedProofStmt):
         Generate the precommitments needed to build the inner constructed
         proof statement, in this case the left-hand side of the second term.
         """
-        order = self.bases[0].group.order()
+        order = self.g.group.order()
         blinder = order.random()
 
         # Set the value of the two internal secrets
         self.alpha.value = self.x.value * blinder % order
         self.beta.value = -blinder % order
 
-        precommitment = blinder * (self.x.value * self.bases[1] - self.lhs[1])
+        precommitment = blinder * (self.x.value * self.h - self.lhs[1])
         return precommitment
 
     def construct_stmt(self, precommitment):
         """
         Build the internal AndProofStmt associated to a DLNotEqual. See formula in Protocol 1 of the BLAC paper.
         """
-        infty = self.bases[0].group.infinite()
-        p1 = DLRep(infty, self.alpha * self.bases[0] + self.beta * self.lhs[0])
-        p2 = DLRep(precommitment, self.alpha * self.bases[1] + self.beta * self.lhs[1])
+        infty = self.g.group.infinite()
+        p1 = DLRep(infty, self.alpha * self.g + self.beta * self.lhs[0])
+        p2 = DLRep(precommitment, self.alpha * self.h + self.beta * self.lhs[1])
         statements = [p1, p2]
 
         if self.bind:
             # If the binding parameter is set, we add a DLRep member repeating
             # the first member without randomizing the secret.
-            statements.append(DLRep(self.lhs[0], self.x * self.bases[0]))
+            statements.append(DLRep(self.lhs[0], self.x * self.g))
 
         return AndProofStmt(*statements)
 
@@ -83,14 +83,14 @@ class DLNotEqual(ExtendedProofStmt):
         Verify the second part of the constructed proof is indeed about to prove the secret is not
         the discrete logarithm.
         """
-        if precommitment == self.bases[0].group.infinite():
+        if precommitment == self.g.group.infinite():
             raise ValidationError("The secret should be not a discret logarithm.")
 
     def simulate_precommit(self):
         """
         Draw a base at random (not unity) from the bases' group.
         """
-        group = self.bases[0].group
+        group = self.g.group
         precommitment = group.order().random() * group.generator()
         return precommitment
 
