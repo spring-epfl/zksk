@@ -1,5 +1,5 @@
 zksk's docs
-================
+===========
 
 .. include::  ../README.rst
    :start-after: start-description-marker-do-not-remove
@@ -23,7 +23,8 @@ zksk's docs
 .. toctree::
    :maxdepth: 2
    :caption: Reference
-    
+   
+   api/core
    api/primitives
 
 

@@ -21,15 +21,15 @@ g3 = group.hash_to_point(b"three")
 
 # Preparing the secrets.
 # In practice, they probably should be big integers (petlib.bn.Bn)
-x0 = Secret(value=3)
-x1 = Secret(value=40)
-x2 = Secret(value=12)
+x0 = Secret()
+x1 = Secret()
+x2 = Secret()
 
 # Set up the proof statement.
 
 # First, compute the values, "left-hand side".
-y1 = x0.value * g0 + x1.value * g1
-y2 = x0.value * g2 + x2.value * g3
+y1 = 4 * g0 + 5 * g1
+y2 = 4 * g2 + 7 * g3
 
 # Next, create the proof statement.
 stmt = DLRep(y1, x0 * g0 + x1 * g1) \
@@ -45,7 +45,7 @@ assert stmt.get_proof_id() == equivalent_stmt.get_proof_id()
 
 # Simulate the prover and verifier interacting.
 
-prover = stmt.get_prover()
+prover = stmt.get_prover({x0: 4, x1: 5, x2: 7})
 verifier = stmt.get_verifier()
 
 commitment = prover.commit()

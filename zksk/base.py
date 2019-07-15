@@ -1,3 +1,7 @@
+"""
+Common clases, including subclassable basic provers and verifiers.
+"""
+
 import abc
 import random
 import string

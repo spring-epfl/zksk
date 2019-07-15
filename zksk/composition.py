@@ -1,5 +1,5 @@
 """
-TODO: Fix docs of and/or proofs.
+Composable proof statements, provers, and verifiers.
 """
 
 import abc
@@ -174,7 +174,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
     def recompute_commitment(self, challenge, response):
         """
-        Compute a pseudo-commitment
+        Compute a pseudo-commitment.
 
         A pseudo-commitment is the commitment a verifier should have received if the proof was
         correct. It should be compared to the actual commitment.
@@ -222,8 +222,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         For example, a :py:class:`primitives.DLNotEqual` statement should
         not validate if its proof components are in fact equal.
 
-        Raises:
-            Exception: If statement is invalid.
+        Should raise an `exceptions.ValidationError` if does not validate.
         """
         pass
 
@@ -503,7 +502,8 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
             forbidden_secrets: A list of all the secrets in the mother proof.
 
         Raises:
-            InvalidSecretsError: If any secrets re-occur in an unsupported way.
+            :py:class:`exceptions.InvalidSecretsError`: If any secrets re-occur in an
+                unsupported way.
         """
         secret_vars = self.get_secret_vars()
         if forbidden_secrets is None:
@@ -847,7 +847,8 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
             forbidden_secrets: A list of all the secrets in the mother proof.
 
         Raises:
-
+            :py:class:`exceptions.InvalidSecretsError`: If any secrets re-occur in an
+                unsupported way.
         """
         if forbidden_secrets is None:
             forbidden_secrets = self.get_secret_vars().copy()
@@ -936,11 +937,15 @@ class AndVerifier(Verifier):
 
     def check_responses_consistency(self, responses, responses_dict=None):
         """
-        Checks the responses are consistent for reoccurring secret names.
-        Iterates through the subverifiers, gives them the responses related to them and constructs a response dictionary (with respect to secret names).
-        If an inconsistency if found during this build, an error code is returned.
-        :param responses: The received list of responses for each subproof.
-        :param responses_dict: The dictionary to construct and use for comparison.
+        Check that the responses are consistent for re-occurring secret names.
+
+        Iterates through the subverifiers, gives them the responses related to them and constructs a
+        response dictionary (with respect to secret names).  If an inconsistency if found during
+        this build, an error code is returned.
+
+        Args:
+            responses: Rreceived list of responses for each subproof.
+            responses_dict: Dictionary to construct and use for comparison.
         """
         if responses_dict is None:
             responses_dict = {}

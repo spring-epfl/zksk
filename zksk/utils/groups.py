@@ -58,7 +58,11 @@ def make_generators(num, group=None, random_bits=256):
 
 def get_random_num(bits):
     """
-    Draws a random number of given bitlength.
+    Draw a random number of given bitlength.
+
+    >>> x = get_random_num(6)
+    >>> x < 2**6
+    True
     """
     order = Bn(2).pow(bits)
     return order.random()
@@ -66,7 +70,12 @@ def get_random_num(bits):
 
 def sum_bn_array(arr, modulus):
     """
-    Sum an array of `petlib.bn.Bn` under a modulus.
+    Sum an array of big numbers under a modulus.
+
+    >>> a = [Bn(5), Bn(7)]
+    >>> m = 10
+    >>> sum_bn_array(a, m)
+    2
     """
     if not isinstance(modulus, Bn):
         modulus = Bn(modulus)
@@ -76,3 +85,18 @@ def sum_bn_array(arr, modulus):
             elem = Bn(elem)
         res = res.mod_add(elem, modulus)
     return res
+
+
+def ensure_bn(x):
+    """
+    Ensure that value is big number.
+
+    >>> isinstance(ensure_bn(42), Bn)
+    True
+    >>> isinstance(ensure_bn(Bn(42)), Bn)
+    True
+    """
+    if isinstance(x, Bn):
+        return x
+    else:
+        return Bn(x)

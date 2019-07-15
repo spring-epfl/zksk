@@ -1,7 +1,7 @@
 Basic Usage
 -----------
 
-This page will outline possible use cases of the library and walk through several examples.
+This page outlines walks through the basic usage of ``zksk`` library, leveraging only built-in primitives.
 
 Notation and Syntax
 ^^^^^^^^^^^^^^^^^^^
@@ -34,17 +34,12 @@ This library enables zero-knowledge proofs that are composed of the following bl
    
    PK \{ (x_0, x_1, ..., x_n): Y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}
 
-- **And** conjunctions of other proofs.
-- **Or** conjunctions of other proofs.
+- **AND**, conjunctions of other proofs.
+- **OR**, disjunctions of other proofs.
 - Your own custom proof primitive.
 
-Apart from DLRep, we include some other useful primitives in the library distribution:
-
-- **Inequality of discrete logarithms,** with one of the logarithms that must be known. This
-  protocol is drawn from the BLAC scheme [HG13]_.
-
-- **BBS+ signature proof** to prove knowledge of a signature over a set of attribute-based
-  credentials [ASM06]_.
+Apart from discrete-logarithm representations, we include :ref:`other useful primitives
+<included_primitives>` in the library distribution.
 
 The library supports three different modes of using zero-knowledge proofs:
 
@@ -56,10 +51,10 @@ The library supports three different modes of using zero-knowledge proofs:
 - Simulation.
 
 
-A Simple Interactive Proof
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Defining a Simple Proof Statement
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In this example, we will build a ZK proof for the following statement:
+In this example, we define a proof for the following statement:
 
 .. math ::
 
@@ -76,59 +71,99 @@ First, we set up the group elements: elliptic curve points :math:`G_i`, and the 
 .. literalinclude:: ../examples/simple_dlrep.py
    :lines: 15-21
 
-Then, we can create a proof like this:
+Then, we can define a proof statement like this:
 
 .. literalinclude:: ../examples/simple_dlrep.py
    :lines: 25-29
 
-In this section, we build an interactive proof. For that, we are going to instantiate a
-:py:class:`Verifier` and a :py:class:`Prover`. In a realistic setup, one would not get both from the
-same proof object (typically the prover and the verifier sides are not running on the same machine).
+See the next section for more details about secrets and expressions that can
+be specified in ``zksk``.
+
+Executing the Proofs
+^^^^^^^^^^^^^^^^^^^^
+
+``zksk`` supports both intractive and non-interactive proof modes.  To execute the interactive proof
+protocol, we are going to instantiate a :py:class:`zksk.base.Verifier` and a
+:py:class:`zksk.base.Prover`. In a realistic setup, one would not get both from the same proof
+object (typically the prover and the verifier sides are not running on the same machine).
 
 .. literalinclude:: ../examples/simple_dlrep.py
    :lines: 32-33
 
-The secret values can also be specified at this step instead of earlier. See the `Secrets
-<#Secrets>`__ section.
-
-The Prover and Verifier are going to interact using a Sigma-protocol, ending with the verifier
+The prover and verifier are going to interact using a sigma protocol, ending with the verifier
 accepting or rejecting the proof.
 
 .. literalinclude:: ../examples/simple_dlrep.py
    :lines: 36-38
 
-Secrets
-^^^^^^^
+Once you have defined your proof along with the values of the secrets, you can
+call the :py:meth:`zksk.base.Prover.prove` method to get a non-interactive ZK proof
+(NIZK):
 
-A :py:class:`Secret` objects represent the secret integer in a zero-knowledge proof. A secret has
+.. literalinclude:: ../examples/simple_dlrep.py
+   :lines: 41
+
+The returned :py:class:`zksk.base.NIZK` object embeds a challenge, a list of
+responses, a hash of the proof statement and a precommitment, if any.
+
+To verify a NIZK, the verifier needs reconstuct the sae statement and 
+call :py:meth:`zksk.base.Verifier.verify`:
+
+.. literalinclude:: ../examples/simple_dlrep.py
+   :lines: 42
+
+Secrets and Expressions
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A :py:class:`zksk.expr.Secret` objects represent the secret integer in a zero-knowledge proof. A secret has
 a name and a value, but both can be empty. It can be constructed without any arguments:
 
-.. code:: python
-
-   x = Secret()
+.. literalinclude:: ../examples/expressions.py
+   :lines: 15
 
 In this case, a name is assigned automatically.
 
 To provide a value, construct a secret like this:
 
-.. code:: python
-
-   x = Secret(value=42)
+.. literalinclude:: ../examples/expressions.py
+   :lines: 16
 
 If a secret contains a value, the proof will be able to use it, otherwise a prover will wait for a
 dictionary that maps secrets to values. The following two equivalent snippets illustrate this:
 
-.. code:: python
+.. literalinclude:: ../examples/expressions.py
+   :lines: 18-22
 
-   x = Secret(value=4, name="x")
-   proof = DLRepProof(y, x * G)
-   prover = proof.get_prover()
+.. literalinclude:: ../examples/expressions.py
+   :lines: 24-28
 
-.. code:: python
+The names of secrets do not matter, they are only used for debugging purposes. All secrets can be
+left unnamed.
 
-   x = Secret(name="x")
-   proof = DLRepProof(y, x * G)
-   prover = proof.get_prover({x: 4})
+Multiplying secrets by elliptic curve points, as in ``x * G``, produces expressions. Expressions can
+also be added together. In general, an expression has the following form:
+
+.. math::
+
+   x_0 G_0 + x_1 G_1 + ... + x_n G_n
+
+For example:
+
+.. literalinclude:: ../examples/expressions.py
+   :lines: 31-35
+
+``expr`` here represents :math:`x G + y H`.
+
+If secrets have their values set, you can also evaluate an expression using
+:py:meth:`zksk.expr.Expression.eval` method:
+
+.. literalinclude:: ../examples/expressions.py
+   :lines: 38-40
+
+This can simplify the redundant definition of a prove above as follows:
+
+.. literalinclude:: ../examples/expressions.py
+   :lines: 43
 
 Composing Proofs with AND
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -145,7 +180,7 @@ As before, we initialize the points :math:`G_i` and the secrets :math:`x_i`.
 
 .. Tip ::
 
-   If you need several group generators, as above, you can use the :py:func:`utils.make_generators`
+   If you need several group generators, as above, you can use the :py:func:`zksk.utils.groups.make_generators`
    function.
 
 Then, we can create the "and"-proof like this:
@@ -157,7 +192,7 @@ This syntax enables us to almost copy the mathematical expression of the proof i
 Camenisch-Stadler notation.
 
 We can also instantiate subproofs separately and pass them to the
-:py:class:`composition.AndProofStmt`. In fact, the above is just a simplified way of writing
+:py:class:`zksk.composition.AndProofStmt`. In fact, the above is just a simplified way of writing
 the following:
 
 .. literalinclude:: ../examples/andproof.py
@@ -176,11 +211,11 @@ equivalent snippets:
    :lines: 62-63
 
 They are not equivalent as the second one will verify that the same
-:py:class:`expr.Secret` object is used. 
+:py:class:`zksk.expr.Secret` object is used. 
 
-Running the protocol is the same as in the previous example.
+Executing the protocol is the same as in the previous example.
 
-Composing proofs with OR
+Composing Proofs with OR
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this example, we show how to build an "or"-composition of two discrete-logarithm proofs:
@@ -191,41 +226,47 @@ In this example, we show how to build an "or"-composition of two discrete-logari
 
 Or-proofs are slightly more complicated than and-proofs. 
 
-First, we set up the proof:
+A simple way to define the or-proof is as follows:
 
-.. code:: python
+.. literalinclude:: ../examples/orproof.py
+   :lines: 26-31
 
-   y1 = x1.value * g1
-   y2 = x2.value * g2
-   proof = DLRepProof(y1, x1 * g1) | DLRepProof(y2, x2 * g2)
+An or-proof works by simulating all subproof, except for one true subproof which will be actually
+proven. Before executing the protocol, you can explicitly define which subproofs
+will be simulated. 
 
-Or use an ``OrProofStmt()`` constructor exactly as for the And statement seen above.
+.. literalinclude:: ../examples/orproof.py
+   :lines: 33-34
 
-The rest is the same as above, that is you still have to create a Prover and a Verifier by calling
-the ``get_prover()`` and ``get_verifier()`` methods of the Proof object. The OrProver will in fact
-be composed of one legit subprover and run simulations for the other subproofs.
+This ensures that this subproof is not picked for the legitimate execution.
 
 .. Note::
 
-   When constructing an or-proof, ``orp = p1 | p2``, the ``p1`` and ``p2`` are copied. After the
-   or-proof is constructed, modifying the original objects does not change the composed proof.
+   When constructing an or-proof, ``orp = p1 | p2``, the ``p1`` and ``p2`` are
+   copied. After the or-proof is constructed, modifying the original objects
+   does not change the composed proof.
 
 .. Tip::
    
-   You don't need to provide all the secret values for the or-proof. The library will draw at random
-   which subproof to compute, but first will chose only among those for which you provided all
-   secrets.
+   You don't need to provide all the secret values for the or-proof. The library
+   will draw a random subproof to actually execute, but it will choose only
+   among those for which you provided all secrets.
 
-You might want to set yourself which subproofs you want to simulate before constructing the prover:
+Equivalently, you can use :py:class:`zksk.composition.OrProofStmt` as for the AND statement:
 
-.. code:: python
+.. literalinclude:: ../examples/orproof.py
+   :lines: 36-41
 
-   proof.subproofs[i].set_simulated()
+The built-in primitives such as :py:class:`zksk.primitives.dlrep.DLRep` accept a
+``simulated`` parameter. You can use it to mark which subproof to simulate at
+its construction time:
 
-This will ensure that this subproof is not picked for the legit computation. 
+.. literalinclude:: ../examples/orproof.py
+   :lines: 45-49
 
+Executing the protocol is the previous cases. 
 
-Composing "And" and "Or"
+Composing AND and OR
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can have complex composition trees:
@@ -234,15 +275,10 @@ You can have complex composition trees:
 
    PK\{ (x_0, x_1, x_2): (Y_0 = x_0 G_0 \lor Y_1 = x_1 G_1) \land Y_2 = x_2 G_2 \}
 
-The setup would be
+Definining this statement amounts to the following:
 
-.. code:: python
-
-    y1 = x1.value * g1
-    y2 = x2.value * g2
-    y3 = x3.value * g3
-    proof = (DLRepProof(y1, x1 * g1) | DLRepProof(y2, x2 * g2)) 
-            & DLRepProof(y3, x3 * g3)
+.. literalinclude:: ../examples/two_level_proof.py
+   :lines: 19-22
 
 Some Special Cases are not Allowed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -251,8 +287,7 @@ The library cannot prevent all cases of flawed proofs, but it will try its best 
 For that, it needs to impose certain limitations on the expressivity of the proofs.
 
 1. When reusing a secret :math:`x` with two different group points :math:`G_0`, :math:`G_1`, the
-   groups induced by :math:`G_0` and :math:`G_1` must have the same order. Otherwise, proof `like
-   this <#a-first-composed-proof>`__ will fail.
+   groups induced by :math:`G_0` and :math:`G_1` must have the same order.
 2. No secret should appear at the same time in and out of an or-proof. This proof will fail to
    instantiate:
    
@@ -265,36 +300,6 @@ For that, it needs to impose certain limitations on the expressivity of the proo
    :math:`PK\{(x_0, x_1): Y = x_1 G_1 + x_0 G_0 \}` will fail as proofs generate and compare
    order-sensitive identifiers.
 
-Using Non-Interactive Proofs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Once you have built your proof with fully constructed Secret objects
-(see `Secrets <#secrets>`__)
-
-.. code:: python
-
-   nizk = stmt.prove()
-
-The returned object will be a ``NonInteractiveTranscript``, embedding a challenge, a list of
-responses, a hash of the proof statement and optionnaly a precommitment.
-
-To verify the non-interactive proof goes as follows:
-
-.. code:: python
-
-   stmt.verify(nizk)
-
-
-References
-^^^^^^^^^^
 
 .. [CS97] J. Camenisch and M. Stadler, "Proof systems for general statements
    about discrete logarithms," Tech. rep. 260, Mar. 1997
-.. [HG13] R. Henry and I. Goldberg, "Thinking inside the BLAC box: smarter
-   protocols for faster anonymous blacklisting," in Proceedings of the 12th
-   ACM workshop on Workshop on privacy in the electronic society. ACM,
-   2013, pp. 71–82.
-.. [ASM06] M. H. Au, W. Susilo, and Y. Mu, "Constant-size dynamic k-TAA," in
-   International Conference on Security and Cryptography for Networks.
-   Springer, 2006, pp. 111–125.
-

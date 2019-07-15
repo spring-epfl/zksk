@@ -1,11 +1,12 @@
 r"""
+"Range proof": ZK proof that a committed value lies within a range.
 
-"Range proof": ZK proof that a committed value is within range.
+.. math::
 
+    PK \{ (r, x): \underbrace{C = x G + r H}_{Commitment} \land \underbrace{l \leq x < u}_{Range} \}
 
-
-.. _`Blackronym`:
-    https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
+This module implements a Shoemaker's range proof, a conjuction of or-proofs for each bit of the
+value.
 
 """
 
@@ -26,56 +27,28 @@ def decompose_into_n_bits(value, n):
     return base + [0] * extra_bits
 
 
-def to_Bn(num):
-    if isinstance(num, Bn):
-        return num
-    else:
-        return Bn(num)
-
-
-class RangeStmt(ExtendedProofStmt):
-    r"""
-    A range proof statement.
-
-    .. math::
-
-        PK \{ value: ``\texttt{lower_limit} \leq value < \texttt{upper\_limit}`` \}
-
-    Args:
-        com: Pedersen commitment, :math:`com = \texttt{value} \cdot g + \texttt{randomizer} \cdot h`
-        g: First Pedersen-commitment base point
-        h: Second Pedersen-commitment base point
-        lower_limit: Lower limit
-        upper_limit: Upper limit
-        value: Value for which we construct a range proof
-        randomizer: Randomizer of the commitment
-    """
-
-    def __init__(self, com, g, h, lower_limit, upper_limit, value, randomizer):
-        self.lower_limit, self.upper_limit = to_Bn(lower_limit), to_Bn(upper_limit)
-        self.num_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
-
-
 class PowerTwoRangeStmt(ExtendedProofStmt):
     r"""
     A power-two range proof statement.
 
     .. math::
 
-        PK \{ value: ``0 \leq value < 2^\textt{num\_bits}`` \}
+        PK \{ (r, x): C = x G + r H \land 0 \leq x < 2^n \}
 
     Args:
-        com: Pedersen commitment, :math:`com = \texttt{value} \cdot g + \texttt{randomizer} \cdot h`
-        g: First Pedersen commitment base point
-        h: Second Pedersen commitment base point
-        num_bits: The number of bits of the committed value
-        value: Value for which we construct a range proof (prover only)
-        randomizer: Randomizer of the commitment (prover only)
+        com: Value of the Pedersen commitment, :math:`C = x G + r H`
+        g: First commitment base point :math:`G`
+        h: Second commitment base point :math:`H`
+        lower_limit: Lower limit :math:`l`
+        upper_limit: Upper limit :math:`u`
+        num_bits: The number of bits of the committed value :math:`n`
+        x: Value for which we construct a range proof (prover only)
+        randomizer: Randomizer of the commitment :math:`r` (prover only)
     """
 
-    def __init__(self, com, g, h, num_bits, value=None, randomizer=None):
-        if not value.value is None and not randomizer.value is None:
-            self.value = value
+    def __init__(self, com, g, h, num_bits, x=None, randomizer=None):
+        if not x.value is None and not randomizer.value is None:
+            self.x = x
             self.randomizer = randomizer
             self.is_prover = True
         else:
@@ -91,7 +64,10 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         self.randomizers = [Secret() for _ in range(self.num_bits)]
 
     def precommit(self):
-        actual_value = self.value.value
+        """
+        Commit to the bit-decomposition of the value.
+        """
+        actual_value = self.x.value
         value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
 
         # Set true value to computed secrets
@@ -115,9 +91,12 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         return precommitment
 
     def construct_stmt(self, precommitment):
+        """
+        Construct the internal proof statement.
+        """
         if self.is_prover:
             # Indicators that tell us which or-clause is true
-            actual_value = self.value.value
+            actual_value = self.x.value
             value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
             zero_simulated = [b == 1 for b in value_as_bits]
             one_simulated = [b == 0 for b in value_as_bits]
@@ -137,6 +116,9 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         return AndProofStmt(*bit_proofs)
 
     def validate(self, precommitment):
+        """
+        Check the commitment to the bit-decomposition is correct.
+        """
         rand = precommitment["rand"]
 
         # Combine bit commitments into value commitment
@@ -148,3 +130,26 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         return combined == self.com + rand * self.h
 
+
+class RangeStmt(PowerTwoRangeStmt):
+    r"""
+    Range proof statement.
+
+    .. math::
+
+        PK \{ (r, x): x g + r h \land l \leq x < u \}
+
+    Args:
+        com: Value of the Pedersen commitment, :math:`C = x G + r H`
+        g: First commitment base point :math:`G`
+        h: Second commitment base point :math:`H`
+        lower_limit: Lower limit :math:`l`
+        upper_limit: Upper limit :math:`u`
+        x: Value for which we construct a range proof
+        randomizer: Randomizer of the commitment :math:`r`
+    """
+
+    def __init__(self, com, g, h, lower_limit, upper_limit, x=None, randomizer=None):
+        lower_limit, upper_limit = to_Bn(lower_limit), to_Bn(upper_limit)
+        num_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
+        super().__init__(self, co, g, h, num_bits=num_bits, x=x, randomizer=randomizer)

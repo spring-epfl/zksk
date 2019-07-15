@@ -1,3 +1,9 @@
+"""
+Extended proofs are proofs that deal with internal precommitments.
+
+This is a convenient building block that is useful for defining complex primitives.
+"""
+
 import abc
 
 from zksk.base import Prover, Verifier
@@ -8,8 +14,6 @@ from zksk.utils.misc import get_default_attr
 class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
     """
     Proof that deals with precommitments.
-
-    TODO: More details.
     """
 
     @abc.abstractmethod
@@ -94,9 +98,6 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         return ExtendedVerifier
 
     def recompute_commitment(self, challenge, responses):
-        """
-        Recompute the commitment.
-        """
         return self.constructed_stmt.recompute_commitment(challenge, responses)
 
     def get_proof_id(self, secret_id_map=None):
@@ -175,7 +176,7 @@ class ExtendedProver(Prover):
 
     def process_precommitment(self):
         """
-        Triggers the inner proof construction and extracts a prover from it given the secrets.
+        Trigger the inner proof construction and extract a prover from it given the secrets.
         """
         self.stmt.full_construct_stmt(self.precommitment)
         self.constructed_prover = self.stmt._constructed_stmt.get_prover(
@@ -190,7 +191,7 @@ class ExtendedVerifier(Verifier):
 
     def process_precommitment(self, precommitment):
         """
-        Receive the precommitment and trigger the inner proof construction.
+        Receive the precommitment and trigger the inner-proof construction.
         """
         self.precommitment = precommitment
         self.stmt.full_construct_stmt(precommitment)
@@ -198,9 +199,7 @@ class ExtendedVerifier(Verifier):
 
     def send_challenge(self, com):
         """
-        Check the received statement and transfer the commitment to the inner proof
-
-        Does not not actually check any statements.
+        Transfer the commitment to the inner proof, and compute the challenge.
         """
 
         statement, self.commitment = com
@@ -212,7 +211,7 @@ class ExtendedVerifier(Verifier):
 
     def check_responses_consistency(self, responses, responses_dict):
         """
-        Wrap the inner proof responses consistency check.
+        Wrap the consistency check of the innter proof.
         """
         return self.constructed_verifier.check_responses_consistency(
             responses, responses_dict

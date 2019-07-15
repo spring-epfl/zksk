@@ -174,18 +174,6 @@ class DLRep(ComposableProofStmt):
         return output
 
     def recompute_commitment(self, challenge, responses):
-        """
-        Applies an equivalent verification equation for the current proof model: computes the
-        commitment which would match the challenge and responses.  This commitment is to be compared
-        to the actual one in the generic :py:func:`Verifier.verify` method.
-
-        Args:
-            challenge: A challenge value
-            responses: A list of responses
-
-        Returns:
-            The required commitment matching the parameters.
-        """
 
         commitment = (
             self.lhs.group.wsum(responses, self.bases) + (-challenge) * self.lhs

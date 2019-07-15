@@ -30,16 +30,27 @@ y1 = x1.value * g1
 # Next, create the proof statement.
 stmt = DLRep(y0, x0 * g0) | DLRep(y1, x1 * g1)
 
-# This is an equivalent way to create the proof statement above.
+# Set the first clause as simulated.
+stmt.subproofs[0].set_simulated()
+
+# This is an equivalent way to define the proof statement above.
 stmt_1 = DLRep(y0, x0 * g0)
+stmt_2 = DLRep(y1, x1 * g1)
+stmt_1.set_simulated()
+
+equivalent_stmt = OrProofStmt(stmt_1, stmt_2)
+
+assert stmt.get_proof_id() == equivalent_stmt.get_proof_id()
+
+# Another equivalent way.
+stmt_1 = DLRep(y0, x0 * g0, simulated=True)
 stmt_2 = DLRep(y1, x1 * g1)
 
 equivalent_stmt = OrProofStmt(stmt_1, stmt_2)
 
 assert stmt.get_proof_id() == equivalent_stmt.get_proof_id()
 
-# Simulate the prover and verifier interacting.
-
+# Execute the protocol.
 prover = stmt.get_prover()
 verifier = stmt.get_verifier()
 

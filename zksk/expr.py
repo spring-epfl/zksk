@@ -124,7 +124,7 @@ class Secret:
             base: Base point on an elliptic curve.
 
         Returns:
-            Expression
+            Expression: Expression that corresponds to :math:`x G`
         """
         return Expression(self, base)
 
@@ -165,7 +165,7 @@ def wsum_secrets(secrets, bases):
         bases: Elliptic curve points :math:`G_i`
 
     Returns:
-        Expression: :math:`x_0 G_0 + x_1 G_1 + ... + x_n G_n`
+        Expression: Expression that corresponds to :math:`x_0 G_0 + x_1 G_1 + ... + x_n G_n`
     """
     if len(secrets) != len(bases):
         raise ValueError("Should have as many secrets as bases.")
