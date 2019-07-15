@@ -170,7 +170,7 @@ class SignatureStmt(ExtendedProofStmt):
     Proof of knowledge of a (A,e,s) signature over a set (known length) of (hidden) messages.
     """
 
-    def __init__(self, secret_vars, pk, signature=None, binding=True):
+    def __init__(self, secret_vars, pk, signature=None, binding=True, simulated=False):
         """
         Instantiates a Signature Proof which is an augmented version of AndProofStmt allowing to access additional parameters.
         If the object is used for proving, it requires a signature argument.
@@ -202,6 +202,8 @@ class SignatureStmt(ExtendedProofStmt):
             # Digest the signature parameters
             self.secret_vars[0].value = signature.e
             self.secret_vars[1].value = signature.s
+
+        self.set_simulated(simulated)
 
     def precommit(self):
         """

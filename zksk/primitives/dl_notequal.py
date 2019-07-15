@@ -31,7 +31,7 @@ class DLNotEqual(ExtendedProofStmt):
     possible to assert the same x was used in an other proof (even in an And conjunction)!
     """
 
-    def __init__(self, valid_tuple, invalid_tuple, x, bind=False):
+    def __init__(self, valid_tuple, invalid_tuple, x, bind=False, simulated=False):
         if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
             raise Exception("The valid_tuple and invalid_tuple must be 2-tuples")
 
@@ -45,6 +45,7 @@ class DLNotEqual(ExtendedProofStmt):
         self.bases = [valid_tuple[1], invalid_tuple[1]]
 
         self.bind = bind
+        self.set_simulated(simulated)
 
     def precommit(self):
         """

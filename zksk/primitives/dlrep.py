@@ -85,7 +85,7 @@ class DLRep(ComposableProofStmt):
 
     verifier_cls = DLRepVerifier
 
-    def __init__(self, lhs, expr):
+    def __init__(self, lhs, expr, simulated=False):
         if isinstance(expr, Expression):
             self.bases = list(expr.bases)
             self.secret_vars = list(expr.secrets)
@@ -107,6 +107,7 @@ class DLRep(ComposableProofStmt):
                 self.secret_values[sec] = sec.value
 
         self.lhs = lhs
+        self.set_simulated(simulated)
 
     def get_prover(self, secrets_dict=None):
         """
