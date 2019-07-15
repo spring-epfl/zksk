@@ -55,7 +55,7 @@ class DLNotEqual(ExtendedProofStmt):
 
         self.lhs = [valid_pair[0], invalid_pair[0]]
         self.g = valid_pair[1]
-        self.h = [1]
+        self.h = invalid_pair[1]
 
         self.bind = bind
         self.set_simulated(simulated)
