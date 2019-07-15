@@ -215,6 +215,9 @@ class BBSPlusSignatureStmt(ExtendedProofStmt):
     """
     Proof of knowledge of a BBS+ signature over a set of (hidden) messages.
 
+    The proof can be made `binding`: bind the secrets to another proof. If the proof is not binding,
+    it is not possible to assert that the same secrets were used in any other proof.
+
     Args:
         secret_vars: Secret variables.
             If binding, the two first elements of secret_vars as the Secret variables for the ``e``
@@ -277,10 +280,10 @@ class BBSPlusSignatureStmt(ExtendedProofStmt):
         return precommitment
 
     def construct_stmt(self, precommitment):
-        """
+        r"""
         Proof of knowledge of a signature.
 
-        This is an implementation of a proof `\Pi_5` detailed on page 7 of the `Constant-Size
+        This is an implementation of a proof :math:`\Pi_5` detailed on page 7 of the `Constant-Size
         Dynamick-TAA` paper.
         """
 

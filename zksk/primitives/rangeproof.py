@@ -1,4 +1,9 @@
-"""
+r"""
+
+"Range proof": ZK proof that a committed value is within range.
+
+
+
 .. _`Blackronym`:
     https://www.cypherpunks.ca/~iang/pubs/blacronym-wpes.pdf
 

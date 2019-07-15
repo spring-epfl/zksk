@@ -1,4 +1,4 @@
-"""
+r"""
 ZK proof for linear representations of discrete logarithms, our basic building block.
 
 An example of such proof is :math:`PK\{ (x_0, x_1): y = x_0 G_0 + x_1 G_1 \}`, where :math:`x_0` and
@@ -63,7 +63,7 @@ class DLRep(ComposableProofStmt):
     """
     Proof statement for a discrete-logarithm representation proof.
 
-    Supported statements of the following form:
+    Supports statements of the following form:
 
     .. math::
         PK\{ (x_0, x_1, ..., x_n): y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}

@@ -5,8 +5,6 @@ from zksk.composition import ComposableProofStmt
 from zksk.utils.misc import get_default_attr
 
 
-
-
 class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
     """
     Proof that deals with precommitments.
@@ -34,7 +32,7 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         constructed and proven.
 
         Returns:
-            precommitment: The precommitment
+            Precommitment
         """
         return []
 
@@ -129,8 +127,8 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         Simulate the proof.
 
         Args:
-            responses_dict
-            challenge
+            responses_dict:
+            challenge:
         """
         tr = self._constructed_stmt.simulate_proof(responses_dict, challenge)
         tr.precommitment = self._precommitment

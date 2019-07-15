@@ -9,8 +9,16 @@ Primitives
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
 
-``bbs_plus``: BBS+
-------------------
+``dl_notequal``: Inequality of Discrete Logarithms
+--------------------------------------------------
+
+.. automodule:: zksk.primitives.dl_notequal
+   :members:
+   :special-members:
+   :exclude-members: __weakref__, __repr__, __init__, __eq__, __ne__, __le__, __lt__, __ge__, __gt__
+
+``bbs_plus``: Knowledge of BBS+ Signature 
+-----------------------------------------
 
 .. automodule:: zksk.primitives.bbsplus
    :members:

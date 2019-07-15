@@ -1,5 +1,9 @@
-"""
+r"""
 ZK proof of inequality of two discrete logarithms.
+
+.. math::
+
+    PK\{ (x): H_0 = x h_0 \land H_1 \neq x h_1 \}
 
 See Protocol 1 in "`Thinking Inside the BLAC Box: Smarter Protocols for Faster Anonymous
 Blacklisting`_" by Henry and Goldberg, 2013:
@@ -17,41 +21,47 @@ from zksk.primitives.dlrep import DLRep
 
 class DLNotEqual(ExtendedProofStmt):
     r"""
-    ZK-proof statement of inequality of two discrete logarithms.
+    ZK proof statement of inequality of two discrete logarithms.
 
-    TODO: update documentation
+    .. math::
 
-    Using the notation from the BLAC paper:
+        PK\{ (x): H_0 = x h_0 \land H_1 \neq x h_1 \}
 
-    .. math:: PK\{ (x): H_0 = x * h_0 \land H_1 \neq x * h_1 \}
+    The statement is constructed from two pairs: :math:`(H_0, h_0)`, :math:`(H_1, h_1)`, and a
+    :py:class:`expr.Secret` object representing a secret :math:`x`.
 
-    Instantiates a Proof of inequal logarithms: takes (H0, h0), (H1, h1), [x=Secret(value=...)] such
-    that H0 = x*h0 and H1 != x*h1.  All these arguments should be iterable. The binding keyword
-    argument allows to make the proof bind the x to an other proof.  If not set to True, it is not
-    possible to assert the same x was used in an other proof (even in an And conjunction)!
+    The proof can be made `binding`: bind the :math:`x` to another proof. If the proof is not
+    binding, it is not possible to assert that the same :math:`x` was used in any other proof (even
+    in, say, an AND conjunction).
+
+    Args:
+        valid_pair (tuple): Pair of two Elliptic curve points :math:`(H_0, h_0)` such that
+            :math:`H_0 = x h_0`
+        invalid_pair (tuple): Pair of two Elliptic curve points :math:`(H_1, h_1)` such that
+            :math:`H_1 \neq x h_1`
+        x (:py:class:`expr.Secret`): Secret.
+        bind (bool): Whether the proof is binding.
+        simulated (bool): If this proof is a part of an or-proof: whether it should be simulated.
     """
 
-    def __init__(self, valid_tuple, invalid_tuple, x, bind=False, simulated=False):
-        if len(valid_tuple) != 2 or len(invalid_tuple) != 2:
-            raise Exception("The valid_tuple and invalid_tuple must be 2-tuples")
+    def __init__(self, valid_pair, invalid_pair, x, bind=False, simulated=False):
+        if len(valid_pair) != 2 or len(invalid_pair) != 2:
+            raise TypeException("The valid_pair and invalid_pair must be pairs")
 
         self.x = x
 
         # The internal ZK proof uses two constructed secrets
         self.alpha, self.beta = Secret(), Secret()
 
-        self.lhs = [valid_tuple[0], invalid_tuple[0]]
-        self.g = valid_tuple[1]
-        self.h = invalid_tuple[1]
+        self.lhs = [valid_pair[0], invalid_pair[0]]
+        self.g = valid_pair[1]
+        self.h = [1]
 
         self.bind = bind
         self.set_simulated(simulated)
 
     def precommit(self):
-        """
-        Generate the precommitments needed to build the inner constructed
-        proof statement, in this case the left-hand side of the second term.
-        """
+        """Build the left-hand side of the internal proof statement."""
         order = self.g.group.order()
         blinder = order.random()
 
@@ -64,7 +74,10 @@ class DLNotEqual(ExtendedProofStmt):
 
     def construct_stmt(self, precommitment):
         """
-        Build the internal AndProofStmt associated to a DLNotEqual. See formula in Protocol 1 of the BLAC paper.
+        Build the internal proof statement.
+
+        See the formula in Protocol 1 of the `Thinking Inside the BLAC Box: Smarter Protocols for
+        Faster Anonymous Blacklisting` paper.
         """
         infty = self.g.group.infinite()
         p1 = DLRep(infty, self.alpha * self.g + self.beta * self.lhs[0])
@@ -80,8 +93,7 @@ class DLNotEqual(ExtendedProofStmt):
 
     def validate(self, precommitment):
         """
-        Verify the second part of the constructed proof is indeed about to prove the secret is not
-        the discrete logarithm.
+        Verify the the proof statement is indeed proving the inequality of discret logs.
         """
         if precommitment == self.g.group.infinite():
             raise ValidationError("The secret should be not a discret logarithm.")
