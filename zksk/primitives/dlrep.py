@@ -66,21 +66,23 @@ class DLRep(ComposableProofStmt):
     Supports statements of the following form:
 
     .. math::
-        PK\{ (x_0, x_1, ..., x_n): y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}
+        PK\{ (x_0, x_1, ..., x_n): Y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}
 
-    Example usage for :math:`PK\{x: y = x G \}`:
+    Example usage for :math:`PK\{x: Y = x G \}`:
 
     >>> from petlib.ec import EcGroup
-    >>> x = Secret(42, name="x")
+    >>> x = Secret(name="x")
     >>> g = EcGroup().generator()
-    >>> y = x * g
+    >>> y = 42 * g
     >>> stmt = DLRep(y, x * g)
-    >>> proof = stmt.prove()
+    >>> nizk = stmt.prove({x: 42})
+    >>> stmt.verify(nizk)
+    True
 
     Args:
         expr (:py:class:`zksk.base.Expression`): Proof statement.
-            For example: ``Secret("x") * g`` represents :math:`PK\{ x: y = x G \}`.
-        lhs: "Left-hand side." Value of :math:`y`.
+            For example: ``Secret("x") * g`` represents :math:`PK\{ x: Y = x G \}`.
+        lhs: "Left-hand side." Value of :math:`Y`.
     """
 
     verifier_cls = DLRepVerifier

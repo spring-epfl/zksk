@@ -1,8 +1,16 @@
+.. _included_primitives:
+
 Included Primitives
 -------------------
 
-``dl_notequal``: Inequality of Two Discrete Logarithms
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- **Inequality of discrete logarithms,** with one of the logarithms that must be known. This
+  protocol is drawn from the BLAC scheme [HG13]_.
+
+- **BBS+ signature proof** to prove knowledge of a signature over a set of attribute-based
+  credentials [ASM06]_.
+
+Inequality of Discrete Logarithms
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This primitive represents a proof of knowledge of :math:`x` such that two
 DL representations are not equal:
@@ -27,8 +35,8 @@ Once the proof is constructed, the same methods as before
 (``get_prover()``, ``get_verifier()``, ``prove()``, ``verify()``, etc.)
 apply.
 
-``bbsplus``: the BBS+ Signature Scheme
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Knowledge of the BBS+ Signature
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We provide a way to obtain blind signatures over a set of
 messages/credentials, along with a ``SignatureStmt`` primitive (to use
@@ -107,3 +115,12 @@ the verifying side would call
 From this Proof objects, one can run the usual methods ``get_prover()``,
 ``get_verifier()``, ``prove()``, ``verify()``, etc.
 
+
+.. [HG13] R. Henry and I. Goldberg, "Thinking inside the BLAC box: smarter
+   protocols for faster anonymous blacklisting," in Proceedings of the 12th
+   ACM workshop on Workshop on privacy in the electronic society. ACM,
+   2013, pp. 71–82.
+
+.. [ASM06] M. H. Au, W. Susilo, and Y. Mu, "Constant-size dynamic k-TAA," in
+   International Conference on Security and Cryptography for Networks.
+   Springer, 2006, pp. 111–125.
