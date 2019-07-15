@@ -69,10 +69,8 @@ class Expression:
         return tuple(self._bases)
 
     def eval(self):
-        """Evaluate the expression, if all secret values are available.
-
-        TODO: Take secret_dict as optional input.
-        """
+        """Evaluate the expression, if all secret values are available."""
+        # TODO: Take secret_dict as optional input.
         for secret in self._secrets:
             if secret.value is None:
                 raise IncompleteValuesError(

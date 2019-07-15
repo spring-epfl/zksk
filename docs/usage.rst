@@ -264,7 +264,7 @@ its construction time:
 .. literalinclude:: ../examples/orproof.py
    :lines: 45-49
 
-Executing the protocol is the previous cases. 
+Executing the protocol is the same as in the previous sections.
 
 Composing AND and OR
 ^^^^^^^^^^^^^^^^^^^^^^^^
