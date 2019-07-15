@@ -11,10 +11,11 @@ from collections import defaultdict
 from petlib.bn import Bn
 from petlib.pack import encode
 
+from zksk.consts import CHALLENGE_LENGTH
 from zksk.base import Prover, Verifier, SimulationTranscript
 from zksk.expr import Secret, update_secret_values
 from zksk.utils import get_random_num, sum_bn_array
-from zksk.consts import CHALLENGE_LENGTH
+from zksk.utils.misc import get_default_attr
 from zksk.exceptions import StatementSpecError, StatementMismatch
 from zksk.exceptions import InvalidSecretsError, GroupMismatchError
 
@@ -146,8 +147,6 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
         return OrProofStmt(self, other)
 
-    def prepare_simulate_proof(self):
-        pass
 
     def get_prover_cls(self):
         if hasattr(self, "prover_cls"):
@@ -189,9 +188,6 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         """
         pass
 
-    def set_simulate(self):
-        self.simulation = True
-
     def prove(self, secret_dict=None, message=""):
         """
         Generate the transcript of a non-interactive proof.
@@ -207,16 +203,6 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         """
         verifier = self.get_verifier()
         return verifier.verify_nizk(nizk, message)
-
-    def simulate(self, challenge=None):
-        """
-        Generate the transcript of a simulated non-interactive proof.
-        """
-        self.set_simulate()
-        self.prepare_simulate_proof()
-        transcript = self.simulate_proof(challenge=challenge)
-        transcript.stmt_hash = self.prehash_statement().digest()
-        return transcript
 
     def check_statement(self, statement_hash):
         """
@@ -281,6 +267,40 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         Return a hash of the proof's ID.
         """
         return sha256(encode(str(self.get_proof_id())))
+
+    @property
+    def simulated(self):
+        """
+        Tell if this proof is designated as to be simulated in an or-proof.
+
+        By default is False.
+        """
+        return get_default_attr(self, "_simulated", False)
+
+    def set_simulated(self, value=True):
+        """
+        Designate this proof statement as simulated in an or-proof.
+
+        Args:
+            value (bool): Whether to simulate this proof.
+        """
+        self._simulated = value
+
+    def prepare_simulate_proof(self):
+        """
+        Additional steps to prepare before simulating the proof. Override if needed.
+        """
+        pass
+
+    def simulate(self, challenge=None):
+        """
+        Generate the transcript of a simulated non-interactive proof.
+        """
+        self.set_simulated()
+        self.prepare_simulate_proof()
+        transcript = self.simulate_proof(challenge=challenge)
+        transcript.stmt_hash = self.prehash_statement().digest()
+        return transcript
 
     def verify_simulation_consistency(self, transcript):
         """Check if the fields of a transcript satisfy the verification equation.
@@ -390,7 +410,6 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # important, as we can have different outputs for the same proof (independent simulations or
         # simulations/execution)
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
-        self.simulation = False
 
     def recompute_commitment(self, challenge, responses):
         """
@@ -431,7 +450,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # TODO: Check this secret_values handling totally different
         update_secret_values(secrets_dict)
 
-        if self.simulation == True:
+        if self.simulated:
             return None
 
         # TODO: Add a unit test where simulation must be True/False for all subproofs
@@ -439,7 +458,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
         for idx in range(len(self.subproofs)):
-            if not self.subproofs[idx].simulation:
+            if not self.subproofs[idx].simulated:
                 candidates[idx] = self.subproofs[idx]
 
         if len(candidates) == 0:
@@ -562,19 +581,19 @@ class OrProver(Prover):
         self.stmt = proof
         self.true_prover_idx = self.stmt.chosen_idx
 
-        # Create a list to store the SimulationTranscripts
-        self.simulations = []
+        # Create a list storing the SimulationTranscripts
         self.setup_simulations()
 
     def setup_simulations(self):
         """
         Runs all the required simulations and stores them.
         """
+        self.simulations = []
         for index in range(len(self.stmt.subproofs)):
             if index != self.true_prover_idx:
                 self.stmt.subproofs[index].prepare_simulate_proof()
-                cur = self.stmt.subproofs[index].simulate_proof()
-                self.simulations.append(cur)
+                sim = self.stmt.subproofs[index].simulate_proof()
+                self.simulations.append(sim)
 
     def precommit(self):
         """
@@ -591,7 +610,6 @@ class OrProver(Prover):
                     index1 = index - 1
                 else:
                     index1 = index
-                # TODO: not sure when simulations are created
                 precommitment.append(self.simulations[index1].precommitment)
         if not any(precommitment):
             return None
@@ -713,8 +731,6 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # occurrences of the same proof in the tree indeed have their own randomnesses.
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
-        self.simulation = False
-
     def validate_composition(self, *args, **kwargs):
         """
         Validate that composition is done correctly.
@@ -748,7 +764,7 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # First we update the dictionary we have with the additional secrets, and process it
         update_secret_values(secrets_dict)
 
-        if self.simulation == True:
+        if self.simulated:
             return None
 
         subs = [sub_proof.get_prover(secrets_dict) for sub_proof in self.subproofs]

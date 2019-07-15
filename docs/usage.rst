@@ -130,8 +130,8 @@ dictionary that maps secrets to values. The following two equivalent snippets il
    proof = DLRepProof(y, x * G)
    prover = proof.get_prover({x: 4})
 
-Composing Proofs with "And"
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Composing Proofs with AND
+^^^^^^^^^^^^^^^^^^^^^^^^^
 In this example, we show how to build an "and"-composition of two discrete-logarithm proofs:
 
 .. math::
@@ -180,8 +180,8 @@ They are not equivalent as the second one will verify that the same
 
 Running the protocol is the same as in the previous example.
 
-Composing proofs with "Or"
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Composing proofs with OR
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this example, we show how to build an "or"-composition of two discrete-logarithm proofs:
 
@@ -220,7 +220,7 @@ You might want to set yourself which subproofs you want to simulate before const
 
 .. code:: python
 
-   proof.subproofs[i].simulation = True
+   proof.subproofs[i].set_simulated()
 
 This will ensure that this subproof is not picked for the legit computation. 
 

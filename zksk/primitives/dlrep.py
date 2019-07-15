@@ -107,7 +107,6 @@ class DLRep(ComposableProofStmt):
                 self.secret_values[sec] = sec.value
 
         self.lhs = lhs
-        self.simulation = False
 
     def get_prover(self, secrets_dict=None):
         """
@@ -127,7 +126,7 @@ class DLRep(ComposableProofStmt):
         secrets_dict = self.secret_values
         # If missing secrets or simulation parameter set, return now
         if (
-            self.simulation == True
+            self.set_simulated()
             or secrets_dict == {}
             or any(sec not in secrets_dict.keys() for sec in set(self.secret_vars))
         ):

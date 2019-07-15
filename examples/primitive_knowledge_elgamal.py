@@ -60,16 +60,13 @@ class AdditiveElgamalPlaintextProof(ExtendedProofStmt):
         True
     """
 
-    def __init__(self, ctxt, pk, msg, randomizer, simulated=None):
+    def __init__(self, ctxt, pk, msg, randomizer):
         self.ctxt = ctxt
         self.pk = pk
         self.msg = msg
         self.randomizer = randomizer
 
-        # TODO: rename
-        self.simulation = simulated
-
-    def construct_proof(self, precommitment):
+    def construct_stmt(self, precommitment):
         part1 = DLRep(self.ctxt[0], self.randomizer * self.pk.g)
         part2 = DLRep(self.ctxt[1], self.randomizer * self.pk.h + self.msg * self.pk.g)
         return part1 & part2

@@ -176,7 +176,6 @@ class SignatureStmt(ExtendedProofStmt):
         If the object is used for proving, it requires a signature argument.
         If binding keyord argument is set to True, the constructor will parse the two first elements of secret_vars as the Secret variables for the e and s attributes of the signature.
         Else, will internally declare its own.
-        TODO: secret_vars -> msg?
         """
 
         self.pk = pk
@@ -198,13 +197,11 @@ class SignatureStmt(ExtendedProofStmt):
         )
 
         # Below is boilerplate
-        # TODO: handle secret_vars in super constructor
         self.secret_vars = secret_vars
         if signature is not None:
             # Digest the signature parameters
             self.secret_vars[0].value = signature.e
             self.secret_vars[1].value = signature.s
-        self.simulation = False
 
     def precommit(self):
         """

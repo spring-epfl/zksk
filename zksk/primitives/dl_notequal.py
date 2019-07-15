@@ -45,7 +45,6 @@ class DLNotEqual(ExtendedProofStmt):
         self.bases = [valid_tuple[1], invalid_tuple[1]]
 
         self.bind = bind
-        self.simulation = False
 
     def precommit(self):
         """
@@ -93,3 +92,4 @@ class DLNotEqual(ExtendedProofStmt):
         group = self.bases[0].group
         precommitment = group.order().random() * group.generator()
         return precommitment
+

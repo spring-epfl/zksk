@@ -34,10 +34,10 @@ class RangeStmt(ExtendedProofStmt):
 
     .. math::
 
-        PK \{ value: ``lower_limit \leq value < upper\_limit`` \}
+        PK \{ value: ``\texttt{lower_limit} \leq value < \texttt{upper\_limit}`` \}
 
     Args:
-        com: Pedersen commitment ``com = value * g + randomizer * h``
+        com: Pedersen commitment, :math:`com = \texttt{value} \cdot g + \texttt{randomizer} \cdot h`
         g: First Pedersen-commitment base point
         h: Second Pedersen-commitment base point
         lower_limit: Lower limit
@@ -57,10 +57,10 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
     .. math::
 
-        PK \{ value: ``lower_limit \leq value < num\_bits`` \}
+        PK \{ value: ``0 \leq value < 2^\textt{num\_bits}`` \}
 
     Args:
-        com: Pedersen commitment, ``com = value * g + randomizer * h``
+        com: Pedersen commitment, :math:`com = \texttt{value} \cdot g + \texttt{randomizer} \cdot h`
         g: First Pedersen commitment base point
         h: Second Pedersen commitment base point
         num_bits: The number of bits of the committed value
@@ -85,10 +85,6 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         # The constructed proofs need extra randomizers as secrets
         self.randomizers = [Secret() for _ in range(self.num_bits)]
-
-        # Move to super initializer with default argument
-        self.constructed_proof = None
-        self.simulation = False
 
     def precommit(self):
         """
@@ -135,14 +131,13 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
             # When we are a prover, mark which disjunct is true
             if self.is_prover:
-                p0.simulation = zero_simulated[i]
-                p1.simulation = one_simulated[i]
+                p0.set_simulated(zero_simulated[i])
+                p1.set_simulated(one_simulated[i])
 
             bit_proofs.append(p0 | p1)
 
         return AndProofStmt(*bit_proofs)
 
-    # TODO: name of check is too specific, e.g., for range proofs we need another post check
     def validate(self, precommitment):
         rand = precommitment["rand"]
 
@@ -154,3 +149,4 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
             power *= 2
 
         return combined == self.com + rand * self.bases[1]
+

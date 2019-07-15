@@ -265,7 +265,7 @@ def test_or_proof_manual(params):
         for proof in subproofs:
             is_simulated = random.choice([True, False])
             sims.append(is_simulated)
-            proof.simulation = is_simulated
+            proof.set_simulated(is_simulated)
 
         if all(sims):
             continue
@@ -274,13 +274,6 @@ def test_or_proof_manual(params):
             # Choose a subproof, look if it was a valid choice, store the result
             prov = orproof.get_prover(secrets)
             chosen.append(sims[orproof.chosen_idx] == False)
-
-            ## Some visual aid.
-            # for idx, proof in enumerate(subproofs):
-            #     if idx == orproof.chosen_idx:
-            #         print(proof.simulation, "<--")
-            #     else:
-            #         print(proof.simulation)
 
         rep += 1
 
@@ -442,7 +435,7 @@ def test_invalid_or_composition():
 
     st21 = DLRep(10 * g2, r * g2)
     st22 = DLRep(12 * g3, r * g3)
-    st22.simulation = True
+    st22.set_simulated()
     st2 = st21 | st22
     st = st1 & st2
 
@@ -456,7 +449,7 @@ def test_invalid_or_composition_inside_two_or():
     g1, g2, g3, g4 = make_generators(4)
     st11 = DLRep(r.value * g1, r * g1)
     st12 = DLRep(2 * g2, r * g2)
-    st12.simulation = True
+    st12.set_simulated()
     st1 = st11 | st12
 
     st21 = DLRep(7 * g3, r * g3)

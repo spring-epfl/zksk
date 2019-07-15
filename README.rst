@@ -1,13 +1,12 @@
-#########
+####
 zksk
-#########
+####
 
 .. start-description-marker-do-not-remove
 
-Zero-Knowledge Swiss Knife: Python package for prototyping composable zero-knowledge proofs.
+Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs.
 
 .. end-description-marker-do-not-remove
-
 
 ===============
 Getting started

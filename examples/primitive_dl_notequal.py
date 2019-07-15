@@ -18,8 +18,6 @@ class DLNotEqual(ExtendedProofStmt):
         # The internal ZK proof uses two constructed secrets
         self.alpha, self.beta = Secret(), Secret()
 
-        self.simulation = False
-
     def precommit(self):
         order = self.generators[0].group.order()
         blinder = order.random()

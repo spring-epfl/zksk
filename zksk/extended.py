@@ -2,12 +2,9 @@ import abc
 
 from zksk.base import Prover, Verifier
 from zksk.composition import ComposableProofStmt
+from zksk.utils.misc import get_default_attr
 
 
-def _get_default_attr(obj, attr, default_value=None):
-    if not hasattr(obj, attr):
-        setattr(obj, attr, default_value)
-    return getattr(obj, attr)
 
 
 class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
@@ -65,11 +62,11 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
 
     @property
     def constructed_stmt(self):
-        return _get_default_attr(self, "_constructed_stmt")
+        return get_default_attr(self, "_constructed_stmt")
 
     @property
     def precommitment(self):
-        return _get_default_attr(self, "_precommitment")
+        return get_default_attr(self, "_precommitment")
 
     def get_secret_vars(self):
         return self.constructed_stmt.get_secret_vars()
