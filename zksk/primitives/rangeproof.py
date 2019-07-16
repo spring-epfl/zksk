@@ -15,6 +15,7 @@ from petlib.bn import Bn
 from zksk import Secret
 from zksk.primitives.dlrep import DLRep
 from zksk.extended import ExtendedProofStmt
+from zksk.utils import make_generators, get_random_num, ensure_bn
 from zksk.composition import AndProofStmt
 
 
@@ -25,6 +26,11 @@ def decompose_into_n_bits(value, n):
     if extra_bits < 0:
         raise Exception("Not enough bits to represent value")
     return base + [0] * extra_bits
+
+
+def next_exp_of_power_of_two(value):
+    """Return smallest l such that value < 2**l"""
+    return 1 if value == 0 else value.bit_length()
 
 
 class PowerTwoRangeStmt(ExtendedProofStmt):
@@ -54,6 +60,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         else:
             self.is_prover = False
 
+        # TODO: Should we combine com with the inner proof?
         self.com = com
         self.g = g
         self.h = h
@@ -67,7 +74,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         """
         Commit to the bit-decomposition of the value.
         """
-        actual_value = self.x.value
+        actual_value = ensure_bn(self.x.value)
         value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
 
         # Set true value to computed secrets
@@ -76,7 +83,8 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         precommitment = {}
         precommitment["Cs"] = [
-            b * self.g + r.value * self.h for b, r in zip(value_as_bits, self.randomizers)
+            b * self.g + r.value * self.h
+            for b, r in zip(value_as_bits, self.randomizers)
         ]
 
         # Compute revealed randomizer
@@ -96,7 +104,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         """
         if self.is_prover:
             # Indicators that tell us which or-clause is true
-            actual_value = self.x.value
+            actual_value = ensure_bn(self.x.value)
             value_as_bits = decompose_into_n_bits(actual_value, self.num_bits)
             zero_simulated = [b == 1 for b in value_as_bits]
             one_simulated = [b == 0 for b in value_as_bits]
@@ -131,13 +139,19 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         return combined == self.com + rand * self.h
 
 
-class RangeStmt(PowerTwoRangeStmt):
+class RangeStmt(ExtendedProofStmt):
     r"""
     Range proof statement.
 
     .. math::
 
-        PK \{ (r, x): x g + r h \land l \leq x < u \}
+        PK \{ (r, x): x G + r H \land l \leq x < u \}
+
+    See "`Efficient Protocols for Set Membership and Range Proofs`_" by Camenisch
+    et al., 2008.
+
+    .. _`Efficient Protocols for Set Membership and Range Proofs`:
+        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
 
     Args:
         com: Value of the Pedersen commitment, :math:`C = x G + r H`
@@ -150,6 +164,62 @@ class RangeStmt(PowerTwoRangeStmt):
     """
 
     def __init__(self, com, g, h, lower_limit, upper_limit, x=None, randomizer=None):
-        lower_limit, upper_limit = to_Bn(lower_limit), to_Bn(upper_limit)
-        num_bits = (self.upper_limit - self.lower_limit - 1).num_bits()
-        super().__init__(self, co, g, h, num_bits=num_bits, x=x, randomizer=randomizer)
+        self.com = com
+        self.g = g
+        self.h = h
+        self.lower_limit = lower_limit
+        self.upper_limit = upper_limit
+        # TODO: Shout if x does not have a value set. We need a value for the
+        # range proofs.
+        self.x = x
+        self.randomizer = randomizer
+
+        self.num_bits = next_exp_of_power_of_two(upper_limit)
+
+    def construct_stmt(self, _):
+        r"""
+        Construct a conjunction of two range-power-of-two proofs:
+
+        .. math ::
+
+            PK\{ (r, x, x_1, x_2): C = x G + r H \land \
+                   C_1 = x_1 G + r H \land \\
+                   C_2 = x_2 G + r H \land \\
+                   0 \leq x_1 + 2^n < 2^n \land \
+                   0 \leq x_2 < 2^n,
+
+        where :math:`n` is the smallest such that :math:`u < 2^n`,
+        :math:`x_1 = x - u + 2^n`, and :math:`x_2 = x - l`.
+
+        """
+        if self.x is not None:
+            x1 = Secret(
+                    value=self.x.value - self.upper_limit + 2 ** self.num_bits)
+            x2 = Secret(
+                    value=self.x.value - self.lower_limit)
+        else:
+            x1 = None
+            x2 = None
+
+        com1 = self.com + (self.upper_limit - 2 ** self.num_bits) * self.g
+        com2 = self.com + self.lower_limit * self.g
+        p1 = PowerTwoRangeStmt(
+            com=com1,
+            g=self.g,
+            h=self.h,
+            num_bits=self.num_bits,
+            x=x1,
+            randomizer=self.randomizer,
+        )
+        p2 = PowerTwoRangeStmt(
+            com=com2,
+            g=self.g,
+            h=self.h,
+            num_bits=self.num_bits,
+            x=x2,
+            randomizer=self.randomizer,
+        )
+
+        p1._precommit(), p2._precommit()
+        return p1 & p2
+
