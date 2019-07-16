@@ -39,25 +39,6 @@ class AdditiveElgamalPlaintextProof(ExtendedProofStmt):
 
     .. math:: PK\{ (x, r) : c_1 = rG \land c_2 = rH + m G \}
 
-    Example:
-
-        >>> group = EcGroup()
-        >>> g = group.generator()
-        >>> x = group.order().random()
-        >>> h = x * g
-        >>> pk = PublicKey(g,h)
-
-        # Create ElGamal ciphertext
-        >>> m = Secret(Bn(42))
-        >>> r = Secret(group.order().random())
-        >>> c = (r.value * g, r.value * h + m.value * g)
-
-        >>> stat = AdditiveElgamalPlaintextProof(c, pk, m, r)
-        >>> proof = stat.prove()
-
-        >>> statprime = AdditiveElgamalPlaintextProof(c, pk, Secret(), Secret())
-        >>> statprime.verify(proof)
-        True
     """
 
     def __init__(self, ctxt, pk, msg, randomizer):
@@ -71,3 +52,20 @@ class AdditiveElgamalPlaintextProof(ExtendedProofStmt):
         part2 = DLRep(self.ctxt[1], self.randomizer * self.pk.h + self.msg * self.pk.g)
         return part1 & part2
 
+
+group = EcGroup()
+g = group.generator()
+x = group.order().random()
+h = x * g
+pk = PublicKey(g,h)
+
+# Create ElGamal ciphertext
+m = Secret(Bn(42))
+r = Secret(group.order().random())
+c = (r.value * g, r.value * h + m.value * g)
+
+stmt = AdditiveElgamalPlaintextProof(c, pk, m, r)
+proof = stmt.prove()
+
+stmt_prime = AdditiveElgamalPlaintextProof(c, pk, Secret(), Secret())
+assert stmt_prime.verify(proof)
