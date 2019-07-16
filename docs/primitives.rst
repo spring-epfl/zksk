@@ -3,12 +3,6 @@
 Included Primitives
 -------------------
 
-- **Inequality of discrete logarithms,** with one of the logarithms that must be known. This
-  protocol is drawn from the BLAC scheme [HG13]_.
-
-- **BBS+ signature proof** to prove knowledge of a signature over a set of attribute-based
-  credentials [ASM06]_.
-
 Inequality of Discrete Logarithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -17,103 +11,97 @@ DL representations are not equal:
 
 .. math::
 
-   PK\{ Y_0 = x \* G_0 and Y_2 != x G_1 \}
+   PK\{ x: Y_0 = x G_0 \land Y_1 \neq x G_1 \}
+
+This protocol is a part of the BLAC scheme [HG13]_.
 
 The associated class ``DLNotEqual`` is constructed as follows:
 
 .. code:: python
 
-    x = Secret(value = 12)
-    proof = DLNotEqual([Y1, G1], [Y2, G2], x)
+   x = Secret(value=12)
+   stmt = DLNotEqual([y0, g0], [y1, g1], x)
 
-    Due to the internal proof construction, this proof does not bind the
-    secret value ``x`` by default. To enable this feature, the proof
-    constructor has to be called with the optional parameter ``binding``
-    set to ``True``).
-
-Once the proof is constructed, the same methods as before
-(``get_prover()``, ``get_verifier()``, ``prove()``, ``verify()``, etc.)
-apply.
+Due to the internal proof construction, this proof does not bind the
+secret value ``x`` by default. To enable this feature, the proof
+constructor has to be called with the parameter ``binding=True``.
 
 Knowledge of the BBS+ Signature
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We provide a way to obtain blind signatures over a set of
-messages/credentials, along with a ``SignatureStmt`` primitive (to use
-much like the ``DLRep`` seen before). This protocol uses group
-pairings as defined from bplib package. The interface has been wrapped so the
-pairings behave as usual EcPt (additive points)
+This primitive provide a way to obtain blind signatures over a set of
+attribute-based credentials [ASM06]_.
+
+The protocol uses group pairings (see :py:mod:`zksk.pairings`).
 
 Obtaining a Signature
 """""""""""""""""""""
 
-The idea is to request an issuer -- identified by a public key
-``pk`` and a secret key ``sk`` -- to blindly sign a list of messages
-``m_i``. The user will blind these attributes by a secret attribute
-``s1``.
+The idea is to request an issuer -- identified by a public key ``pk`` and a
+secret key ``sk`` -- to blindly sign a list of messages :math:`m_i`. The user will
+blind these attributes by a secret attribute :math:`s_1`.
 
 The resulting number is sent to the issuer along with a proof of correct
-construction (a ``DLRepProof``).
+construction.
 
 .. code:: python
 
-    # NMAX is an upperbound on the number of generators to be used
-    mG = BilinearGroupPair()
-    keypair = Keypair(mG, NMAX) 
+   group_pair = BilinearGroupPair()
+   keypair = Keypair(group_pair, num_generators) 
 
-    # Construct a UserCommitment object embedding the blinded block and the proof of correct construction.
-    creator = SignatureCreator(pk)
-    usr_commitment = creator.commit(messages)
+   # Construct a UserCommitment object embedding the blinded block and the proof
+   # of correct construction.
+   creator = BBSPlusSignatureCreator(pk)
+   usr_commitment = creator.commit(messages)
 
-    # Get the blinded block signed by the issuer (through its secret key). It returns a (A, e, s) signature we then update by adding to s the value s1 drawn before.
-    presignature = sk.sign(lhs.commitment_message)
-    signature = creator.obtain_signature(presignature)
+   # Get the blinded block signed by the issuer (through its secret key). It
+   # returns a signature that we then update by adding s_1.
+   presignature = sk.sign(lhs.com_message)
+   signature = creator.obtain_signature(presignature)
 
-The final signature validity can be verified by calling
-
-.. code:: python
-
-    signature.verify(pk, messages)
-
-and the issuer can verify the correct construction (step 2) with
+The final signature validity can be verified by calling:
 
 .. code:: python
 
-    usr_commitment.verify_blinding(pk)
+   signature.verify(pk, messages)
+
+The issuer can verify the correct construction as follows:
+
+.. code:: python
+
+   usr_commitment.verify_blinding(pk)
 
 Proving Knowledge of a Signature
 ''''''''''''''''''''''''''''''''
 
-Once the user has the final signature, it can prove knowledge of it by
-calling
+Once the user has the final signature, she can prove she has it:
 
 .. code:: python
 
-    e, s = Secret(value=signature.e), Secret(value=signature.s)
-    messages = [Secret(value=m1)..., Secret(value=mn)]
-    proof = SignatureStmt([e, s, *messages], pk, signature)
+   e, s = Secret(value=signature.e), Secret(value=signature.s)
+   messages = [Secret(value=m1), ..., Secret(value=m_n)]
+   proof = SignatureStmt([e, s, *messages], pk, signature)
 
-The ``e`` and ``s`` Secret instances are necessary so the proof can bind
-them to an other proof, e.g. in an ``And`` conjunction. If you do not
-care about binding ``e`` and ``s`` to other proofs you can skip them,
-only pass the messages and set a ``binding`` keyword argument to False.
-
-.. code:: python
-
-    messages = [Secret(value=m1)..., Secret(value=mn)]
-    proof = SignatureStmt(messages, pk, signature, binding=False)
-
-The ``signature`` argument is required for the proving side. Of course,
-the verifying side would call
+The :math:`e` and :math:`s` secrets are necessary so the proof can bind them to
+another proof, e.g. in an AND conjunction. If you do not care about binding
+:math:`e` and :math:`s` to other proofs, you can skip them, only pass the messages and
+set a ``binding=False``.
 
 .. code:: python
 
-    e, s = Secret(), Secret()   # Omitted if not binding
-    messages = [Secret()..., Secret()]
-    proof = SignatureStmt([e, s, *messages], pk)
+   messages = [Secret(value=m1)..., Secret(value=mn)]
+   stmt = BBSPlusSignatureStmt(messages, pk, signature, binding=False)
 
-From this Proof objects, one can run the usual methods ``get_prover()``,
-``get_verifier()``, ``prove()``, ``verify()``, etc.
+The ``signature`` argument is required for the proving side. 
+The verifier can run this:
+
+.. code:: python
+
+   e, s = Secret(), Secret()   # Omitted if not binding
+   messages = [Secret(), ..., Secret()]
+   stmt = BBSPlusSignatureStmt([e, s, *messages], pk)
+
+Afterwards, a prover and verifier can run the proof protocol.
 
 
 .. [HG13] R. Henry and I. Goldberg, "Thinking inside the BLAC box: smarter
