@@ -10,7 +10,7 @@ from petlib.bn import Bn
 
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
-from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt
+from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt, createRangeStmt
 from zksk.utils.debug import SigmaProtocol
 
 
@@ -76,3 +76,48 @@ def test_range_stmt_non_interactive(group):
 
     tr = stmt.prove({x: 3})
     assert stmt.verify(tr)
+
+def test_range_stmt_non_interactive_start_at_zero(group):
+    x = Secret(value=3)
+    randomizer = Secret(value=group.order().random())
+
+    g = group.generator()
+    h = 10 * group.generator()  # FIXME
+    lo = 0
+    hi = 5
+
+    com = x * g + randomizer * h
+    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+
+    tr = stmt.prove()
+    assert stmt.verify(tr)
+
+def test_range_stmt_non_interactive_start_at_nonzero(group):
+    x = Secret(value=14)
+    randomizer = Secret(value=group.order().random())
+
+    g = group.generator()
+    h = 10 * group.generator()  # FIXME
+    lo = 7
+    hi = 15
+
+    com = x * g + randomizer * h
+    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+
+    tr = stmt.prove()
+    assert stmt.verify(tr)
+
+def test_range_stmt_non_interactive_outside_range(group):
+    x = Secret(value=15)
+    randomizer = Secret(value=group.order().random())
+
+    g = group.generator()
+    h = 10 * group.generator()  # FIXME
+    lo = 7
+    hi = 15
+
+    com = x * g + randomizer * h
+    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+
+    with pytest.raises(Exception):
+        tr = stmt.prove()

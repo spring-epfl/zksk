@@ -223,3 +223,36 @@ class RangeStmt(ExtendedProofStmt):
         p1._precommit(), p2._precommit()
         return p1 & p2
 
+
+def createRangeStmt(com, x, r, a, b, g, h):
+    a = ensure_bn(a)
+    b = ensure_bn(b)
+    nr_bits = (b - a - 1).num_bits()
+    offset = 2**nr_bits - (b - a)
+
+    com_shifted1 = com - a * g
+    com_shifted2 = com_shifted1 - offset * g
+    x1 = Secret(x.value - a)
+    x2 = Secret(x.value - a - offset)
+
+    com_stat = DLRep(com, x * g + r * h)
+
+    p1 = PowerTwoRangeStmt(
+        com=com_shifted1,
+        g=g,
+        h=h,
+        num_bits=nr_bits,
+        x=x1,
+        randomizer=r,
+    )
+
+    p2 = PowerTwoRangeStmt(
+        com=com_shifted2,
+        g=g,
+        h=h,
+        num_bits=nr_bits,
+        x=x2,
+        randomizer=r,
+    )
+
+    return com_stat & p1 & p2
