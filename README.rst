@@ -47,4 +47,14 @@ Second, run the tests with pytest:
 
    pytest
 
+To build the the documentation pages, make sure you have installed the dev version of the package
+(see above), and then run:
+
+.. code-block:: bash
+
+    cd docs/
+    make html
+
+[Upon paper acceptance, we will put the HTML documentation online]
+
 .. end-getting-started-marker-do-not-remove
