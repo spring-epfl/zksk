@@ -231,7 +231,9 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
     def validate_secrets_reoccurence(self, forbidden_secrets=None):
         """
-        Check if a secret appears both inside an outside an or-proof. Does nothing if not overriden.
+        Check if a secret appears both inside an outside an or-proof.
+
+        Does nothing if not overriden.
         """
         pass
 
@@ -701,8 +703,8 @@ class OrVerifier(Verifier):
         """
         Checks that for a same secret, response are actually the same.
 
-        Since every member is run with its own challenge, it is enough that one member is consistent
-        within itself.
+        Since every member is run with its own challenge, it is enough that one
+        member is consistent within itself.
 
         Args:
             responses: a tuple (subchallenges, actual_responses) from which we extract only the
@@ -866,8 +868,11 @@ class AndProver(Prover):
 
     def precommit(self):
         """
-        Computes the precommitment for an and-proof, i.e a list of the precommitments of the subprovers.
-        If not applicable (not subprover outputs a precommitment), returns None.
+        Computes the precommitment for an and-proof.
+
+        This precommitment is the list of precommitments of the subprovers.
+
+        If not applicable (no subprover outputs a precommitment), returns None.
         """
         precommitment = []
         for idx in range(len(self.subs)):
@@ -887,9 +892,9 @@ class AndProver(Prover):
         Computes the commitment.
 
         Args:
-            randomizers_dict: Randomizers.
+            randomizers_dict: Mapping from secrets to randomizers.
         """
-        # Now that we have constructed the proofs, validate
+        # Now that we have constructed the proofs, validate.
         self.stmt.validate_composition()
 
         randomizers_dict = self.stmt.update_randomizers(randomizers_dict)
@@ -902,7 +907,7 @@ class AndProver(Prover):
 
     def compute_response(self, challenge):
         """
-        Returns a list of the responses of each subprover.
+        Return a list of the responses of each subprover.
         """
         return [subp.compute_response(challenge) for subp in self.subs]
 
@@ -917,15 +922,18 @@ class AndVerifier(Verifier):
 
     def send_challenge(self, commitment, ignore_statement_hash_checks=False):
         """
-        Stores the received commitment and generates a challenge. Checks the received hashed
-        statement matches the one of the current proof.  Only called at the highest level or in
-        embedded proofs working with precommitments.
+        Store the received commitment and generates a challenge.
+
+        Checks the received hashed statement matches the one of the current
+        proof. Only called at the highest level or in extended proofs.
 
         Args:
-            commitment: A tuple (statement, actual_commitment) with actual_commitment a list of commitments, one for each subproof.
-            ignore_statement_hash_checks: Optional parameter to deactivate the statement check. In this case, the commitment
-                parameter is simply the actual commitment. Useful in 2-level proofs for which we don't
-                check the inner statements.
+            commitment: A tuple (statement, actual_commitment) with
+                actual_commitment a list of commitments, one for each subproof.
+            ignore_statement_hash_checks: Optional parameter to deactivate the
+                statement check. In this case, the commitment parameter is
+                simply the actual commitment. Useful in 2-level proofs for which
+                we don't check the inner statements.
         """
         if ignore_statement_hash_checks:
             self.commitment = commitment
@@ -939,9 +947,9 @@ class AndVerifier(Verifier):
         """
         Check that the responses are consistent for re-occurring secret names.
 
-        Iterates through the subverifiers, gives them the responses related to them and constructs a
-        response dictionary (with respect to secret names).  If an inconsistency if found during
-        this build, an error code is returned.
+        Iterates through the subverifiers, gives them the responses related to
+        them and constructs a response dictionary.  If an inconsistency if found
+        during this build, returns False.
 
         Args:
             responses: Rreceived list of responses for each subproof.
@@ -959,9 +967,10 @@ class AndVerifier(Verifier):
 
     def process_precommitment(self, precommitment):
         """
-        Receives a list of precommitments for the subproofs (or None) and distributes them to the subverifiers.
+        Distribute the list of precommitments to the subverifiers.
         """
         if precommitment is None:
             return
         for idx in range(len(self.subs)):
             self.subs[idx].process_precommitment(precommitment[idx])
+

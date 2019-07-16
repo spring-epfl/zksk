@@ -134,7 +134,8 @@ class Prover(metaclass=abc.ABCMeta):
         # Generate the challenge.
         prehash = self.stmt.prehash_statement()
         stmt_hash = prehash.digest()
-        challenge = build_fiat_shamir_challenge(prehash, precommitment, commitment, message=message)
+        challenge = build_fiat_shamir_challenge(prehash, precommitment,
+                commitment, message=message)
 
         responses = self.compute_response(challenge)
         return NIZK(
@@ -174,8 +175,9 @@ class Verifier(metaclass=abc.ABCMeta):
         between 0 and CHALLENGE_LENGTH (excluded).
 
         Args:
-            commitment: A tuple containing a hash of the stmt statement, to be compared against the local statement,
-                and the commmitment as a (potentially multi-level list of) base(s) of the group.
+            commitment: A tuple containing a hash of the stmt statement, to be
+                compared against the local statement, and the commmitment as a
+                (potentially multi-level list of) base(s) of the group.
         """
         statement, self.commitment = commitment
         self.stmt.check_statement(statement)
@@ -223,6 +225,7 @@ class Verifier(metaclass=abc.ABCMeta):
             bool: True of verification succeeded, False otherwise.
         """
         # Build the complete stmt if necessary.
+        # TODO: If empty precommit() function, this is always true.
         if nizk.precommitment is not None:
             self.process_precommitment(nizk.precommitment)
 
