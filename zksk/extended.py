@@ -2,6 +2,25 @@
 Extended proofs are proofs that deal with internal precommitments.
 
 This is a convenient building block that is useful for defining complex primitives.
+
+Precommitments are parameters that are not known at the proof instantiation time
+and are computed by the proving side. Therefore, they have to be sent explicitly
+in a preliminary round for interactive protocols, and as an additional attribute
+in non-interactive or simulated transcripts.
+
+The protocol of an extended proof is as follows:
+
+1. A proof statement (:py:class:`ExtendedProofStmt`) is instantiated and its
+   attributes are set, but cannot run most methods.
+2. Upon processing of the precommitment
+   (:py:meth:`ExtendedProofProver.process_precommitment`), a separate and complete
+   regular proof statement (:py:class:`zksk.base.ComposableProofStmt`) is constructed inside the
+   extended proof (:py:attr`ExtendedProofStmt.constructed_stmt`)
+3. :py:meth:`ExtendedProofStmt.get_bases`,
+   :py:meth:`ExtendedProofStmt.get_secret_vars` delegate to the internal
+   ``constructed_stmt``. The :py:class:`ExtendedProver` and
+   :py:class:`ExtendedVerifier` work in the same way, embedding a
+   ``constructed_prover`` (resp., ``constructed_verifier``).
 """
 
 import abc
@@ -128,8 +147,8 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
         Simulate the proof.
 
         Args:
-            responses_dict:
-            challenge:
+            responses_dict: Mapping from secrets to responses
+            challenge: Challenge
         """
         tr = self._constructed_stmt.simulate_proof(responses_dict, challenge)
         tr.precommitment = self._precommitment
@@ -149,10 +168,10 @@ class ExtendedProver(Prover):
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Trigger the inside the prover commit.
+        Trigger the internal prover commit.
 
-        Transfers the randomizer_dict if passed. It might be used if the binding of the proof is set
-        True.
+        Transfers the randomizer_dict if passed. It might be used if the binding
+        of the proof is set True.
         """
         if self.stmt.constructed_stmt is None:
             raise StatementSpecError(
@@ -172,11 +191,16 @@ class ExtendedProver(Prover):
     def precommit(self):
         self.precommitment = self.stmt._precommit()
         self.process_precommitment()
+        try:
+            for p in self.constructed_prover.subs:
+                p.precommit()
+        except AttributeError:
+            pass
         return self.precommitment
 
     def process_precommitment(self):
         """
-        Trigger the inner proof construction and extract a prover from it given the secrets.
+        Trigger the inner-proof construction and extract a prover given the secrets.
         """
         self.stmt.full_construct_stmt(self.precommitment)
         self.constructed_prover = self.stmt._constructed_stmt.get_prover(
@@ -191,7 +215,7 @@ class ExtendedVerifier(Verifier):
 
     def process_precommitment(self, precommitment):
         """
-        Receive the precommitment and trigger the inner-proof construction.
+        Receive the precommitment and trigger the inner-verifier construction.
         """
         self.precommitment = precommitment
         self.stmt.full_construct_stmt(precommitment)
@@ -216,5 +240,3 @@ class ExtendedVerifier(Verifier):
         return self.constructed_verifier.check_responses_consistency(
             responses, responses_dict
         )
-
-
