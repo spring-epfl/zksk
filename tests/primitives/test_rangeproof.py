@@ -1,7 +1,7 @@
 """
 Unit tests for rangeproofs.
 
-TODO: Add tests for failure conditions.
+TODO: Add tests for failure conditions of PowerTwoRangeStmt
 
 """
 import pytest
@@ -10,7 +10,8 @@ from petlib.bn import Bn
 
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
-from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt, createRangeStmt
+from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt
+from zksk.utils import make_generators
 from zksk.utils.debug import SigmaProtocol
 
 
@@ -21,8 +22,7 @@ def test_power_two_range_stmt_non_interactive():
     value = Secret(value=Bn(10))
     randomizer = Secret(value=group.order().random())
 
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
+    g, h = make_generators(2, group)
     limit = 20
 
     com = value * g + randomizer * h
@@ -41,8 +41,7 @@ def test_power_two_range_stmt_interactive():
     value = Secret(value=Bn(10))
     randomizer = Secret(value=group.order().random())
 
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
+    g, h = make_generators(2, group)
     limit = 20
 
     com = value * g + randomizer * h
@@ -58,36 +57,16 @@ def test_power_two_range_stmt_interactive():
     assert protocol.verify()
     verifier.stmt.full_validate()
 
-
-@pytest.mark.skip
-def test_range_stmt_non_interactive(group):
-    x = Secret(value=3)
-    randomizer = Secret(value=group.order().random())
-
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
-    lo = 0
-    hi = 5
-
-    com = x * g + randomizer * h
-
-    stmt = RangeStmt(com.eval(), g, h, lower_limit=lo, upper_limit=hi,
-            x=x, randomizer=randomizer)
-
-    tr = stmt.prove({x: 3})
-    assert stmt.verify(tr)
-
 def test_range_stmt_non_interactive_start_at_zero(group):
     x = Secret(value=3)
     randomizer = Secret(value=group.order().random())
 
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
+    g, h = make_generators(2, group)
     lo = 0
     hi = 5
 
     com = x * g + randomizer * h
-    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
 
     tr = stmt.prove()
     assert stmt.verify(tr)
@@ -96,13 +75,12 @@ def test_range_stmt_non_interactive_start_at_nonzero(group):
     x = Secret(value=14)
     randomizer = Secret(value=group.order().random())
 
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
+    g, h = make_generators(2, group)
     lo = 7
     hi = 15
 
     com = x * g + randomizer * h
-    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
 
     tr = stmt.prove()
     assert stmt.verify(tr)
@@ -111,13 +89,13 @@ def test_range_stmt_non_interactive_outside_range(group):
     x = Secret(value=15)
     randomizer = Secret(value=group.order().random())
 
-    g = group.generator()
-    h = 10 * group.generator()  # FIXME
+    g, h = make_generators(2, group)
     lo = 7
     hi = 15
 
     com = x * g + randomizer * h
-    stmt = createRangeStmt(com.eval(), x, randomizer, lo, hi, g, h)
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
 
     with pytest.raises(Exception):
         tr = stmt.prove()
+
