@@ -18,7 +18,6 @@ zksk's docs
    usage
    primitives
    new_primitives
-   internals
 
 .. toctree::
    :maxdepth: 2
