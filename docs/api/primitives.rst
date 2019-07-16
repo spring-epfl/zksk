@@ -1,5 +1,5 @@
-Primitives
-==========
+Primitives API
+==============
 
 :mod:`zksk.primitives.dlrep` -- Discrete Logarithm Representations
 ------------------------------------------------------------------
@@ -9,7 +9,7 @@ Primitives
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
 
-:mod:`zksk.primitives.dl_notequal` -- Inequality of Discrete Logarithms 
+:mod:`zksk.primitives.dl_notequal` -- Inequality of Discrete Logarithms
 -----------------------------------------------------------------------
 
 .. automodule:: zksk.primitives.dl_notequal

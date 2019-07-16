@@ -16,8 +16,8 @@ zksk's docs
 
 .. toctree::
    :maxdepth: 2
-   :caption: Guide 
-   
+   :caption: Guide
+
    usage
    primitives
    new_primitives
@@ -25,14 +25,14 @@ zksk's docs
 .. toctree::
    :maxdepth: 2
    :caption: Reference
-   
+
    api/core
    api/primitives
 
 
-Indices and tables
-==================
+.. Indices and tables
+.. ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
