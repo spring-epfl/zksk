@@ -33,6 +33,14 @@ Core
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
 
+:py:mod:`zksk.pairings` -- Pairings
+-----------------------------------
+
+.. automodule:: zksk.pairings
+   :members:
+   :special-members:
+   :exclude-members: __weakref__, __repr__, __init__
+
 :py:mod:`zksk.exceptions` -- Built-in Exceptions
 ------------------------------------------------
 
