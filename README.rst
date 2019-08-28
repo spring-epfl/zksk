@@ -20,8 +20,6 @@ You can install zksk using pip:
 
    pip install -e .
 
-[Upon paper acceptance, we will publish the package to PyPI]
-
 To run unit tests, first, install the dev version of the package:
 
 .. code-block:: bash
