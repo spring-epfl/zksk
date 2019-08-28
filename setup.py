@@ -2,10 +2,8 @@
 import os
 import re
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
-
-PACKAGE_NAME = "zksk"
 
 INSTALL_REQUIRES = ["petlib", "bplib"]
 
@@ -21,7 +19,7 @@ with open(os.path.join(here, "README.rst")) as f:
     long_description = f.read()
 
 
-with open(os.path.join(here, PACKAGE_NAME, "__init__.py")) as f:
+with open(os.path.join(here, "zksk/__init__.py")) as f:
     matches = re.findall(r"(__.+__) = \"(.*)\"", f.read())
     for var_name, var_value in matches:
         globals()[var_name] = var_value
@@ -34,7 +32,7 @@ setup(
     long_description=long_description,
     author=__author__,
     author_email=__email__,
-    packages=[PACKAGE_NAME],
+    packages=find_packages(exclude=["tests"]),
     license=__license__,
     url=__url__,
     install_requires=INSTALL_REQUIRES,
