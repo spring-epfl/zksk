@@ -118,3 +118,5 @@ texinfo_documents = [
      author, __title__, __description__,
      'Miscellaneous'),
 ]
+
+autodoc_mock_imports = ['petlib', 'bplib']
