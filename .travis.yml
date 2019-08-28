@@ -1,8 +1,9 @@
-sudo: false
 language: python
 python:
   - "3.6"
 install:
-  - pip install -e .[dev] --quiet
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq python-dev libssl-dev libffi-dev
+  - pip install -e ".[dev]"
 script:
   - pytest
