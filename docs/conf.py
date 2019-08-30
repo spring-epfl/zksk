@@ -10,13 +10,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import re
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
-from zksk import __title__, __version__, __copyright__, __author__, \
-        __description__
+base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+with open(os.path.join(base_path, "zksk/__init__.py")) as f:
+    matches = re.findall(r"(__.+__) = \"(.*)\"", f.read())
+    for var_name, var_value in matches:
+        globals()[var_name] = var_value
 
 
 # -- Project information -----------------------------------------------------
