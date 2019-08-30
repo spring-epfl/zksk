@@ -5,7 +5,7 @@ __email__ = "wouter.lueks@epfl.ch"
 __url__ = "https://zksk.rtfd.io"
 __license__ = "MIT"
 __description__ = "Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs."
-__copyright__ = "2019, Wouter Lueks (EPFL SPRING Lab)"
+__copyright__ = "2019, Wouter Lueks, Bogdan Kulynych (EPFL SPRING Lab)"
 
 
 from zksk.expr import Secret
