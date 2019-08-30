@@ -13,9 +13,9 @@
 import re
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, base_path)
 
 with open(os.path.join(base_path, "zksk/__init__.py")) as f:
     matches = re.findall(r"(__.+__) = \"(.*)\"", f.read())
