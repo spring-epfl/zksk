@@ -5,7 +5,7 @@ r"""
 
     PK \{ (r, x): \underbrace{C = x G + r H}_{Commitment} \land \underbrace{l \leq x < u}_{Range} \}
 
-This module implements a Shoemaker's range proof, a conjuction of or-proofs for each bit of the
+This module implements a Schoenmakers' range proof, a conjuction of or-proofs for each bit of the
 value.
 
 """
