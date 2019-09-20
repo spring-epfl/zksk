@@ -6,12 +6,10 @@ from setuptools import setup, find_packages
 
 
 INSTALL_REQUIRES = ["petlib", "bplib"]
-
 SETUP_REQUIRES = ["pytest-runner"]
-
 TEST_REQUIRES = ["pytest"]
-
-DEV_REQUIRES = TEST_REQUIRES + ["sphinx", "sphinx_rtd_theme", "m2r", "black"]
+DOC_REQUIRES = ["sphinx", "sphinx_rtd_theme", "m2r"]
+DEV_REQUIRES = TEST_REQUIRES + DOC_REQUIRES + ["black"]
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -38,7 +36,11 @@ setup(
     install_requires=INSTALL_REQUIRES,
     setup_requires=SETUP_REQUIRES,
     tests_require=TEST_REQUIRES,
-    extras_require={"dev": DEV_REQUIRES, "test": TEST_REQUIRES},
+    extras_require={
+        "dev": DEV_REQUIRES,
+        "test": TEST_REQUIRES,
+        "doc": DOC_REQUIRES,
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

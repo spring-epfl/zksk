@@ -123,4 +123,4 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-autodoc_mock_imports = ['petlib', 'bplib']
+autodoc_mock_imports = ['petlib', 'bplib', 'msgpack']
