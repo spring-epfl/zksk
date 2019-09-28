@@ -7,6 +7,7 @@ TODO: Add tests for failure conditions of PowerTwoRangeStmt
 import pytest
 
 from petlib.bn import Bn
+from petlib.ec import EcGroup
 
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
@@ -98,4 +99,19 @@ def test_range_stmt_non_interactive_outside_range(group):
 
     with pytest.raises(Exception):
         tr = stmt.prove()
+
+def test_range_proof_outside():
+    group = EcGroup()
+    x = Secret(value=15)
+    randomizer = Secret(value=group.order().random())
+
+    g, h = make_generators(2, group)
+    lo = 0
+    hi = 14
+
+    com = x * g + randomizer * h
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+    nizk = stmt.prove()
+    # x is outside [lo, hi]. Verification should fail
+    assert stmt.verify(nizk) is False
 
