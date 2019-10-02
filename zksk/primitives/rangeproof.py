@@ -237,6 +237,7 @@ class GenericRangeOnlyStmtMaker:
     >>> nizk = stmt.prove()
     >>> stmt.verify(nizk)
     True
+
     See :py:meth:`GenericRangeStmtMaker.__call__` for the construction signature.
     """
 
