@@ -233,7 +233,7 @@ class GenericRangeOnlyStmtMaker:
     >>> x = Secret(value=3)
     >>> lo = 0
     >>> hi = 5
-    >>> stmt = RangeStmt(lo, hi, x)
+    >>> stmt = RangeOnlyStmt(lo, hi, x)
     >>> nizk = stmt.prove()
     >>> stmt.verify(nizk)
     True
