@@ -264,8 +264,6 @@ class GenericRangeOnlyStmtMaker:
         if x is not None:
             x1.value = x.value - a
             x2.value = x.value - a + offset
-            print(x.value, a, offset)
-            print(x1.value, x2.value)
         com_stmt = DLRep(com, x * g + r * h)
         p1 = PowerTwoRangeStmt(
             com=com_shifted1,
