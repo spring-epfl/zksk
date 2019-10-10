@@ -16,6 +16,10 @@ zksk
 
 Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs.
 
+.. WARNING::
+
+   Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
+
 .. end-description-marker-do-not-remove
 
 
