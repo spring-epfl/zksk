@@ -7,10 +7,11 @@ TODO: Add tests for failure conditions of PowerTwoRangeStmt
 import pytest
 
 from petlib.bn import Bn
+from petlib.ec import EcGroup
 
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
-from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt
+from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt, RangeOnlyStmt
 from zksk.utils import make_generators
 from zksk.utils.debug import SigmaProtocol
 
@@ -57,6 +58,7 @@ def test_power_two_range_stmt_interactive():
     assert protocol.verify()
     verifier.stmt.full_validate()
 
+
 def test_range_stmt_non_interactive_start_at_zero(group):
     x = Secret(value=3)
     randomizer = Secret(value=group.order().random())
@@ -70,6 +72,7 @@ def test_range_stmt_non_interactive_start_at_zero(group):
 
     tr = stmt.prove()
     assert stmt.verify(tr)
+
 
 def test_range_stmt_non_interactive_start_at_nonzero(group):
     x = Secret(value=14)
@@ -85,6 +88,7 @@ def test_range_stmt_non_interactive_start_at_nonzero(group):
     tr = stmt.prove()
     assert stmt.verify(tr)
 
+
 def test_range_stmt_non_interactive_outside_range(group):
     x = Secret(value=15)
     randomizer = Secret(value=group.order().random())
@@ -99,3 +103,38 @@ def test_range_stmt_non_interactive_outside_range(group):
     with pytest.raises(Exception):
         tr = stmt.prove()
 
+
+def test_range_proof_outside():
+    group = EcGroup()
+    x = Secret(value=15)
+    randomizer = Secret(value=group.order().random())
+
+    g, h = make_generators(2, group)
+    lo = 0
+    hi = 14
+
+    com = x * g + randomizer * h
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+    with pytest.raises(Exception):
+        nizk = stmt.prove()
+        stmt.verify(nizk)
+
+
+def test_range_proof_outside_range_above():
+    x = Secret(value=7)
+    lo = 0
+    hi = 6
+    stmt = RangeOnlyStmt(lo, hi, x)
+    with pytest.raises(Exception):
+        nizk = stmt.prove()
+        assert stmt.verify(nizk) == False
+
+
+def test_range_proof_outside_range_below():
+    x = Secret(value=1)
+    lo = 2
+    hi = 7
+    stmt = RangeOnlyStmt(lo, hi, x)
+    with pytest.raises(Exception):
+        nizk = stmt.prove()
+        stmt.verify(nizk)

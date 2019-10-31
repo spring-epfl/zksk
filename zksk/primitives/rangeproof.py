@@ -1,5 +1,5 @@
 r"""
-"Range proof": ZK proof that a committed value lies within a range.
+Range proof: ZK proof that a committed value lies within a range.
 
 .. math::
 
@@ -22,11 +22,13 @@ from zksk.composition import AndProofStmt
 
 def decompose_into_n_bits(value, n):
     """Array of bits, least significant bit first"""
-    base = [1 if value.is_bit_set(b) else 0 for b in range(value.num_bits())]
+    if value < 0:
+        raise Exception("Can't represent negative values")
+    base = [1 if value.is_bit_set(b) else 0 for b in range(value.num_bits() - 1, -1, -1)]
     extra_bits = n - len(base)
     if extra_bits < 0:
         raise Exception("Not enough bits to represent value")
-    return base + [0] * extra_bits
+    return [0] * extra_bits + base
 
 
 def next_exp_of_power_of_two(value):
@@ -134,7 +136,6 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         for c in precommitment["Cs"]:
             combined += power * c
             power *= 2
-
         return combined == self.com + rand * self.h
 
 
@@ -148,9 +149,6 @@ class GenericRangeStmtMaker:
 
     See "`Efficient Protocols for Set Membership and Range Proofs`_" by Camenisch
     et al., 2008.
-
-    .. _`Efficient Protocols for Set Membership and Range Proofs`:
-        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
 
     In practice, use the :py:obj:`zksk.primitives.rangeproof.RangeStmt` object directly:
 
@@ -169,6 +167,9 @@ class GenericRangeStmtMaker:
 
     See :py:meth:`GenericRangeStmtMaker.__call__` for the construction signature.
 
+    .. `Efficient Protocols for Set Membership and Range Proofs`:
+        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
+
     """
 
     def __call__(self, com, g, h, a, b, x=None, r=None):
@@ -183,7 +184,6 @@ class GenericRangeStmtMaker:
             b: Upper limit :math:`b`
             x: Value for which we construct a range proof
             randomizer: Randomizer of the commitment :math:`r`
-
         """
         a = ensure_bn(a)
         b = ensure_bn(b)
@@ -196,7 +196,7 @@ class GenericRangeStmtMaker:
         x2 = Secret()
         if x is not None:
             x1.value = x.value - a
-            x2.value = a - offset
+            x2.value = x.value - a + offset
 
         com_stmt = DLRep(com, x * g + r * h)
 
@@ -221,5 +221,77 @@ class GenericRangeStmtMaker:
         return com_stmt & p1 & p2
 
 
+class GenericRangeOnlyStmtMaker:
+    """
+    Auxiliary builder class for generic range proofs.
+
+    .. math::
+        PK \{ (x): a \leq x < b \}
+
+    See "`Efficient Protocols for Set Membership and Range Proofs`_" by Camenisch
+    et al., 2008.
+
+    .. _`Efficient Protocols for Set Membership and Range Proofs`:
+        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
+
+    In practice, use the :py:obj:`zksk.primitives.rangeproof.RangeStmt` object directly:
+
+    >>> x = Secret(value=3)
+    >>> lo = 0
+    >>> hi = 5
+    >>> stmt = RangeOnlyStmt(lo, hi, x)
+    >>> nizk = stmt.prove()
+    >>> stmt.verify(nizk)
+    True
+
+    See :py:meth:`GenericRangeStmtMaker.__call__` for the construction signature.
+    """
+
+    def __call__(self, a, b, x=None):
+        """
+        Get a conjunction of two range-power-of-two proofs.
+        Args:
+            a: Lower limit :math:`a`
+            b: Upper limit :math:`b`
+            x: Value for which we construct a range proof
+        """
+        group = EcGroup()
+        g = group.hash_to_point(b"g")
+        h = group.hash_to_point(b"h")
+        r = Secret(value=2)
+        com = (x * g + r * h).eval()
+        a = ensure_bn(a)
+        b = ensure_bn(b)
+        num_bits = (b - a - 1).num_bits()
+        offset = 2 ** num_bits - (b - a)
+        com_shifted1 = com - a * g
+        com_shifted2 = com_shifted1 - offset * g
+        x1 = Secret()
+        x2 = Secret()
+        if x is not None:
+            x1.value = x.value - a
+            x2.value = x.value - a + offset
+        com_stmt = DLRep(com, x * g + r * h)
+        p1 = PowerTwoRangeStmt(
+            com=com_shifted1,
+            g=g,
+            h=h,
+            num_bits=num_bits,
+            x=x1,
+            randomizer=r,
+        )
+        p2 = PowerTwoRangeStmt(
+            com=com_shifted2,
+            g=g,
+            h=h,
+            num_bits=num_bits,
+            x=x2,
+            randomizer=r,
+        )
+
+        return com_stmt & p1 & p2
+
+
 # TODO: Make a regular class.
 RangeStmt = GenericRangeStmtMaker()
+RangeOnlyStmt = GenericRangeOnlyStmtMaker()
