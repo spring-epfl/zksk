@@ -18,6 +18,9 @@ Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowl
 
 .. end-description-marker-do-not-remove
 
+Check out the `documentation <https://zksk.readthedocs.io/>`_.
+
+> **Warning.** Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
 
 
 ===============
@@ -43,5 +46,13 @@ Second, run the tests with pytest:
 .. code-block:: bash
 
    pytest
+
+To build the the documentation pages, make sure you have installed the dev version of the package
+(see above), and then run:
+
+.. code-block:: bash
+
+    cd docs/
+    make html
 
 .. end-getting-started-marker-do-not-remove

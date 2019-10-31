@@ -1,8 +1,8 @@
 Creating Your Own Proof Primitives
 ----------------------------------
 
-You can also easily define your own proof primitives and use them in new proofs.
-The library already uses this technique to define several new proof primitives.
+You can also define your own proof primitives and use them in new proofs.
+The library uses this technique to define several proof primitives.
 In this guide we will see how to define our own primitives.
 
 A Primitive for Proving Knowledge of an ElGamal Plaintext
@@ -30,7 +30,7 @@ The first step in defining a new primitive is to determine its inputs and
 secrets. In this case, the public input is the ciphertext :math:`c` and a public
 key ``pk`` containing the points :math:`G` and :math:`H`. Moreover, the prover
 has two secrets, the message :math:`m` and the randomizer :math:`r`. To define a
-new primitive with these parameters, we inherit from ``zksk.extended.ExtendedProofStmt``. The
+new primitive with these parameters, we inherit from :py:class:`zksk.extended.ExtendedProofStmt`. The
 constructor simply stores the values we pass.
 
 .. literalinclude:: ../examples/primitive_knowledge_elgamal.py
@@ -42,7 +42,7 @@ Next, we define which statement corresponds to our new primitive.
    :lines: 50-53
 
 Which is a direct translation of the Camenisch-Stadler notation defined above. This function must
-take an extra argument ``precommitment``. But this argument is not used here. 
+take an extra argument ``precommitment``. But this argument is not used here.
 
 A Primitive for Proving Inequality of Discrete Logarithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,7 +66,7 @@ above statement in zero-knowledge, we must proceed as follows [HG13]_:
 2. The prover and the verifier then engage in the zero-knowledge proof
 
    .. math::
-   
+
       PK\{ (\alpha, \beta): 1 = \alpha \cdot h_0 + \beta \cdot H_0 \land C = \alpha \cdot h_1 + \beta \cdot H_1 \},
 
    where the prover uses :math:`\alpha = x r \mod q` and :math:`\beta = -r \mod q`.
@@ -79,13 +79,13 @@ into step 2, can be seen as a Sigma protocol. Internally, we still use a
 standard sigma protocol. However, we notice two major changes. First, the prover
 precomputes a commitment, that then becomes part of the constructed proof
 statement. Second, after verifying the constructed proof, the verifier needs to
-perform another verification.  The ``zksk.extended.ExtendedProofStmt`` class allows us to define
+perform another verification.  The :py:class:`zksk.extended.ExtendedProofStmt` class allows us to define
 the extra steps.
 
 We again first determine the inputs to the primitive. The public inputs are the
 pairs :math:`(H_0, h_0)` and :math:`(H_1, h_1)`. The prover takes as private
 input the secret :math:`x` such that :math:`H_0 = x \cdot h_0`. Again we
-override ``zksk.extended.ExtendedProofStmt`` and store the inputs:
+override :py:class:`zksk.extended.ExtendedProofStmt` and store the inputs:
 
 .. literalinclude:: ../examples/primitive_dl_notequal.py
    :lines: 14-21
@@ -130,7 +130,7 @@ If defined, the verifier will run the checks in ``validate`` before accepting
 the proof. And that is it, our new primitive can now be used in bigger proofs.
 
 The full implementation in the library of
-:py:class:`zksk.primitives.dl_notequal.DLNotEqual`` is a little bit more
+:py:class:`zksk.primitives.dl_notequal.DLNotEqual` is a little bit more
 complicated. Note that in the above protocol, the secret ``x`` is not actually
 used directly in the proof. The full version allows explicit binding of the
 secret ``x``.

@@ -86,7 +86,11 @@ latex_elements = {
     # 'pointsize': '10pt',
 
     # Additional stuff for the LaTeX preamble.
-    'preamble': r'\usepackage{mathtools}',
+    'preamble': r"""
+        \usepackage{mathtools}
+        \usepackage{libertine}
+        \usepackage{zi4}
+        """,
 
     # Latex figure (float) alignment
     #
@@ -98,8 +102,10 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc,  __title__ + '.tex', __title__ + ' Documentation',
-     __author__, 'manual'),
+     __author__, 'howto'),
 ]
+
+# latex_toplevel_sectioning = 'section'
 
 
 # -- Options for manual page output ------------------------------------------

@@ -1,5 +1,5 @@
-Core
-====
+Core API
+========
 
 :py:mod:`zksk.expr` -- DL Expressions
 -------------------------------------
@@ -68,4 +68,3 @@ Core
    :members:
    :special-members:
    :exclude-members: __weakref__, __repr__, __init__
-

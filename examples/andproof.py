@@ -59,9 +59,8 @@ x0 = Secret(4)
 x1 = Secret(4)
 stmt = DLRep(4 * g0, x0 * g0) & DLRep(4 * g1, x1 * g1)
 
-# NOT the same as above. Note that x1 is used for both clauses.
+# NOT the same as above. Note that x1_prime is used for both clauses.
 x1_prime = Secret(4)
 another_stmt = DLRep(4 * g0, x1_prime * g0) & DLRep(4 * g1, x1_prime * g1)
 
 assert stmt.get_proof_id() != another_stmt.get_proof_id()
-

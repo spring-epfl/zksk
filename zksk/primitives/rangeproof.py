@@ -32,7 +32,7 @@ def decompose_into_n_bits(value, n):
 
 
 def next_exp_of_power_of_two(value):
-    """Return smallest l such that value < 2**l"""
+    """Return smallest n such that :math:`value < 2^n`"""
     return 1 if value == 0 else value.bit_length()
 
 

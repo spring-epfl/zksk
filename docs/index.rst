@@ -5,6 +5,9 @@ zksk's docs
    :start-after: start-description-marker-do-not-remove
    :end-before: end-description-marker-do-not-remove
 
+.. warning::
+   Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
+
 .. toctree::
    :maxdepth: 2
    :caption: Basics
@@ -13,8 +16,8 @@ zksk's docs
 
 .. toctree::
    :maxdepth: 2
-   :caption: Guide 
-   
+   :caption: Guide
+
    usage
    primitives
    new_primitives
@@ -22,14 +25,14 @@ zksk's docs
 .. toctree::
    :maxdepth: 2
    :caption: Reference
-   
+
    api/core
    api/primitives
 
 
-Indices and tables
-==================
+.. Indices and tables
+.. ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
