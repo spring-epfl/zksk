@@ -21,9 +21,9 @@ follows:
 .. Tip ::
    We use `petlib <https://github.com/gdanezis/petlib>`__ library for working with elliptic curves.
    We strongly advise you to take a look at petlib's `documentation page
-   <https://petlib.readthedocs.io/en/latest/>`__. 
+   <https://petlib.readthedocs.io/en/latest/>`__.
 
-Overview 
+Overview
 ^^^^^^^^
 This library enables zero-knowledge proofs that are composed of the following blocks:
 
@@ -31,7 +31,7 @@ This library enables zero-knowledge proofs that are composed of the following bl
   such that :math:`Y` can be written as :math:`Y = \sum_i x_i G_i`:
 
   .. math ::
-   
+
    PK \{ (x_0, x_1, ..., x_n): Y = x_0 G_0 + x_1 G_1 + ... + x_n G_n \}
 
 - **AND**, conjunctions of other proofs.
@@ -46,7 +46,7 @@ The library supports three different modes of using zero-knowledge proofs:
 - **Interactive** proof. You can get the messages that need to be transmitted between a prover and
   a verifier, along with functionality to verify those messages.
 
-- **Non-interactive** proof through Fiat-Shamir heuristic. 
+- **Non-interactive** proof through Fiat-Shamir heuristic.
 
 - Simulation.
 
@@ -61,9 +61,9 @@ In this example, we define a proof for the following statement:
    PK \{ (x_1, x_2): Y = x_0 G_1 + x_1 G_1 \}
 
 .. Tip ::
-   
+
    The next steps use petlib's big number and elliptic curve syntax (``petlib.bn``,
-   ``petlib.ec``) syntax. We encourage you to get familiar with them on petlib's
+   ``petlib.ec``). We encourage you to get familiar with them on petlib's
    `documentation page <https://petlib.readthedocs.io/en/latest/>`__.
 
 First, we set up the group elements: elliptic curve points :math:`G_i`, and the secrets :math:`x_i`.
@@ -106,7 +106,7 @@ call the :py:meth:`zksk.base.Prover.prove` method to get a non-interactive ZK pr
 The returned :py:class:`zksk.base.NIZK` object embeds a challenge, a list of
 responses, a hash of the proof statement and a precommitment, if any.
 
-To verify a NIZK, the verifier needs reconstuct the sae statement and 
+To verify a NIZK, the verifier needs reconstruct the same statement and
 call :py:meth:`zksk.base.Verifier.verify`:
 
 .. literalinclude:: ../examples/simple_dlrep.py
@@ -160,7 +160,7 @@ If secrets have their values set, you can also evaluate an expression using
 .. literalinclude:: ../examples/expressions.py
    :lines: 38-40
 
-This can simplify the redundant definition of a prove above as follows:
+This can simplify the redundant definition of a proof above:
 
 .. literalinclude:: ../examples/expressions.py
    :lines: 43
@@ -208,10 +208,10 @@ equivalent snippets:
    :lines: 58-60
 
 .. literalinclude:: ../examples/andproof.py
-   :lines: 62-63
+   :lines: 62-64
 
 They are not equivalent as the second one will verify that the same
-:py:class:`zksk.expr.Secret` object is used. 
+:py:class:`zksk.expr.Secret` object is used.
 
 Executing the protocol is the same as in the previous example.
 
@@ -224,16 +224,15 @@ In this example, we show how to build an "or"-composition of two discrete-logari
    PK \{ (x_0, x_1): \underbrace{Y_0 = x_0 G_0}_{\text{First statement}}
          \lor \underbrace{Y_1 = x_1 G_1}_{\text{Second statement}} \}
 
-Or-proofs are slightly more complicated than and-proofs. 
+Or-proofs are slightly more complicated than and-proofs.
 
-A simple way to define the or-proof is as follows:
+A simple way to define this or-proof is as follows:
 
 .. literalinclude:: ../examples/orproof.py
    :lines: 26-31
 
-An or-proof works by simulating all subproof, except for one true subproof which will be actually
-proven. Before executing the protocol, you can explicitly define which subproofs
-will be simulated. 
+An or-proof works by simulating all subproofs but the one true subproof which will be actually
+proved. Before executing the protocol, you can explicitly define which subproofs will be simulated.
 
 .. literalinclude:: ../examples/orproof.py
    :lines: 33-34
@@ -247,12 +246,12 @@ This ensures that this subproof is not picked for the legitimate execution.
    does not change the composed proof.
 
 .. Tip::
-   
+
    You don't need to provide all the secret values for the or-proof. The library
-   will draw a random subproof to actually execute, but it will choose only
+   will draw a random subproof to execute, but it will choose only
    among those for which you provided all secrets.
 
-Equivalently, you can use :py:class:`zksk.composition.OrProofStmt` as for the AND statement:
+Equivalently, you can use :py:class:`zksk.composition.OrProofStmt`:
 
 .. literalinclude:: ../examples/orproof.py
    :lines: 36-41
@@ -287,10 +286,10 @@ The library cannot prevent all cases of flawed proofs, but it will try its best 
 For that, it needs to impose certain limitations on the expressivity of the proofs.
 
 1. When reusing a secret :math:`x` with two different group points :math:`G_0`, :math:`G_1`, the
-   groups induced by :math:`G_0` and :math:`G_1` must have the same order.
+   groups induced by :math:`G_0` and :math:`G_1` must have the same size.
 2. No secret should appear at the same time in and out of an or-proof. This proof will fail to
    instantiate:
-   
+  
    .. math::
 
       PK\{ (x_0, x_1): Y_0 = x_0 G_0  \land  (Y_1 = x_1 G_1  \lor Y_2 = x_0 G_2 ) \}
