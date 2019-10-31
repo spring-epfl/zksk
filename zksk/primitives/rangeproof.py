@@ -1,5 +1,5 @@
 r"""
-"Range proof": ZK proof that a committed value lies within a range.
+Range proof: ZK proof that a committed value lies within a range.
 
 .. math::
 
@@ -142,15 +142,13 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 class GenericRangeStmtMaker:
     """
     Auxiliary builder class for generic range proofs.
+
     .. math::
 
-        PK { (r, x): x G + r H & a <= x < b }
+        PK \{ (r, x): x G + r H \land a \leq x < b \}
 
     See "`Efficient Protocols for Set Membership and Range Proofs`_" by Camenisch
     et al., 2008.
-
-    .. _`Efficient Protocols for Set Membership and Range Proofs`:
-        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
 
     In practice, use the :py:obj:`zksk.primitives.rangeproof.RangeStmt` object directly:
 
@@ -168,6 +166,9 @@ class GenericRangeStmtMaker:
     True
 
     See :py:meth:`GenericRangeStmtMaker.__call__` for the construction signature.
+
+    .. `Efficient Protocols for Set Membership and Range Proofs`:
+        https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
 
     """
 
@@ -223,13 +224,18 @@ class GenericRangeStmtMaker:
 class GenericRangeOnlyStmtMaker:
     """
     Auxiliary builder class for generic range proofs.
+
     .. math::
-        PK { (x): a <= x < b }
+        PK \{ (x): a \leq x < b \}
+
     See "`Efficient Protocols for Set Membership and Range Proofs`_" by Camenisch
     et al., 2008.
+
     .. _`Efficient Protocols for Set Membership and Range Proofs`:
         https://infoscience.epfl.ch/record/128718/files/CCS08.pdf
+
     In practice, use the :py:obj:`zksk.primitives.rangeproof.RangeStmt` object directly:
+
     >>> x = Secret(value=3)
     >>> lo = 0
     >>> hi = 5
@@ -289,4 +295,3 @@ class GenericRangeOnlyStmtMaker:
 # TODO: Make a regular class.
 RangeStmt = GenericRangeStmtMaker()
 RangeOnlyStmt = GenericRangeOnlyStmtMaker()
-

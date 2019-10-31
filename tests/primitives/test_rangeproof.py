@@ -58,6 +58,7 @@ def test_power_two_range_stmt_interactive():
     assert protocol.verify()
     verifier.stmt.full_validate()
 
+
 def test_range_stmt_non_interactive_start_at_zero(group):
     x = Secret(value=3)
     randomizer = Secret(value=group.order().random())
@@ -71,6 +72,7 @@ def test_range_stmt_non_interactive_start_at_zero(group):
 
     tr = stmt.prove()
     assert stmt.verify(tr)
+
 
 def test_range_stmt_non_interactive_start_at_nonzero(group):
     x = Secret(value=14)
@@ -86,6 +88,7 @@ def test_range_stmt_non_interactive_start_at_nonzero(group):
     tr = stmt.prove()
     assert stmt.verify(tr)
 
+
 def test_range_stmt_non_interactive_outside_range(group):
     x = Secret(value=15)
     randomizer = Secret(value=group.order().random())
@@ -99,6 +102,7 @@ def test_range_stmt_non_interactive_outside_range(group):
 
     with pytest.raises(Exception):
         tr = stmt.prove()
+
 
 def test_range_proof_outside():
     group = EcGroup()
@@ -134,4 +138,3 @@ def test_range_proof_outside_range_below():
     with pytest.raises(Exception):
         nizk = stmt.prove()
         stmt.verify(nizk)
-
