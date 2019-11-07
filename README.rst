@@ -12,6 +12,10 @@ zksk
    :target: https://zksk.readthedocs.io/?badge=latest
    :alt: Documentation status
 
+.. |arxiv| image:: https://img.shields.io/badge/cs.CR-arXiv%3A1911.02459-red
+   :target: https://arxiv.org/abs/1911.02459
+   :alt: Paper on arXiv
+
 .. start-description-marker-do-not-remove
 
 Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs.
