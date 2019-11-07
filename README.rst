@@ -2,7 +2,7 @@
 zksk
 ####
 
-|build_status| |docs_status|
+|build_status| |docs_status| |arxiv|
 
 .. |build_status| image:: https://travis-ci.org/spring-epfl/zksk.svg?branch=master
    :target: https://travis-ci.org/spring-epfl/zksk
