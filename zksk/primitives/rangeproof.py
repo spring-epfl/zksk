@@ -10,7 +10,6 @@ value.
 
 """
 
-from petlib.bn import Bn
 from petlib.ec import EcGroup
 
 from zksk import Secret
@@ -89,10 +88,10 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         ]
 
         # Compute revealed randomizer
-        rand = Bn(0)
-        power = Bn(1)
+        rand = 0
+        power = 1
         for r in self.randomizers:
-            rand = rand.mod_add(r.value * power, self.order)
+            rand = (r.value * power).mod_add(rand, self.order)
             power *= 2
         rand = rand.mod_sub(self.randomizer.value, self.order)
         precommitment["rand"] = rand
@@ -132,7 +131,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
         # Combine bit commitments into value commitment
         combined = self.g.group.infinite()
-        power = Bn(1)
+        power = 1
         for c in precommitment["Cs"]:
             combined += power * c
             power *= 2

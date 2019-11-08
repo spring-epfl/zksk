@@ -14,8 +14,6 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 """
 from hashlib import sha256
 
-from petlib.bn import Bn
-
 from zksk.base import Verifier, Prover, SimulationTranscript
 from zksk.expr import Secret, Expression
 from zksk.utils import get_random_num
@@ -136,11 +134,6 @@ class DLRep(ComposableProofStmt):
             # TODO: Make this raise:
             # raise IncompleteValuesError(self.secret_vars)
             return None
-
-        # We check everything is indeed a big number, else we cast it
-        for name, sec in secrets_dict.items():
-            if not isinstance(sec, Bn):
-                secrets_dict[name] = Bn(sec)
 
         return DLRepProver(self, secrets_dict)
 
