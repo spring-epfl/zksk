@@ -1,6 +1,6 @@
 import os
 
-from petlib.bn import Bn
+from zksk.bn import Bn
 
 from zksk.consts import DEFAULT_GROUP
 from zksk.exceptions import InvalidExpression

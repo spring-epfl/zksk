@@ -6,7 +6,6 @@ import abc
 import random
 import string
 from petlib.ec import EcGroup, EcPt
-from petlib.bn import Bn
 from petlib.pack import *
 import binascii
 import msgpack
@@ -15,6 +14,7 @@ from hashlib import sha256
 from collections import defaultdict
 import attr
 
+from zksk.bn import Bn
 from zksk.utils import get_random_num
 from zksk.consts import CHALLENGE_LENGTH
 from zksk.exceptions import ValidationError
