@@ -148,7 +148,6 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
         return OrProofStmt(self, other)
 
-
     def get_prover_cls(self):
         if hasattr(self, "prover_cls"):
             return self.prover_cls
@@ -406,6 +405,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
     Raise:
         ValueError: If less than two subproofs given.
     """
+
     def __init__(self, *subproofs):
         if len(subproofs) < 2:
             raise ValueError("Need at least two subproofs")
@@ -430,7 +430,11 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # (in-order)
         com = []
         for index, subproof in enumerate(self.subproofs):
-            com.append(subproof.recompute_commitment(self.or_challenges[index], responses[index]))
+            com.append(
+                subproof.recompute_commitment(
+                    self.or_challenges[index], responses[index]
+                )
+            )
         return com
 
     def get_prover(self, secrets_dict=None):
@@ -536,7 +540,9 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # Generate the last simulation.
         final_chal = _find_residual_challenge(or_chals, challenge, CHALLENGE_LENGTH)
         or_chals.append(final_chal)
-        final_transcript = self.subproofs[index + 1].simulate_proof(challenge=final_chal)
+        final_transcript = self.subproofs[index + 1].simulate_proof(
+            challenge=final_chal
+        )
         com.append(final_transcript.commitment)
         resp.append(final_transcript.responses)
         precom.append(final_transcript.precommitment)
@@ -924,9 +930,7 @@ class AndVerifier(Verifier):
             responses_dict = {}
 
         for index, sub in enumerate(self.subs):
-            if not sub.check_responses_consistency(
-                responses[index], responses_dict
-            ):
+            if not sub.check_responses_consistency(responses[index], responses_dict):
                 return False
         return True
 

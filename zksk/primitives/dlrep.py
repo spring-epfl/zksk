@@ -242,8 +242,7 @@ class DLRepProver(Prover):
         """
         order = self.stmt.bases[0].group.order()
         resps = [
-            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
-            % order
+            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k) % order
             for i, k in enumerate(self.ks)
         ]
         return resps

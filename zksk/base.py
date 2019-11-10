@@ -131,8 +131,9 @@ class Prover(metaclass=abc.ABCMeta):
         # Generate the challenge.
         prehash = self.stmt.prehash_statement()
         stmt_hash = prehash.digest()
-        challenge = build_fiat_shamir_challenge(prehash, precommitment,
-                commitment, message=message)
+        challenge = build_fiat_shamir_challenge(
+            prehash, precommitment, commitment, message=message
+        )
 
         responses = self.compute_response(challenge)
         return NIZK(
@@ -233,6 +234,7 @@ class Verifier(metaclass=abc.ABCMeta):
         commitment_prime = self.stmt.recompute_commitment(
             nizk.challenge, nizk.responses
         )
-        challenge_prime = build_fiat_shamir_challenge(prehash, nizk.precommitment,
-                commitment_prime, message=message)
+        challenge_prime = build_fiat_shamir_challenge(
+            prehash, nizk.precommitment, commitment_prime, message=message
+        )
         return nizk.challenge == challenge_prime

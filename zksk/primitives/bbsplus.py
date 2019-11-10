@@ -104,7 +104,9 @@ class BBSPlusSignatureCreator:
             secrets = [self.s1] + messages
             rhs = wsum_secrets(secret_vars, self.pk.generators[1 : len(messages) + 2])
             com_stmt = DLRep(lhs, rhs)
-            com_nizk_proof = com_stmt.prove({s: v for s, v in zip(secret_vars, secrets)})
+            com_nizk_proof = com_stmt.prove(
+                {s: v for s, v in zip(secret_vars, secrets)}
+            )
 
         return UserCommitmentMessage(com_message=lhs, com_nizk_proof=com_nizk_proof)
 
@@ -155,13 +157,9 @@ class BBSPlusKeypair:
         generators = make_generators(num_generators + 2, group=bilinear_pair.G1)
         h0 = bilinear_pair.G2.generator()
         sk = BBSPlusSecretKey(
-            gamma=bilinear_pair.G1.order().random(),
-            generators=generators,
-            h0=h0,
+            gamma=bilinear_pair.G1.order().random(), generators=generators, h0=h0,
         )
-        pk = BBSPlusPublicKey(
-            w=sk.gamma * h0, generators=generators, h0=h0
-        )
+        pk = BBSPlusPublicKey(w=sk.gamma * h0, generators=generators, h0=h0)
         return BBSPlusKeypair(generators=generators, h0=h0, sk=sk, pk=pk)
         # self.sk.pk = self.pk
 

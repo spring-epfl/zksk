@@ -24,7 +24,9 @@ def decompose_into_n_bits(value, n):
     """Array of bits, least significant bit first"""
     if value < 0:
         raise Exception("Can't represent negative values")
-    base = [1 if value.is_bit_set(b) else 0 for b in range(value.num_bits() - 1, -1, -1)]
+    base = [
+        1 if value.is_bit_set(b) else 0 for b in range(value.num_bits() - 1, -1, -1)
+    ]
     extra_bits = n - len(base)
     if extra_bits < 0:
         raise Exception("Not enough bits to represent value")
@@ -188,7 +190,7 @@ class GenericRangeStmtMaker:
         a = ensure_bn(a)
         b = ensure_bn(b)
         num_bits = (b - a - 1).num_bits()
-        offset = 2**num_bits - (b - a)
+        offset = 2 ** num_bits - (b - a)
 
         com_shifted1 = com - a * g
         com_shifted2 = com_shifted1 - offset * g
@@ -201,21 +203,11 @@ class GenericRangeStmtMaker:
         com_stmt = DLRep(com, x * g + r * h)
 
         p1 = PowerTwoRangeStmt(
-            com=com_shifted1,
-            g=g,
-            h=h,
-            num_bits=num_bits,
-            x=x1,
-            randomizer=r,
+            com=com_shifted1, g=g, h=h, num_bits=num_bits, x=x1, randomizer=r,
         )
 
         p2 = PowerTwoRangeStmt(
-            com=com_shifted2,
-            g=g,
-            h=h,
-            num_bits=num_bits,
-            x=x2,
-            randomizer=r,
+            com=com_shifted2, g=g, h=h, num_bits=num_bits, x=x2, randomizer=r,
         )
 
         return com_stmt & p1 & p2
@@ -273,20 +265,10 @@ class GenericRangeOnlyStmtMaker:
             x2.value = x.value - a + offset
         com_stmt = DLRep(com, x * g + r * h)
         p1 = PowerTwoRangeStmt(
-            com=com_shifted1,
-            g=g,
-            h=h,
-            num_bits=num_bits,
-            x=x1,
-            randomizer=r,
+            com=com_shifted1, g=g, h=h, num_bits=num_bits, x=x1, randomizer=r,
         )
         p2 = PowerTwoRangeStmt(
-            com=com_shifted2,
-            g=g,
-            h=h,
-            num_bits=num_bits,
-            x=x2,
-            randomizer=r,
+            com=com_shifted2, g=g, h=h, num_bits=num_bits, x=x2, randomizer=r,
         )
 
         return com_stmt & p1 & p2
