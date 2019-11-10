@@ -2,7 +2,7 @@
 zksk
 ####
 
-|build_status| |docs_status| |arxiv|
+|build_status| |docs_status| |license| |arxiv|
 
 .. |build_status| image:: https://travis-ci.org/spring-epfl/zksk.svg?branch=master
    :target: https://travis-ci.org/spring-epfl/zksk
@@ -12,6 +12,10 @@ zksk
    :target: https://zksk.readthedocs.io/?badge=latest
    :alt: Documentation status
 
+.. |license| image:: https://img.shields.io/badge/License-MIT-yellow.svg
+   :target: https://opensource.org/licenses/MIT
+   :alt: MIT License
+
 .. |arxiv| image:: https://img.shields.io/badge/cs.CR-arXiv%3A1911.02459-red
    :target: https://arxiv.org/abs/1911.02459
    :alt: Paper on arXiv
@@ -20,12 +24,65 @@ zksk
 
 Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs.
 
+--------------------------------------------------------------------------------------------
+
+Let's say Peggy commits to a secret bit and wants to prove to Victor in zero knowledge that she
+knows this bit---that is, without revealing it. In Camenisch-Stadler notation, we can write:
+
+.. image:: images/bit_proof_stmt.svg
+   :alt: PK{ (r): (C = rH) ∨ (C - G = rH) }
+
+To implement this zero-knowledge proof, Peggy will run:
+
+.. code-block:: python
+
+    from zksk import Secret, DLRep
+    from zksk import utils
+
+    # Setup: Peggy and Victor agree on two group generators.
+    G, H = utils.make_generators(num=2, seed=42)
+    # Setup: generate a secret randomizer.
+    r = Secret(utils.get_random_num(bits=128))
+
+    # This is Peggy's secret bit.
+    top_secret_bit = 1
+
+    # A Pedersen commitment to the secret bit.
+    commitment = top_secret_bit * G + r.value * H
+
+    # Peggy's definition of the proof statement, and proof generation.
+    stmt = DLRep(commitment, r * H, simulated=True) | DLRep(commitment - G, r * H)
+    zk_proof = stmt.prove()
+
+
+Victor will receive ``commitment`` and ``zk_proof`` from Peggy, and run this to verify the
+proof:
+
+.. code-block:: python
+
+    from zksk import Secret, DLRep
+
+    # Setup: get the agreed group generators.
+    G, H = utils.make_generators(num=2, seed=42)
+    # Setup: define a randomizer with an unknown value.
+    r = Secret()
+
+    stmt = DLRep(commitment, r * H) | DLRep(commitment - G, r * H)
+    assert stmt.verify(zk_proof)
+
+Victor is now convinced that Peggy knows the committed bit.
+
+--------------------------------------------------------------------------------------------
+
 .. end-description-marker-do-not-remove
 
 Check out the `documentation <https://zksk.readthedocs.io/>`_.
 
+--------------------------------------------------------------------------------------------
+
 > **Warning.** Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
 
+--------------------------------------------------------------------------------------------
 
 ===============
 Getting started
