@@ -22,9 +22,10 @@ zksk
 
 .. start-description-marker-do-not-remove
 
-Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs.
+Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowledge proofs in the
+discrete-log setting.
 
---------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
 
 Let's say Peggy commits to a secret bit and wants to prove to Victor in zero knowledge that she
 knows this bit—that is, without revealing it. In Camenisch-Stadler notation, we can write:
