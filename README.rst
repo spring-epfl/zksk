@@ -76,8 +76,6 @@ Victor is now convinced that Peggy knows the committed bit.
 
 .. end-description-marker-do-not-remove
 
---------------------------------------------------------------------------------------------
-
 > **Warning.** Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
 
 Check out the `documentation <https://zksk.readthedocs.io/>`_.
