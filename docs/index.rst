@@ -8,6 +8,8 @@ zksk's docs
 .. warning::
    Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
 
+-------------
+
 .. toctree::
    :maxdepth: 2
    :caption: Basics
@@ -28,6 +30,12 @@ zksk's docs
 
    api/core
    api/primitives
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Misc
+
+   citing
 
 
 .. Indices and tables

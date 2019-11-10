@@ -117,3 +117,28 @@ To build the the documentation pages, make sure you have installed the dev versi
     make html
 
 .. end-getting-started-marker-do-not-remove
+
+======
+Citing
+======
+
+.. start-citing-do-not-remove
+
+If you use zksk in your research, please cite like this:
+
+.. code-block:: bibtex
+
+    @inproceedings{LueksKFBT19,
+      author    = {Wouter Lueks and
+                   Bogdan Kulynych and
+                   Jules Fasquelle and
+                   Simon Le Bail{-}Collet and
+                   Carmela Troncoso},
+      title     = {zksk: {A} Library for Composable Zero-Knowledge Proofs},
+      booktitle = {Proceedings of the 18th {ACM} Workshop on Privacy in the Electronic
+                   Society ({WPES@CCS})},
+      pages     = {50--54},
+      year      = {2019},
+    }
+
+.. end-citing-do-not-remove
