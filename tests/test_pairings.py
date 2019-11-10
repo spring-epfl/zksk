@@ -49,12 +49,12 @@ def test_additive_point(bp_group, group_pair):
     gmg = group_pair.GT.generator()
     assert g == gmg.pt
     assert gmg == AdditivePoint(g, group_pair)
-    assert AdditivePoint(g**(g.group.order()), group_pair) == group_pair.GT.infinite()
+    assert AdditivePoint(g ** (g.group.order()), group_pair) == group_pair.GT.infinite()
 
     r = bp_group.order().random()
-    g1, g1mg = g**r, r*gmg
+    g1, g1mg = g ** r, r * gmg
     assert g1 == g1mg.pt
-    assert g1*g1*g1 == (g1mg+g1mg+g1mg).pt
+    assert g1 * g1 * g1 == (g1mg + g1mg + g1mg).pt
     assert g1.export() == g1mg.export()
     assert g1.group == g1mg.bp.bpgp
 
@@ -64,11 +64,11 @@ def test_g1_g2_groups(bp_group, group_pair):
     g1, g2 = G1.generator(), G2.generator()
     assert G1.infinite().pt == bp_group.gen1().inf(bp_group)
     assert G1.infinite() == G1Point(bp_group.gen1().inf(bp_group), group_pair)
-    assert g1*0 ==G1.infinite()
-    assert g1*0 == g1*bp_group.order()
+    assert g1 * 0 == G1.infinite()
+    assert g1 * 0 == g1 * bp_group.order()
     assert G2.infinite().pt == bp_group.gen2().inf(bp_group)
-    assert g2*0 == G2.infinite()
-    assert g2*0 == g2*bp_group.order()
+    assert g2 * 0 == G2.infinite()
+    assert g2 * 0 == g2 * bp_group.order()
 
 
 def test_pack_unpack_g1(group_pair):

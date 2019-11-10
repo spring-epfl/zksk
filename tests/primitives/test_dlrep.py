@@ -64,7 +64,7 @@ def test_dlrep_non_interactive_1(group):
 
 
 def test_dlrep_non_interactive_2(group):
-    g, = make_generators(1, group)
+    (g,) = make_generators(1, group)
     x = Secret()
     p = DLRep(4 * g, x * g)
     tr = p.prove({x: 4})
@@ -194,7 +194,7 @@ def test_get_many_different_provers(group, num):
 
 
 def test_same_random_values_in_commitments(group):
-    g, = make_generators(1, group)
+    (g,) = make_generators(1, group)
     generators = [g, g, g]
 
     pub = group.wsum([Bn(100), Bn(100), Bn(100)], generators)

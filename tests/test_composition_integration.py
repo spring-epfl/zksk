@@ -6,7 +6,12 @@ from petlib.bn import Bn
 from petlib.ec import EcGroup
 
 from zksk import DLRep, Secret
-from zksk.exceptions import InvalidExpression, InvalidSecretsError, ValidationError, GroupMismatchError
+from zksk.exceptions import (
+    InvalidExpression,
+    InvalidSecretsError,
+    ValidationError,
+    GroupMismatchError,
+)
 from zksk.composition import AndProofStmt, OrProofStmt
 from zksk.expr import wsum_secrets
 from zksk.utils import make_generators
@@ -427,6 +432,7 @@ def test_malicious_and_proofs():
     resp = prov.compute_response(chal)
     with pytest.raises(ValidationError):
         verif.verify(resp)
+
 
 # Secret used both inside and outside of or clause
 def test_invalid_or_composition():

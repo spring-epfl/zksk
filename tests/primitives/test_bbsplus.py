@@ -19,9 +19,7 @@ def test_signature_setup():
     presignature = sk.sign(com.com_message)
     signature = creator.obtain_signature(presignature)
 
-    assert com.verify_blinding(pk) and signature.verify_signature(
-        pk, messages
-    )
+    assert com.verify_blinding(pk) and signature.verify_signature(pk, messages)
 
 
 def test_signature_proof():

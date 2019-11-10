@@ -8,7 +8,11 @@ from zksk.pairings import BilinearGroupPair
 from zksk import DLRep
 from zksk.composition import OrProofStmt, AndProofStmt
 from zksk.exceptions import ValidationError
-from zksk.primitives.bbsplus import BBSPlusKeypair, BBSPlusSignatureCreator, BBSPlusSignatureStmt
+from zksk.primitives.bbsplus import (
+    BBSPlusKeypair,
+    BBSPlusSignatureCreator,
+    BBSPlusSignatureStmt,
+)
 from zksk.primitives.dl_notequal import DLNotEqual
 from zksk.primitives.rangeproof import RangeStmt
 from zksk.utils.debug import SigmaProtocol
