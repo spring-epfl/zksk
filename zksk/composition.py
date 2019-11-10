@@ -360,8 +360,8 @@ class _CommonComposedStmtMixin:
 
         # We map the unique secrets to the indices where they appear
         mydict = defaultdict(list)
-        for idx, word in enumerate(secrets):
-            mydict[word].append(idx)
+        for index, word in enumerate(secrets):
+            mydict[word].append(index)
 
         # Now we use this dictionary to check all the bases related to a particular secret live in
         # the same group
@@ -434,9 +434,8 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # Compute the list of commitments, one for each proof with its challenge and responses
         # (in-order)
         com = []
-        for i in range(len(self.subproofs)):
-            p = self.subproofs[i]
-            com.append(p.recompute_commitment(self.or_challenges[i], responses[i]))
+        for index, subproof in enumerate(self.subproofs):
+            com.append(subproof.recompute_commitment(self.or_challenges[index], responses[index]))
         return com
 
     def get_prover(self, secrets_dict=None):
@@ -458,9 +457,9 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
 
         # Prepare the draw. Disqualify proofs with simulation parameter set to true
         candidates = {}
-        for idx in range(len(self.subproofs)):
-            if not self.subproofs[idx].simulated:
-                candidates[idx] = self.subproofs[idx]
+        for index, subproof in enumerate(self.subproofs):
+            if not self.subproofs[index].simulated:
+                candidates[index] = subproof
 
         if len(candidates) == 0:
             print("Cannot run an or-proof if all elements are simulated")
@@ -523,19 +522,16 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         for subp in self.subproofs:
             subp.prepare_simulate_proof()
 
-    def simulate_proof(self, responses_dict=None, challenge=None):
+    def simulate_proof(self, challenge=None, *args, **kwargs):
         """
         Simulate the or-proof.
 
         To do so, simulates the n-1 first subproofs, computes the complementary challenge and
-        simulates the last proof using this challenge. Does not use the responses_dict passed as
-        parameter since inside an or-proof responses consistency is not required between subproofs.
+        simulates the last proof using this challenge.
 
         Args:
             challenge: The global challenge, equal to the sum of all the subchallenges mod chal
                 bitlength.
-            responses_dict: A dictionary of responses to enforce for consistency.
-                Useless hiere, kept to have the same prototype for all simulate_proof methods.
         """
         if challenge is None:
             challenge = get_random_num(bits=CHALLENGE_LENGTH)
@@ -545,8 +541,8 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         precom = []
 
         # Generate one simulation at a time and update a list of each attribute.
-        for index in range(len(self.subproofs) - 1):
-            transcript = self.subproofs[index].simulate_proof()
+        for index, subproof in enumerate(self.subproofs[:-1]):
+            transcript = subproof.simulate_proof()
             com.append(transcript.commitment)
             resp.append(transcript.responses)
             or_chals.append(transcript.challenge)
@@ -571,7 +567,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
 
 class OrProver(Prover):
     """
-    Prover for the or proof.
+    Prover for the or-proof.
 
     This prover is built with only one subprover, and needs to have access to the index of the
     corresponding subproof in its mother proof. Runs all the simulations for the other proofs and
@@ -591,10 +587,10 @@ class OrProver(Prover):
         Runs all the required simulations and stores them.
         """
         self.simulations = []
-        for index in range(len(self.stmt.subproofs)):
+        for index, subproof in enumerate(self.stmt.subproofs):
             if index != self.true_prover_idx:
-                self.stmt.subproofs[index].prepare_simulate_proof()
-                sim = self.stmt.subproofs[index].simulate_proof()
+                subproof.prepare_simulate_proof()
+                sim = subproof.simulate_proof()
                 self.simulations.append(sim)
 
     def precommit(self):
@@ -604,7 +600,7 @@ class OrProver(Prover):
         Else, returns None.
         """
         precommitment = []
-        for index in range(len(self.stmt.subproofs)):
+        for index, _ in enumerate(self.stmt.subproofs):
             if index == self.true_prover_idx:
                 precommitment.append(self.subprover.precommit())
             else:
@@ -630,7 +626,7 @@ class OrProver(Prover):
         self.stmt.validate_composition()
 
         commitment = []
-        for index in range(len(self.stmt.subproofs)):
+        for index, _ in enumerate(self.stmt.subproofs):
             if index == self.true_prover_idx:
                 commitment.append(self.subprover.internal_commit())
             else:
@@ -657,7 +653,7 @@ class OrProver(Prover):
         )
         response = []
         challenges = []
-        for index in range(len(self.stmt.subproofs)):
+        for index, subproof in enumerate(self.stmt.subproofs):
             if index == self.true_prover_idx:
                 challenges.append(residual_chal)
                 response.append(self.subprover.compute_response(residual_chal))
@@ -696,8 +692,8 @@ class OrVerifier(Verifier):
         """
         if precommitment is None:
             return
-        for idx in range(len(self.subs)):
-            self.subs[idx].process_precommitment(precommitment[idx])
+        for index, sub in enumerate(self.subs):
+            sub.process_precommitment(precommitment[index])
 
     def check_responses_consistency(self, responses, responses_dict=None):
         """
@@ -712,8 +708,8 @@ class OrVerifier(Verifier):
         """
         if responses_dict is None:
             responses_dict = {}
-        for idx in range(len(self.subs)):
-            if not self.subs[idx].check_responses_consistency(responses[1][idx], {}):
+        for index, sub in enumerate(self.subs):
+            if not sub.check_responses_consistency(responses[1][index], {}):
                 return False
         return True
 
@@ -723,7 +719,9 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         """
         Constructs the And conjunction of several subproofs.
         Subproofs are copied at instantiation.
-        :param subproofs: An arbitrary number of proofs.
+
+        Args:
+            suproofs: Proof statements.
         """
         if len(subproofs) < 2:
             raise ValueError("AndProofStmt needs > 1 arguments")
@@ -750,9 +748,8 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
             responses: A list of responses (themselves being lists), ordered as the list of subproofs.
         """
         com = []
-        for i in range(len(self.subproofs)):
-            cur_proof = self.subproofs[i]
-            com.append(cur_proof.recompute_commitment(challenge, responses[i]))
+        for index, subproof in enumerate(self.subproofs):
+            com.append(subproof.recompute_commitment(challenge, responses[index]))
         return com
 
     def get_prover(self, secrets_dict=None):
@@ -875,14 +872,13 @@ class AndProver(Prover):
         If not applicable (no subprover outputs a precommitment), returns None.
         """
         precommitment = []
-        for idx in range(len(self.subs)):
-
-            # Collects precommitments one by one
-            subprecom = self.subs[idx].precommit()
-            if subprecom is not None:
+        for index, sub in enumerate(self.subs):
+            # Collect precommitments one by one
+            sub_precommitment = sub.precommit()
+            if sub_precommitment is not None:
                 if len(precommitment) == 0:
                     precommitment = [None] * len(self.subs)
-                precommitment[idx] = subprecom
+                precommitment[index] = sub_precommitment
 
         # If any precommitment is valid, return the list. If all were None, return None.
         return precommitment if len(precommitment) != 0 else None
@@ -958,9 +954,9 @@ class AndVerifier(Verifier):
         if responses_dict is None:
             responses_dict = {}
 
-        for i in range(len(self.subs)):
-            if not self.subs[i].check_responses_consistency(
-                responses[i], responses_dict
+        for index, sub in enumerate(self.subs):
+            if not sub.check_responses_consistency(
+                responses[index], responses_dict
             ):
                 return False
         return True
@@ -971,6 +967,5 @@ class AndVerifier(Verifier):
         """
         if precommitment is None:
             return
-        for idx in range(len(self.subs)):
-            self.subs[idx].process_precommitment(precommitment[idx])
-
+        for index, sub in enumerate(self.subs):
+            sub.process_precommitment(precommitment[index])

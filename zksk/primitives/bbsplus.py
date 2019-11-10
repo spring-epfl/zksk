@@ -61,7 +61,7 @@ class UserCommitmentMessage:
         # TODO: Extract into a separate ExtendedProofStmt.
         lhs = self.com_message
         generators = pk.generators[1 : len(self.com_nizk_proof.responses) + 1]
-        secret_vars = [Secret() for i in range(len(self.com_nizk_proof.responses))]
+        secret_vars = [Secret() for _ in self.com_nizk_proof.responses]
         proof = DLRep(lhs, wsum_secrets(secret_vars, generators))
 
         return proof.verify(self.com_nizk_proof)
@@ -324,4 +324,3 @@ class BBSPlusSignatureStmt(ExtendedProofStmt):
         precommitment["A1"] = group.order().random() * group.generator()
         precommitment["A2"] = group.order().random() * group.generator()
         return precommitment
-

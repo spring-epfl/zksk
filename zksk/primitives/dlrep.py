@@ -44,8 +44,7 @@ class DLRepVerifier(Verifier):
         if responses_dict is None:
             responses_dict = {}
 
-        for i in range(len(self.stmt.secret_vars)):
-            s = self.stmt.secret_vars[i]
+        for i, s in enumerate(self.stmt.secret_vars):
             if s in responses_dict.keys():
                 if responses[i] != responses_dict[s]:
                     warnings.warn(
@@ -248,8 +247,8 @@ class DLRepProver(Prover):
         """
         order = self.stmt.bases[0].group.order()
         resps = [
-            (self.secret_values[self.stmt.secret_vars[i]] * challenge + self.ks[i])
+            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
             % order
-            for i in range(len(self.ks))
+            for i, k in enumerate(self.ks)
         ]
         return resps
