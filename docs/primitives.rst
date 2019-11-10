@@ -47,7 +47,7 @@ construction.
 .. code:: python
 
    group_pair = BilinearGroupPair()
-   keypair = Keypair(group_pair, num_generators) 
+   keypair = Keypair(group_pair, num_generators)
 
    # Construct a UserCommitment object embedding the blinded block and the proof
    # of correct construction.
@@ -80,7 +80,7 @@ Once the user has the final signature, she can prove she has it:
 
    e, s = Secret(value=signature.e), Secret(value=signature.s)
    messages = [Secret(value=m1), ..., Secret(value=m_n)]
-   proof = SignatureStmt([e, s, *messages], pk, signature)
+   proof = BBPlusSignatureStmt([e, s, *messages], pk, signature)
 
 The :math:`e` and :math:`s` secrets are necessary so the proof can bind them to
 another proof, e.g. in an AND conjunction. If you do not care about binding
@@ -92,7 +92,7 @@ set a ``binding=False``.
    messages = [Secret(value=m1)..., Secret(value=mn)]
    stmt = BBSPlusSignatureStmt(messages, pk, signature, binding=False)
 
-The ``signature`` argument is required for the proving side. 
+The ``signature`` argument is required for the proving side.
 The verifier can run this:
 
 .. code:: python
