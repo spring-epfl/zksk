@@ -29,7 +29,7 @@ Zero-Knowledge Swiss Knife: Python library for prototyping composable zero-knowl
 Let's say Peggy commits to a secret bit and wants to prove to Victor in zero knowledge that she
 knows this bit---that is, without revealing it. In Camenisch-Stadler notation, we can write:
 
-.. image:: images/bit_proof_stmt.svg
+.. image:: https://raw.githubusercontent.com/spring-epfl/zksk/docs-fixes/images/bit_proof_stmt.svg
    :alt: PK{ (r): (C = rH) ∨ (C - G = rH) }
 
 To implement this zero-knowledge proof, Peggy will run:
