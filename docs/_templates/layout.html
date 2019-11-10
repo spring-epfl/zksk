@@ -1,0 +1,18 @@
+{% extends "!layout.html" %}
+  {% block extrahead %} {{ super() }}
+
+  <style>
+    /* Sidebar header (and topbar for mobile) */
+    .wy-side-nav-search, .wy-nav-top, .wy-menu-vertical a:active {
+      background: #d52b1e;
+    }
+    /* TOC captions */
+    .wy-menu-vertical .caption-text {
+      color: #fff;
+    }
+    /* Sidebar */
+    .wy-nav-side {
+      background: #231f1b;
+    }
+  </style>
+{% endblock %}
