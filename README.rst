@@ -30,7 +30,7 @@ discrete-log setting.
 Let's say Peggy commits to a secret bit and wants to prove to Victor in zero knowledge that she
 knows this bit—that is, without revealing it. In Camenisch-Stadler notation, we can write:
 
-.. image:: https://raw.githubusercontent.com/spring-epfl/zksk/docs-fixes/images/bit_proof_stmt.svg?sanitize=true
+.. image:: https://raw.githubusercontent.com/spring-epfl/zksk/master/images/bit_proof_stmt.svg?sanitize=true
    :alt: PK{ (r): (C = rH) ∨ (C - G = rH) }
 
 To implement this zero-knowledge proof, Peggy will run:
