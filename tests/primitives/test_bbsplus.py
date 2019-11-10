@@ -83,3 +83,31 @@ def test_signature_non_interactive_proof():
     p1 = BBSPlusSignatureStmt([Secret() for _ in range(5)], pk)
     assert p1.verify(tr)
 
+
+def test_bbsplus_and_range():
+    from zksk.primitives.rangeproof import RangeStmt
+    from zksk.utils import make_generators
+
+    mG = BilinearGroupPair()
+    keypair = BBSPlusKeypair.generate(mG, 9)
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = BBSPlusSignatureCreator(pk)
+    msg_val = Bn(30)
+    lhs = creator.commit([msg_val])
+    presignature = sk.sign(lhs.com_message)
+    signature = creator.obtain_signature(presignature)
+    e, s, m = Secret(signature.e), Secret(signature.s), Secret(msg_val)
+
+    p1 = BBSPlusSignatureStmt([e, s, m], pk, signature)
+
+    g, h = make_generators(2, mG.G1)
+    randomizer = Secret(value=mG.G1.order().random())
+    com = m * g + randomizer * h
+    p2 = RangeStmt(com.eval(), g, h, 18, 9999, m, randomizer)
+
+    stmt = p1 & p2
+    proof = stmt.prove()
+    assert stmt.verify(proof)

@@ -370,6 +370,7 @@ def test_or_proof_infix_operator(params):
     orproof = p1 | p2
     assert verify_proof(orproof, secrets)
 
+
 def test_multiple_or_proof_infix_operator(group, params):
     p1, p2, secrets = params
     g = group.generator()

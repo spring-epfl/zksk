@@ -10,6 +10,7 @@ from zksk.composition import OrProofStmt, AndProofStmt
 from zksk.exceptions import ValidationError
 from zksk.primitives.bbsplus import BBSPlusKeypair, BBSPlusSignatureCreator, BBSPlusSignatureStmt
 from zksk.primitives.dl_notequal import DLNotEqual
+from zksk.primitives.rangeproof import RangeStmt
 from zksk.utils.debug import SigmaProtocol
 from zksk.utils import make_generators
 
@@ -985,3 +986,30 @@ def test_or_and_dlrne():
     chal = ver.send_challenge(com)
     resp = prov.compute_response(chal)
     assert ver.verify(resp)
+
+
+# BBS+ & Range
+def test_bbsplus_and_rangeproof():
+    mG = BilinearGroupPair()
+    keypair = BBSPlusKeypair.generate(mG, 9)
+
+    pk, sk = keypair.pk, keypair.sk
+    generators, h0 = keypair.generators, keypair.h0
+
+    creator = BBSPlusSignatureCreator(pk)
+    msg_val = Bn(30)
+    lhs = creator.commit([msg_val])
+    presignature = sk.sign(lhs.com_message)
+    signature = creator.obtain_signature(presignature)
+    e, s, m = Secret(signature.e), Secret(signature.s), Secret(msg_val)
+
+    p1 = BBSPlusSignatureStmt([e, s, m], pk, signature)
+
+    g, h = make_generators(2, mG.G1)
+    randomizer = Secret(value=mG.G1.order().random())
+    com = m * g + randomizer * h
+    p2 = RangeStmt(com.eval(), g, h, 18, 9999, m, randomizer)
+
+    stmt = p1 & p2
+    proof = stmt.prove()
+    assert stmt.verify(proof)
