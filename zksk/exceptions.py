@@ -11,6 +11,10 @@ class InvalidExpression(Exception):
     pass
 
 
+class InconsistentChallengeError(Exception):
+    """Recomputed and global challenge values do not match."""
+
+
 class StatementMismatch(Exception):
     """Proof statements mismatch, impossible to verify."""
 

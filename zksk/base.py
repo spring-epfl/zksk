@@ -10,7 +10,6 @@ from petlib.bn import Bn
 from petlib.pack import *
 import binascii
 import msgpack
-import pdb
 from hashlib import sha256
 from collections import defaultdict
 import attr
@@ -29,13 +28,13 @@ class NIZK:
     challenge = attr.ib()
     responses = attr.ib()
     precommitment = attr.ib(default=None)
-    stmt_hash= attr.ib(default=None)
+    stmt_hash = attr.ib(default=None)
 
 
 @attr.s
 class SimulationTranscript:
     """
-    Simulated proof transcript
+    Simulated proof transcript.
     """
 
     commitment = attr.ib()
@@ -46,7 +45,7 @@ class SimulationTranscript:
 
 
 def build_fiat_shamir_challenge(stmt_prehash, *args, message=""):
-    """Generate Fiat-Shamir challenge.
+    """Generate a Fiat-Shamir challenge.
 
     >>> prehash = sha256(b"statement id")
     >>> commitment = 42 * EcGroup().generator()
@@ -54,10 +53,9 @@ def build_fiat_shamir_challenge(stmt_prehash, *args, message=""):
     True
 
     Args:
-        prehash: Hash object seeded with Proof ID.
+        prehash: Hash object seeded with the proof statement ID.
         args: Items to hash (e.g., commitments)
         message: Message to make it a signature PK.
-
     """
     # Start building the complete hash for the challenge
     for elem in args:
@@ -73,7 +71,7 @@ def build_fiat_shamir_challenge(stmt_prehash, *args, message=""):
 
 class Prover(metaclass=abc.ABCMeta):
     """
-    An abstract interface representing Prover used in sigma protocols
+    Abstract interface representing Prover used in sigma protocols.
 
     Args:
         stmt: The Proof instance from which we draw the Prover.
@@ -81,28 +79,27 @@ class Prover(metaclass=abc.ABCMeta):
     """
 
     def __init__(self, stmt, secret_values):
-        """
-        """
         self.stmt = stmt
         self.secret_values = secret_values
 
     @abc.abstractmethod
     def compute_response(self, challenge):
         """
-        Computes the responses associated to each Secret object in the stmt, and returns the list.
+        Computes the responses associated to each Secret object in the statement.
+
+        Returns a list of responses.
         """
         pass
 
     def precommit(self):
         """
-        Generates a precommitment set to None if this function is not overriden.
+        Generate a precommitment.
         """
         return None
 
     def commit(self, randomizers_dict=None):
         """
-        Gathers the commitment of the instantiated prover, and appends a hash of the stmt statement
-        to it. Returns the tuple.
+        Constuct the proof commitment.
 
         Args:
             randomizers_dict: Optional dictionary of random values. Each random values is assigned
@@ -115,13 +112,13 @@ class Prover(metaclass=abc.ABCMeta):
 
     def get_nizk_proof(self, message=""):
         """
-        Construct a non-interactive stmt transcript using Fiat-Shamir heuristic.
+        Construct a non-interactive proof transcript using Fiat-Shamir heuristic.
 
         The transcript contains only the challenge and the responses, as the commitment can be
         deterministically recomputed.
 
         The challenge is a hash of the commitment, the stmt statement and all the bases in the
-        stmt (including the left-hand-side).
+        statement (including the left-hand-side).
 
         Args:
             message (str): Optional message to make a signature stmt of knowledge.
@@ -157,22 +154,21 @@ class Verifier(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def check_responses_consistency(self, response, response_dict=None):
         """
-        Verifies that for two identical secrets, the responses are also the same.
-        Returns False by default, should be overriden.
+        Verify that for two identical secrets, the responses are also the same.
         """
         return False
 
     def process_precommitment(self, precommitment):
         """
-        Receives a precommitment and processes it, i.e instantiates a constructed stmt if
-        necessary. If not overriden, does nothing.
+        Receive a precommitment and process it.
         """
         pass
 
     def send_challenge(self, commitment):
         """
-        Stores the received commitment and generates a challenge. The challenge is chosen at random
-        between 0 and CHALLENGE_LENGTH (excluded).
+        Store the received commitment and generate a challenge.
+
+        The challenge is chosen at random between 0 and ``CHALLENGE_LENGTH`` (excluded).
 
         Args:
             commitment: A tuple containing a hash of the stmt statement, to be
@@ -192,9 +188,10 @@ class Verifier(metaclass=abc.ABCMeta):
 
     def verify(self, response, *args, **kwargs):
         """
-        Verifies the responses of an interactive sigma protocol. To do so, generates a
-        pseudo-commitment based on the stored challenge and the received responses,
-        and compares it against the stored commitment.
+        Verify the responses of an interactive sigma protocol.
+
+        To do so, generates a pseudo-commitment based on the stored challenge and the received
+        responses, and compares it against the stored commitment.
 
         Args:
             response: The response given by the prover
@@ -211,11 +208,10 @@ class Verifier(metaclass=abc.ABCMeta):
 
     def verify_nizk(self, nizk, message="", *args, **kwargs):
         """
-        Verify a non-interactive proofs.
+        Verify a non-interactive proof.
 
         Unpacks the attributes and checks their consistency by computing a pseudo-commitment and
-        drawing from it a pseudo-challenge. Compares the pseudo-challenge with the nizk
-        challenge.
+        drawing from a pseudo-challenge. Compares the pseudo-challenge with the nizk challenge.
 
         Args:
             nizk (:py:class:`NIZK`): Non-interactive proof

@@ -54,4 +54,3 @@ b = 41 * h
 stmt = DLNotEqual((a, g), (b, h), x)
 nizk = stmt.prove()
 stmt.verify(nizk)
-

@@ -18,6 +18,7 @@ from zksk.utils import get_random_num, sum_bn_array
 from zksk.utils.misc import get_default_attr
 from zksk.exceptions import StatementSpecError, StatementMismatch
 from zksk.exceptions import InvalidSecretsError, GroupMismatchError
+from zksk.exceptions import InconsistentChallengeError
 
 
 def _find_residual_challenge(subchallenges, challenge, modulus):
@@ -113,7 +114,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
     def __and__(self, other):
         """
-        Return a conjuction of proof statements using :py:class:`AndProofStmt`.
+        Make a conjuction of proof statements using :py:class:`AndProofStmt`.
 
         If called multiple times, subproofs are flattened so that only one :py:class:`AndProofStmt`
         remains at the root.
@@ -131,7 +132,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
     def __or__(self, other):
         """
-        Return a disjunction of proof statements using :py:class:`OrProofStmt`.
+        Make a disjunction of proof statements using :py:class:`OrProofStmt`.
 
         If called multiple times, subproofs are flattened so that only one :py:class:`OrProofStmt`
         remains at the root.
@@ -162,13 +163,13 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
 
     def get_prover(self, secrets_dict=None):
         """
-        Return a Verifier object for the current proof.
+        Get the :py:class:`base.Prover` for the current proof.
         """
         return self.get_prover_cls()(self)
 
     def get_verifier(self):
         """
-        Return a Verifier object for the current proof.
+        Return the :py:class:`base.Verifier` for the current proof.
         """
         return self.get_verifier_cls()(self)
 
@@ -227,6 +228,9 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         pass
 
     def full_validate(self, *args, **kwargs):
+        """
+        For or/and-proofs, perform recursive validation of subproofs.
+        """
         return self.validate(*args, **kwargs)
 
     def validate_secrets_reoccurence(self, forbidden_secrets=None):
@@ -345,8 +349,9 @@ class _CommonComposedStmtMixin:
         """
         Check that if two secrets are the same, their bases induce groups of the same order.
 
-        The primary goal is to ensure same responses for same secrets will not yield false negatives of
-        :py:meth:`base.Verifier.check_responses_consistency` due to different group-order modular reductions.
+        The primary goal is to ensure same responses for same secrets will not yield false negatives
+        of :py:meth:`base.Verifier.check_responses_consistency` due to different group-order modular
+        reductions.
 
         TODO: Consider deactivating in the future as this forbids using different groups in one proof.
         TODO: Update docs, variable names.
@@ -386,9 +391,6 @@ class _CommonComposedStmtMixin:
         return (self.__class__.__name__, proof_ids)
 
     def full_validate(self, *args, **kwargs):
-        """
-        Validate subproofs.
-        """
         for sub in self.subproofs:
             sub.full_validate(*args, **kwargs)
 
@@ -397,15 +399,16 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
     """
     An disjunction of several subproofs.
 
-    Subproofs are copied at instantiation.
 
     Args:
-        subproofs: Two or more proof statements.
-    """
+        suproofs: Proof statements.
 
+    Raise:
+        ValueError: If less than two subproofs given.
+    """
     def __init__(self, *subproofs):
         if len(subproofs) < 2:
-            raise ValueError("OrProofStmt needs > 1 arguments")
+            raise ValueError("Need at least two subproofs")
 
         # We make a shallow copy of each subproof so they don't mess up each other.  This step is
         # important, as we can have different outputs for the same proof (independent simulations or
@@ -413,14 +416,6 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         self.subproofs = [copy.copy(p) for p in list(subproofs)]
 
     def recompute_commitment(self, challenge, responses):
-        """
-        Recompute the commitments, raise an Exception if the global challenge was not respected.
-
-        Args:
-            challenge: The global challenge sent by the verifier.
-            responses: A tuple (subchallenges, actual_responses) containing the subchallenges each
-                proof used (ordered list), and a list of responses (also ordered)
-        """
         # We retrieve the challenges, hidden in the responses tuple
         self.or_challenges = responses[0]
         responses = responses[1]
@@ -429,7 +424,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         if _find_residual_challenge(
             self.or_challenges, challenge, CHALLENGE_LENGTH
         ) != Bn(0):
-            raise Exception("Inconsistent challenge")
+            raise InconsistentChallengeError("Inconsistent challenges.")
 
         # Compute the list of commitments, one for each proof with its challenge and responses
         # (in-order)
@@ -439,13 +434,11 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         return com
 
     def get_prover(self, secrets_dict=None):
-        """
-        Get an OrProver, which is built on one legit prover constructed from a
-        subproof picked at random among all possible candidates.
-        """
         if secrets_dict is None:
             secrets_dict = {}
 
+        # The prover is built on one legit prover constructed from a subproof picked at random among
+        # candidates.
         # First we update the dictionary we have with the additional secrets, and process it
         # TODO: Check this secret_values handling totally different
         update_secret_values(secrets_dict)
@@ -485,7 +478,7 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         return OrProver(self, valid_prover)
 
     def get_verifier(self):
-        return OrVerifier(self, [subp.get_verifier() for subp in self.subproofs])
+        return OrVerifier(self, [sub.get_verifier() for sub in self.subproofs])
 
     def validate_composition(self):
         """
@@ -519,20 +512,12 @@ class OrProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
                 )
 
     def prepare_simulate_proof(self):
-        for subp in self.subproofs:
-            subp.prepare_simulate_proof()
+        for sub in self.subproofs:
+            sub.prepare_simulate_proof()
 
     def simulate_proof(self, challenge=None, *args, **kwargs):
-        """
-        Simulate the or-proof.
-
-        To do so, simulates the n-1 first subproofs, computes the complementary challenge and
-        simulates the last proof using this challenge.
-
-        Args:
-            challenge: The global challenge, equal to the sum of all the subchallenges mod chal
-                bitlength.
-        """
+        # Simulate the n-1 first subproofs, computes the complementary challenge and
+        # simulates the last proof using this challenge.
         if challenge is None:
             challenge = get_random_num(bits=CHALLENGE_LENGTH)
         com = []
@@ -574,9 +559,9 @@ class OrProver(Prover):
     stores them.
     """
 
-    def __init__(self, proof, subprover):
+    def __init__(self, stmt, subprover):
         self.subprover = subprover
-        self.stmt = proof
+        self.stmt = stmt
         self.true_prover_idx = self.stmt.chosen_idx
 
         # Create a list storing the SimulationTranscripts
@@ -584,7 +569,7 @@ class OrProver(Prover):
 
     def setup_simulations(self):
         """
-        Runs all the required simulations and stores them.
+        Run all the required simulations and stores them.
         """
         self.simulations = []
         for index, subproof in enumerate(self.stmt.subproofs):
@@ -594,11 +579,8 @@ class OrProver(Prover):
                 self.simulations.append(sim)
 
     def precommit(self):
-        """
-        Generate precommitment for the legit subprover, and gather the precommitments from the
-        stored simulations.  Outputs a list of the precommitments needed by the subproofs if any.
-        Else, returns None.
-        """
+        # Generate precommitment for the legit subprover, and gather the precommitments from the
+        # stored simulations.
         precommitment = []
         for index, _ in enumerate(self.stmt.subproofs):
             if index == self.true_prover_idx:
@@ -615,8 +597,7 @@ class OrProver(Prover):
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Commits from the subprover, gathers the commitments from the stored simulations. Packs into
-        a list.
+        Gather the commitments from the stored simulations.
 
         Args:
             randomizers_dict: A dictionary of randomizers to use for responses consistency. Not used
@@ -639,10 +620,12 @@ class OrProver(Prover):
 
     def compute_response(self, challenge):
         """
+        Compute complementary challenges and responses.
+
         Computes the complementary challenge with respect to the received global challenge and the
         list of challenges used in the stored simulations.  Computes the responses of the subprover
         using this auxiliary challenge, gathers the responses from the stored simulations.  Returns
-        both the complete list of subchallenges (included the auxiliary challenge) and the list of
+        both the complete list of subchallenges (including the auxiliary challenge) and the list of
         responses, both ordered.
 
         Args:
@@ -666,8 +649,6 @@ class OrProver(Prover):
                 challenges.append(self.simulations[index1].challenge)
                 response.append(self.simulations[index1].responses)
 
-        # We carry the or-challenges in a tuple, will be unpacked by the verifier calling
-        # recompute_commitment.
         return (challenges, response)
 
 
@@ -678,9 +659,9 @@ class OrVerifier(Verifier):
     The verifier is built on a list of subverifiers, which will unpack the received attributes.
     """
 
-    def __init__(self, proof, subverifiers):
+    def __init__(self, stmt, subverifiers):
         self.subs = subverifiers
-        self.stmt = proof
+        self.stmt = stmt
 
     def process_precommitment(self, precommitment):
         """
@@ -722,9 +703,12 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
 
         Args:
             suproofs: Proof statements.
+
+        Raise:
+            ValueError: If less than two subproofs given.
         """
         if len(subproofs) < 2:
-            raise ValueError("AndProofStmt needs > 1 arguments")
+            raise ValueError("Need at least two subproofs")
 
         # We make a shallow copy of each subproof so they dont mess with each other.  This step is
         # important in case we have proofs which locally draw random values.  It ensures several
@@ -739,24 +723,12 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         self.validate_secrets_reoccurence()
 
     def recompute_commitment(self, challenge, responses):
-        """
-        Recomputes the commitment consistent with the given challenge and response, as a list of
-        commitments of the subproofs.
-
-        Args:
-            challenge: The challenge to use in the proof
-            responses: A list of responses (themselves being lists), ordered as the list of subproofs.
-        """
         com = []
         for index, subproof in enumerate(self.subproofs):
             com.append(subproof.recompute_commitment(challenge, responses[index]))
         return com
 
     def get_prover(self, secrets_dict=None):
-        """
-        Constructs a Prover for the and-proof, which is a list of the Provers related to each subproof, in order.
-        If any of the collected Provers is invalid (None), returns None.
-        """
         if secrets_dict is None:
             secrets_dict = {}
 
@@ -778,7 +750,7 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         """
         Constructs a Verifier for the and-proof, based on a list of the Verifiers of each subproof.
         """
-        return AndVerifier(self, [subp.get_verifier() for subp in self.subproofs])
+        return AndVerifier(self, [sub.get_verifier() for sub in self.subproofs])
 
     def get_randomizers(self):
         """
@@ -797,8 +769,8 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         return random_vals
 
     def prepare_simulate_proof(self):
-        for subp in self.subproofs:
-            subp.prepare_simulate_proof()
+        for sub in self.subproofs:
+            sub.prepare_simulate_proof()
 
     def simulate_proof(self, responses_dict=None, challenge=None):
         """
@@ -825,8 +797,8 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
 
         # Simulate all subproofs and gather their attributes, repack them in a unique
         # SimulationTranscript.
-        for subp in self.subproofs:
-            simulation = subp.simulate_proof(responses_dict, challenge)
+        for sub in self.subproofs:
+            simulation = sub.simulate_proof(responses_dict, challenge)
             com.append(simulation.commitment)
             resp.append(simulation.responses)
             precom.append(simulation.precommitment)
@@ -885,7 +857,7 @@ class AndProver(Prover):
 
     def internal_commit(self, randomizers_dict=None):
         """
-        Computes the commitment.
+        Compute the internal commitment.
 
         Args:
             randomizers_dict: Mapping from secrets to randomizers.
@@ -895,33 +867,30 @@ class AndProver(Prover):
 
         randomizers_dict = self.stmt.update_randomizers(randomizers_dict)
         self.commitment = []
-        for subp in self.subs:
+        for sub in self.subs:
             self.commitment.append(
-                subp.internal_commit(randomizers_dict=randomizers_dict)
+                sub.internal_commit(randomizers_dict=randomizers_dict)
             )
         return self.commitment
 
     def compute_response(self, challenge):
         """
-        Return a list of the responses of each subprover.
+        Return a list of responses of each subprover.
         """
-        return [subp.compute_response(challenge) for subp in self.subs]
+        return [sub.compute_response(challenge) for sub in self.subs]
 
 
 class AndVerifier(Verifier):
     def __init__(self, proof, subverifiers):
-        """
-        Constructs a Verifier for the and-proof, with a list of subverifiers.
-        """
         self.subs = subverifiers
         self.stmt = proof
 
     def send_challenge(self, commitment, ignore_statement_hash_checks=False):
         """
-        Store the received commitment and generates a challenge.
+        Store the received commitment and generate a challenge.
 
-        Checks the received hashed statement matches the one of the current
-        proof. Only called at the highest level or in extended proofs.
+        Additionally checks the received hashed statement matches the one of the current proof. Only
+        called at the highest level or in extended proofs.
 
         Args:
             commitment: A tuple (statement, actual_commitment) with
