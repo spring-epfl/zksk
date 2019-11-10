@@ -29,7 +29,7 @@ import warnings
 class DLRepVerifier(Verifier):
     def check_responses_consistency(self, responses, responses_dict=None):
         """
-        Check if reoccuring secrets indeed yield the same responses.
+        Check if reoccuring secrets yield the same responses.
 
         To do so, go through the names of the secrets in the current DLRep, and construct a mapping
         between secrets and responses.
@@ -47,11 +47,6 @@ class DLRepVerifier(Verifier):
         for i, s in enumerate(self.stmt.secret_vars):
             if s in responses_dict.keys():
                 if responses[i] != responses_dict[s]:
-                    warnings.warn(
-                        "Values are {}. Should be {}".format(
-                            responses[i], responses_dict[s]
-                        )
-                    )
                     return False
             else:
                 responses_dict.update({s: responses[i]})
