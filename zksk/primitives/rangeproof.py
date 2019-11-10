@@ -142,7 +142,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
 
 
 class GenericRangeStmtMaker:
-    """
+    r"""
     Auxiliary builder class for generic range proofs.
 
     .. math::
@@ -214,7 +214,7 @@ class GenericRangeStmtMaker:
 
 
 class GenericRangeOnlyStmtMaker:
-    """
+    r"""
     Auxiliary builder class for generic range proofs.
 
     .. math::
