@@ -15,4 +15,3 @@ def get_default_attr(obj, attr, default_value=None):
     if not hasattr(obj, attr):
         setattr(obj, attr, default_value)
     return getattr(obj, attr)
-

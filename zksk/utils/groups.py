@@ -1,4 +1,7 @@
-import os
+import math
+import secrets
+import hashlib
+import warnings
 
 from petlib.bn import Bn
 
@@ -6,7 +9,7 @@ from zksk.consts import DEFAULT_GROUP
 from zksk.exceptions import InvalidExpression
 
 
-def get_random_point(group=None, random_bits=256):
+def get_random_point(group=None, random_bits=256, seed=None):
     """
     Generate some random group generators.
 
@@ -24,13 +27,23 @@ def get_random_point(group=None, random_bits=256):
     True
     >>> a != b
     True
+    >>> get_random_point(seed=1)
+    EcPt(037697679766c26bb7b76c65d2639fb983dea7c859c63b3047168dbc1b)
     """
+
     if group is None:
         group = DEFAULT_GROUP
-    return group.hash_to_point(os.urandom(random_bits))
+
+    num_bytes = math.ceil(random_bits / 8)
+    if seed is None:
+        randomness = secrets.token_bytes(num_bytes)
+    else:
+        randomness = hashlib.sha512(b"%i" % seed).digest()[:num_bytes]
+
+    return group.hash_to_point(randomness)
 
 
-def make_generators(num, group=None, random_bits=256):
+def make_generators(num, group=None, random_bits=256, seed=42):
     """
     Create some random group generators.
 
@@ -52,7 +65,12 @@ def make_generators(num, group=None, random_bits=256):
     """
     if group is None:
         group = DEFAULT_GROUP
-    generators = [get_random_point(group, random_bits) for _ in range(num)]
+    generators = [
+        get_random_point(
+            group, random_bits, seed=seed + i if seed is not None else None
+        )
+        for i in range(num)
+    ]
     return generators
 
 
