@@ -8,6 +8,10 @@ install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq python-dev libssl-dev libffi-dev
   - pip install -e ".[dev]"
+  - pip install codecov
 
 script:
   - pytest
+
+after_success:
+  - codecov
