@@ -120,7 +120,7 @@ the package:
 
 .. code-block:: bash
 
-   pip install "https://github.com/spring-epfl/zksk#egg=zksk[dev]"
+   pip install "git+https://github.com/spring-epfl/zksk#egg=zksk[dev]"
 
 Then, run the tests with pytest:
 
