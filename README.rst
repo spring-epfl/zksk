@@ -2,7 +2,7 @@
 zksk
 ####
 
-|build_status| |docs_status| |license| |arxiv|
+|build_status| |docs_status| |coverage| |license| |arxiv|
 
 .. |build_status| image:: https://travis-ci.org/spring-epfl/zksk.svg?branch=master
    :target: https://travis-ci.org/spring-epfl/zksk
@@ -11,6 +11,10 @@ zksk
 .. |docs_status| image:: https://readthedocs.org/projects/zksk/badge/?version=latest
    :target: https://zksk.readthedocs.io/?badge=latest
    :alt: Documentation status
+
+.. |coverage| image:: https://codecov.io/gh/spring-epfl/zksk/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/spring-epfl/zksk
+   :alt: Test coverage
 
 .. |license| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT
