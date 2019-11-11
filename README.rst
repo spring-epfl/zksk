@@ -81,18 +81,24 @@ Victor is now convinced that Peggy knows the committed bit.
 
 --------------------------------------------------------------------------------------------
 
-.. end-description-marker-do-not-remove
-
-> **Warning.** Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
-
---------------------------------------------------------------------------------------------
-
 ===========================
 Documentation and materials
 ===========================
 
-* Check out the `documentation <https://zksk.readthedocs.io/>`_.
-* For additional high-level and theoretical details, see the `academic paper <https://https://arxiv.org/abs/1911.02459>`_.
++----------------+--------------------------------------------------------------------+
+| Docs           | https://zksk.readthedocs.io                                        |
++----------------+--------------------------------------------------------------------+
+| Academic paper | https://arxiv.org/abs/1911.02459 —                                 |
+|                | theoretical details                                                |
++----------------+--------------------------------------------------------------------+
+
+.. end-description-marker-do-not-remove
+
+> **Warning.** Please don't use this software for anything mission-critical. It is designed for
+quick protyping of privacy-enhancing technologies, not production use.
+
+--------------------------------------------------------------------------------------------
+
 
 ===============
 Getting started
@@ -128,7 +134,7 @@ Then, run the tests with pytest:
 Contributing
 ============
 
-See the `contributing document <CONTRIBUTING.rst>`_
+See the `contributing document <CONTRIBUTING.rst>`_.
 
 ======
 Citing
