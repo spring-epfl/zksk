@@ -1,5 +1,5 @@
 from petlib.ec import EcGroup
-from petlib.bn import Bn
+from zksk.bn import Bn
 
 
 CHALLENGE_LENGTH = Bn(128)

@@ -8,7 +8,7 @@ import random
 from hashlib import sha256
 from collections import defaultdict
 
-from petlib.bn import Bn
+from zksk.bn import Bn
 from petlib.pack import encode
 
 from zksk.consts import CHALLENGE_LENGTH
