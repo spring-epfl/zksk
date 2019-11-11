@@ -35,6 +35,7 @@ zksk's docs
    :maxdepth: 2
    :caption: Misc
 
+   ../contributing
    citing
 
 

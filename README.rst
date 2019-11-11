@@ -85,9 +85,14 @@ Victor is now convinced that Peggy knows the committed bit.
 
 > **Warning.** Please don't use this software for anything mission-critical. It is designed for quick protyping of privacy-enhancing technologies, not production use.
 
-Check out the `documentation <https://zksk.readthedocs.io/>`_.
-
 --------------------------------------------------------------------------------------------
+
+===========================
+Documentation and materials
+===========================
+
+* Check out the `documentation <https://zksk.readthedocs.io/>`_.
+* For additional high-level and theoretical details, see the `academic paper <https://https://arxiv.org/abs/1911.02459>`_.
 
 ===============
 Getting started
@@ -95,33 +100,35 @@ Getting started
 
 .. start-getting-started-marker-do-not-remove
 
+You need to have Python 3.6 or higher to use zksk. The library is tested and supported on
+Debian-based systems. Mac support is not guaranteed.
+
 You can install zksk using pip:
 
 .. code-block:: bash
 
-   pip install -e .
+   pip install git+https://github.com/spring-epfl/zksk
 
-To run unit tests, first, install the dev version of the package:
+To make sure everything is in order, you can run unit tests. For that, install the dev version of
+the package:
 
 .. code-block:: bash
 
-   pip install -e ".[dev]"
+   pip install "https://github.com/spring-epfl/zksk#egg=zksk[dev]"
 
-Second, run the tests with pytest:
+Then, run the tests with pytest:
 
 .. code-block:: bash
 
    pytest
 
-To build the the documentation pages, make sure you have installed the dev version of the package
-(see above), and then run:
-
-.. code-block:: bash
-
-    cd docs/
-    make html
-
 .. end-getting-started-marker-do-not-remove
+
+============
+Contributing
+============
+
+See the `contributing document <CONTRIBUTING.rst>`_
 
 ======
 Citing
