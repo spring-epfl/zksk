@@ -49,16 +49,16 @@ To implement this zero-knowledge proof, Peggy will run:
     top_secret_bit = 1
 
     # A Pedersen commitment to the secret bit.
-    commitment = top_secret_bit * G + r.value * H
+    C = top_secret_bit * G + r.value * H
 
     # Peggy's definition of the proof statement, and proof generation.
     # (The first or-clause corresponds to the secret value 0, and the second to the value 1. Because
     # the real value of the bit is 1, the clause that corresponds to zero is marked as simulated.)
-    stmt = DLRep(commitment, r * H, simulated=True) | DLRep(commitment - G, r * H)
+    stmt = DLRep(C, r * H, simulated=True) | DLRep(C - G, r * H)
     zk_proof = stmt.prove()
 
 
-Victor will receive ``commitment`` and ``zk_proof`` from Peggy, and run this to verify the
+Victor will receive the commitment ``C`` and ``zk_proof`` from Peggy, and run this to verify the
 proof:
 
 .. code-block:: python
@@ -70,7 +70,7 @@ proof:
     # Setup: define a randomizer with an unknown value.
     r = Secret()
 
-    stmt = DLRep(commitment, r * H) | DLRep(commitment - G, r * H)
+    stmt = DLRep(C, r * H) | DLRep(C - G, r * H)
     assert stmt.verify(zk_proof)
 
 Victor is now convinced that Peggy knows the committed bit.
