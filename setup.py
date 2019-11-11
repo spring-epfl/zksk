@@ -9,7 +9,7 @@ INSTALL_REQUIRES = ["petlib", "bplib"]
 SETUP_REQUIRES = ["pytest-runner"]
 TEST_REQUIRES = ["pytest"]
 DOC_REQUIRES = ["sphinx", "sphinx_rtd_theme", "m2r"]
-DEV_REQUIRES = TEST_REQUIRES + DOC_REQUIRES + ["black", "pre-commit"]
+DEV_REQUIRES = TEST_REQUIRES + DOC_REQUIRES + ["black", "pre-commit", "pytest-cov"]
 
 
 here = os.path.abspath(os.path.dirname(__file__))
