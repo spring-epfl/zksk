@@ -156,8 +156,8 @@ def test_range_proof_outside():
     hi = 14
 
     com = x * g + randomizer * h
-    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
     with pytest.raises(Exception):
+        stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
         nizk = stmt.prove()
         stmt.verify(nizk)
 
@@ -166,8 +166,8 @@ def test_range_proof_outside_range_above():
     x = Secret(value=7)
     lo = 0
     hi = 6
-    stmt = RangeOnlyStmt(lo, hi, x)
     with pytest.raises(Exception):
+        stmt = RangeOnlyStmt(lo, hi, x)
         nizk = stmt.prove()
         assert stmt.verify(nizk) == False
 
@@ -176,7 +176,8 @@ def test_range_proof_outside_range_below():
     x = Secret(value=1)
     lo = 2
     hi = 7
-    stmt = RangeOnlyStmt(lo, hi, x)
+
     with pytest.raises(Exception):
+        stmt = RangeOnlyStmt(lo, hi, x)
         nizk = stmt.prove()
         stmt.verify(nizk)

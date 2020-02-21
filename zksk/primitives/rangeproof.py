@@ -57,6 +57,15 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
             self.x = x
             self.randomizer = randomizer
             self.is_prover = True
+
+            # Ensure secret is in range
+            self.x.value = ensure_bn(self.x.value)
+            if self.x.value < 0:
+                raise FalseStatementError("Secret is negative")
+            if self.x.value.num_bits() > num_bits:
+                raise FalseStatementError(
+                    "Secret has more than {} bits".format(num_bits)
+                )
         else:
             self.is_prover = False
 
@@ -198,6 +207,12 @@ class GenericRangeStmtMaker:
         if x.value is not None:
             x1.value = x.value - a
             x2.value = x.value - a + offset
+
+            # Ensure secret is in range
+            if x.value < a or x.value >= b:
+                raise FalseStatementError(
+                    "Secret outside of given range [{}, {})".format(a, b)
+                )
 
         com_stmt = DLRep(com, x * g + r * h)
 
