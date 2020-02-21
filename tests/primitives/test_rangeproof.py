@@ -12,8 +12,32 @@ from petlib.ec import EcGroup
 from zksk import Secret
 from zksk.pairings import BilinearGroupPair
 from zksk.primitives.rangeproof import PowerTwoRangeStmt, RangeStmt, RangeOnlyStmt
+from zksk.primitives.rangeproof import decompose_into_n_bits
 from zksk.utils import make_generators
 from zksk.utils.debug import SigmaProtocol
+
+
+def test_decompose_n_bits():
+    n4 = Bn(4)
+    assert decompose_into_n_bits(n4, 4) == [0, 0, 1, 0]
+
+    n3 = Bn(3)
+    assert decompose_into_n_bits(n3, 6) == [1, 1, 0, 0, 0, 0]
+
+    n5 = Bn(5)
+    assert decompose_into_n_bits(n5, 4) == [1, 0, 1, 0]
+
+
+def test_decompose_n_bits_too_big():
+    n4 = Bn(9)
+    with pytest.raises(Exception):
+        decompose_into_n_bits(n4, 3)
+
+
+def test_decompose_n_bits_negative():
+    n4 = Bn(-2)
+    with pytest.raises(Exception):
+        decompose_into_n_bits(n4, 3)
 
 
 def test_power_two_range_stmt_non_interactive():
@@ -79,8 +103,8 @@ def test_range_stmt_non_interactive_start_at_nonzero(group):
     randomizer = Secret(value=group.order().random())
 
     g, h = make_generators(2, group)
-    lo = 7
-    hi = 15
+    lo = 6
+    hi = 16
 
     com = x * g + randomizer * h
 
@@ -100,10 +124,26 @@ def test_range_stmt_non_interactive_outside_range(group):
     hi = 15
 
     com = x * g + randomizer * h
-    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
 
     with pytest.raises(Exception):
-        tr = stmt.prove()
+        stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+
+def test_range_stmt_non_interactive_wrong_commit(group):
+    x = Secret(value=14)
+    randomizer = Secret(value=group.order().random())
+
+    g, h = make_generators(2, group)
+    lo = 7
+    hi = 15
+
+    com = x * g + randomizer * h
+    comval = com.eval() + g
+    stmt = RangeStmt(comval, g, h, lo, hi, x, randomizer)
+
+    tr = stmt.prove()
+
+    with pytest.raises(Exception):
+        assert not stmt.verify(tr)
 
 
 def test_range_proof_outside():

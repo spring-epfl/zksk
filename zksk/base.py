@@ -200,6 +200,7 @@ class Verifier(metaclass=abc.ABCMeta):
         Returns:
             bool: True if verification succeeded, False otherwise.
         """
+        # TODO: I really don't think this chain should be raising exceptions
         self.pre_verification_validation(response, *args, **kwargs)
 
         # Retrieve the commitment using the verification identity

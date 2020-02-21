@@ -230,6 +230,7 @@ class ComposableProofStmt(metaclass=abc.ABCMeta):
         """
         For or/and-proofs, perform recursive validation of subproofs.
         """
+        # TODO: calling return here is deceptive if we ask to throw an Exception
         return self.validate(*args, **kwargs)
 
     def validate_secrets_reoccurence(self, forbidden_secrets=None):
