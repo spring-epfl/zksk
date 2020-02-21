@@ -96,7 +96,7 @@ class DLNotEqual(ExtendedProofStmt):
         Verify the the proof statement is indeed proving the inequality of discret logs.
         """
         if precommitment == self.g.group.infinite():
-            raise ValidationError("The secret should be not a discret logarithm.")
+            raise ValidationError("The commitment should not be the unity element")
 
     def simulate_precommit(self):
         """
