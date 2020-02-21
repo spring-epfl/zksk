@@ -83,10 +83,12 @@ def test_range_stmt_non_interactive_start_at_nonzero(group):
     hi = 15
 
     com = x * g + randomizer * h
-    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
 
-    tr = stmt.prove()
-    assert stmt.verify(tr)
+    stmt1 = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+    tr = stmt1.prove()
+
+    stmt2 = RangeStmt(com.eval(), g, h, lo, hi, Secret(), Secret())
+    assert stmt2.verify(tr)
 
 
 def test_range_stmt_non_interactive_outside_range(group):

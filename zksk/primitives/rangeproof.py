@@ -174,7 +174,7 @@ class GenericRangeStmtMaker:
 
     """
 
-    def __call__(self, com, g, h, a, b, x=None, r=None):
+    def __call__(self, com, g, h, a, b, x, r):
         """
         Get a conjunction of two range-power-of-two proofs.
 
@@ -196,7 +196,7 @@ class GenericRangeStmtMaker:
         com_shifted2 = com_shifted1 - offset * g
         x1 = Secret()
         x2 = Secret()
-        if x is not None:
+        if x.value is not None:
             x1.value = x.value - a
             x2.value = x.value - a + offset
 
