@@ -264,8 +264,10 @@ class GenericRangeOnlyStmtMaker:
         group = EcGroup()
         g = group.hash_to_point(b"g")
         h = group.hash_to_point(b"h")
-        r = Secret(value=2)
+
+        r = Secret(value=group.order().random())
         com = (x * g + r * h).eval()
+
         a = ensure_bn(a)
         b = ensure_bn(b)
         num_bits = (b - a - 1).num_bits()
