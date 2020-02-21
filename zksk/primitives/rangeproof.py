@@ -193,7 +193,7 @@ class GenericRangeStmtMaker:
             a: Lower limit :math:`a`
             b: Upper limit :math:`b`
             x: Value for which we construct a range proof
-            randomizer: Randomizer of the commitment :math:`r`
+            r: Randomizer of the commitment :math:`r`
         """
         a = ensure_bn(a)
         b = ensure_bn(b)
