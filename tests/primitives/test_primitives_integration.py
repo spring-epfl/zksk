@@ -992,6 +992,25 @@ def test_or_and_dlrne():
     assert ver.verify(resp)
 
 
+# DLRep | Range
+def test_dlrep_or_rangeproof(group):
+    g, h = make_generators(2)
+
+    x = Secret(9)
+    y = Secret(42)
+    z = Secret(40)
+
+    c = x.value * g + y.value * h
+    c2 = z.value * g + y.value * h
+
+    stmt1 = DLRep(c, x * g + y * h) & RangeStmt(c, g, h, 0, 50, x, y)
+    stmt2 = DLRep(c2, z * g + y * h) & RangeStmt(c2, g, h, 0, 50, z, y)
+    stmt1.set_simulated()
+    or_stmt = OrProofStmt(stmt1, stmt2)
+    nizk = or_stmt.prove()
+    assert or_stmt.verify(nizk)
+
+
 # BBS+ & Range
 def test_bbsplus_and_rangeproof():
     mG = BilinearGroupPair()

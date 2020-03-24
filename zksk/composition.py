@@ -805,7 +805,9 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         # Simulate all subproofs and gather their attributes, repack them in a unique
         # SimulationTranscript.
         for sub in self.subproofs:
-            simulation = sub.simulate_proof(responses_dict, challenge)
+            simulation = sub.simulate_proof(
+                challenge=challenge, responses_dict=responses_dict
+            )
             com.append(simulation.commitment)
             resp.append(simulation.responses)
             precom.append(simulation.precommitment)

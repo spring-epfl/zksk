@@ -27,6 +27,7 @@ import abc
 
 from zksk.base import Prover, Verifier
 from zksk.composition import ComposableProofStmt
+from zksk.exceptions import StatementSpecError
 from zksk.utils.misc import get_default_attr
 
 
@@ -150,7 +151,9 @@ class ExtendedProofStmt(ComposableProofStmt, metaclass=abc.ABCMeta):
             responses_dict: Mapping from secrets to responses
             challenge: Challenge
         """
-        tr = self._constructed_stmt.simulate_proof(responses_dict, challenge)
+        tr = self._constructed_stmt.simulate_proof(
+            challenge=challenge, responses_dict=responses_dict
+        )
         tr.precommitment = self._precommitment
         return tr
 
