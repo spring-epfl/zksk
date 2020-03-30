@@ -10,12 +10,14 @@ value.
 
 """
 
+import warnings
+
 from petlib.bn import Bn
 from petlib.ec import EcGroup
 
 from zksk import Secret
 from zksk.primitives.dlrep import DLRep
-from zksk.exceptions import FalseStatementError, ValidationError
+from zksk.exceptions import ValidationError
 from zksk.extended import ExtendedProofStmt
 from zksk.utils import make_generators, get_random_num, ensure_bn
 from zksk.composition import AndProofStmt
@@ -61,11 +63,9 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
             # Ensure secret is in range
             self.x.value = ensure_bn(self.x.value)
             if self.x.value < 0:
-                raise FalseStatementError("Secret is negative")
+                warnings.warn("Secret is negative")
             if self.x.value.num_bits() > num_bits:
-                raise FalseStatementError(
-                    "Secret has more than {} bits".format(num_bits)
-                )
+                warnings.warn("Secret has more than {} bits".format(num_bits))
         else:
             self.is_prover = False
 
@@ -135,9 +135,7 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
     def simulate_precommit(self):
         randomizers = [self.order.random() for _ in range(self.num_bits)]
         precommitment = {}
-        precommitment["Cs"] = [
-            r * self.h for r in randomizers
-        ]
+        precommitment["Cs"] = [r * self.h for r in randomizers]
         precommitment["Cs"][0] += self.com
 
         # Compute revealed randomizer
@@ -228,9 +226,7 @@ class GenericRangeStmtMaker:
 
             # Ensure secret is in range
             if x.value < a or x.value >= b:
-                raise FalseStatementError(
-                    "Secret outside of given range [{}, {})".format(a, b)
-                )
+                warnings.warn("Secret outside of given range [{}, {})".format(a, b))
 
         com_stmt = DLRep(com, x * g + r * h)
 

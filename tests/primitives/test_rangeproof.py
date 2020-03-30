@@ -125,8 +125,9 @@ def test_range_stmt_non_interactive_outside_range(group):
 
     com = x * g + randomizer * h
 
-    with pytest.raises(Exception):
+    with pytest.warns(UserWarning):
         stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+
 
 def test_range_stmt_non_interactive_wrong_commit(group):
     x = Secret(value=14)
