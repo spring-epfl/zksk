@@ -136,8 +136,9 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         randomizers = [self.order.random() for _ in range(self.num_bits)]
         precommitment = {}
         precommitment["Cs"] = [
-            self.order.random() * self.g + r * self.h for r in randomizers
+            r * self.h for r in randomizers
         ]
+        precommitment["Cs"][0] += self.com
 
         # Compute revealed randomizer
         rand = Bn(0)
@@ -145,7 +146,6 @@ class PowerTwoRangeStmt(ExtendedProofStmt):
         for r in randomizers:
             rand = rand.mod_add(r * power, self.order)
             power *= 2
-        rand = rand - self.order.random()
         precommitment["rand"] = rand
 
         return precommitment
