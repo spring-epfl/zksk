@@ -171,7 +171,7 @@ In this example, we show how to build an "and"-composition of two discrete-logar
 
 .. math::
    PK \{ (x_0, x_1, x_2): \underbrace{Y_0 = x_0 G_0 + x_1 G_1}_{\text{First statement}}
-      \land \underbrace{Y_1 = x_1 G_2 + x_2 G_3}_{\text{Second statement}} \}
+      \land \underbrace{Y_1 = x_0 G_2 + x_2 G_3}_{\text{Second statement}} \}
 
 As before, we initialize the points :math:`G_i` and the secrets :math:`x_i`.
 
