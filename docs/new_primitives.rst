@@ -13,7 +13,7 @@ We start with a simple new primitive. Consider an additive ElGamal ciphertext
 .. math:: c = (c_1, c_2) = (rG, rH + mG)
 
 for a group with generator :math:`G` and public key :math:`H = xG`. The owner
-the private key :math:`x` can decrypt the ciphertext by computing
+of the private key :math:`x` can decrypt the ciphertext by computing
 
 .. math:: T = c_2 - x \cdot c_1 = mG
 
@@ -91,7 +91,7 @@ override :py:class:`zksk.extended.ExtendedProofStmt` and store the inputs:
    :lines: 14-21
 
 Note that the constructor also defines the secrets ``alpha`` and ``beta`` that
-will be used in the constructed proof from step 2 above. The compute the
+will be used in the constructed proof from step 2 above. To compute the
 commitment :math:`C` we override the ``precommit(self)`` method to compute a
 precommitment containing :math:`C`:
 

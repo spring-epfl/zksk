@@ -116,7 +116,7 @@ class Secret:
 
     def __mul__(self, base):
         """
-        Construct an expression that represents this secrets multipled by the base.
+        Construct an expression that represents this secrets multiplied by the base.
 
         Args:
             base: Base point on an elliptic curve.
