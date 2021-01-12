@@ -31,25 +31,26 @@ class NIZK:
     stmt_hash = attr.ib(default=None)
 
 
-def nizk_serialize(nizk: NIZK) -> bytes:
-    """
-    Serialize a non-interactive zero-knowledge proof.
-    """
-    as_list = [
-        encode(nizk.challenge),
-        encode(nizk.responses),
-        encode(nizk.precommitment),
-        encode(nizk.stmt_hash)
-    ]
-    return msgpack.packb(as_list, use_bin_type=True)
+    def serialize(self):
+        """
+        Serialize a non-interactive zero-knowledge proof.
+        """
+        as_list = [
+            encode(self.challenge),
+            encode(self.responses),
+            encode(self.precommitment),
+            encode(self.stmt_hash)
+        ]
+        return msgpack.packb(as_list, use_bin_type=True)
 
 
-def nizk_deserialize(nizk_raw: bytes) -> NIZK:
-    """
-    Deserialize a non-interactive zero-knowledge proof.
-    """
-    as_list = [decode(x) for x in msgpack.unpackb(nizk_raw)]
-    return NIZK(*as_list)
+    @classmethod
+    def deserialize(cls, nizk_raw):
+        """
+        Deserialize a non-interactive zero-knowledge proof.
+        """
+        as_list = [decode(x) for x in msgpack.unpackb(nizk_raw)]
+        return NIZK(*as_list)
 
 
 @attr.s
@@ -260,6 +261,3 @@ class Verifier(metaclass=abc.ABCMeta):
             prehash, nizk.precommitment, commitment_prime, message=message
         )
         return nizk.challenge == challenge_prime
-
-
-register_coders(NIZK, 121, nizk_serialize, nizk_deserialize)
