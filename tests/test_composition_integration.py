@@ -15,7 +15,7 @@ from zksk.exceptions import (
 from zksk.composition import AndProofStmt, OrProofStmt
 from zksk.expr import wsum_secrets
 from zksk.utils import make_generators
-
+from zksk.base import NIZK
 
 @pytest.fixture
 def params(group):
@@ -391,6 +391,22 @@ def test_or_non_interactive(params):
     message = "whatever"
     tr = p.prove(secrets, message=message)
     assert p.verify(tr, message=message)
+
+
+def test_or_non_interactive_serialization(params):
+    p1, p2, secrets = params
+    p = OrProofStmt(p1, p2)
+    message = "whatever"
+    tr = p.prove(secrets, message=message)
+    tr_enc = tr.serialize()
+    tr_dec = NIZK.deserialize(tr_enc)
+    assert tr_dec.challenge == tr.challenge
+    assert len(tr_dec.responses) == len(tr.responses)
+    for resp1, resp2 in zip(tr_dec.responses, tr.responses):
+        assert resp1 == resp2
+    assert tr_dec.precommitment == tr.precommitment
+    assert tr_dec.stmt_hash == tr.stmt_hash
+    assert p.verify(tr_dec, message=message)
 
 
 def test_or_non_interactive_fails_on_wrong_secrets(group, params):
