@@ -214,7 +214,7 @@ class GenericRangeStmtMaker:
         a = ensure_bn(a)
         b = ensure_bn(b)
         num_bits = (b - a - 1).num_bits()
-        offset = 2 ** num_bits - (b - a)
+        offset = Bn(2) ** num_bits - (b - a)
 
         com_shifted1 = com - a * g
         com_shifted2 = com_shifted1 + offset * g
@@ -285,7 +285,7 @@ class GenericRangeOnlyStmtMaker:
         a = ensure_bn(a)
         b = ensure_bn(b)
         num_bits = (b - a - 1).num_bits()
-        offset = 2 ** num_bits - (b - a)
+        offset = Bn(2) ** num_bits - (b - a)
         com_shifted1 = com - a * g
         com_shifted2 = com_shifted1 + offset * g
 
