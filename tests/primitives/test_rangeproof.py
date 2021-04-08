@@ -98,6 +98,20 @@ def test_range_stmt_non_interactive_start_at_zero(group):
     assert stmt.verify(tr)
 
 
+def test_range_stmt_non_interactive_big_range(group):
+    x = Secret(value=3)
+    randomizer = Secret(value=group.order().random())
+
+    g, h = make_generators(2, group)
+    lo = 0
+    hi = Bn(2) ** 65
+
+    com = x * g + randomizer * h
+    stmt = RangeStmt(com.eval(), g, h, lo, hi, x, randomizer)
+
+    tr = stmt.prove()
+    assert stmt.verify(tr)
+
 def test_range_stmt_non_interactive_start_at_nonzero(group):
     x = Secret(value=14)
     randomizer = Secret(value=group.order().random())
@@ -162,6 +176,14 @@ def test_range_proof_outside():
         nizk = stmt.prove()
         stmt.verify(nizk)
 
+
+def test_range_proof_big_range():
+    x = Secret(value=7)
+    lo = 0
+    hi = Bn(2) ** 65
+    stmt = RangeOnlyStmt(lo, hi, x)
+    nizk = stmt.prove()
+    assert stmt.verify(nizk) == True
 
 def test_range_proof_outside_range_above():
     x = Secret(value=7)
