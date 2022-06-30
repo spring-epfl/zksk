@@ -2,6 +2,7 @@ import math
 import secrets
 import hashlib
 import warnings
+import random
 
 from petlib.bn import Bn
 
@@ -84,6 +85,18 @@ def get_random_num(bits):
     """
     order = Bn(2).pow(bits)
     return order.random()
+
+
+def get_quad_res(n):
+    """
+    Draw a random quadratic residue modulo n, coprime to n. Here n is a Bignum
+    """
+    b = n.num_bits()
+    while True:
+        q = Bn.from_num(get_random_num(b))
+        if q < n and math.gcd(int(q), int(n)) == 1:
+            break
+    return (q * q) % n
 
 
 def sum_bn_array(arr, modulus):
