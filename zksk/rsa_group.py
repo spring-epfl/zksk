@@ -1,4 +1,5 @@
 from petlib.bn import Bn
+from sympy import mod_inverse
 
 # Creates a class for RSA group elements which is structured in the same way as petlib.ec.EcPt, to allow users to use RSA groups in their proofs.
 class RSAGroup:
@@ -13,10 +14,13 @@ class RSAGroup:
         return IntPt(1, self)
 
     def wsum(self, weights, elems):
-        res = IntPt(0, self)
+        res = IntPt(Bn(1), self)
         for i in range(0, len(elems)):
             res = res + (weights[i] * elems[i])
         return res
+
+    def __eq__(self, other):
+        return self.value == other.value
 
 
 class IntPt:
@@ -26,7 +30,16 @@ class IntPt:
         self.group = modulus
 
     def __add__(self, o):
-        return IntPt((self.pt + o.pt) % self.group.value, self.group)
+        return IntPt((self.pt * o.pt) % self.group.value, self.group)
 
     def __rmul__(self, o):
-        return IntPt(pow(self.pt, o, self.group.value), self.group)
+        if o < 0:
+            return IntPt(
+                pow(self.pt.mod_inverse(self.group.value), -o, self.group.value),
+                self.group,
+            )
+        else:
+            return IntPt(pow(self.pt, o, self.group.value), self.group)
+
+    def __eq__(self, other):
+        return (self.pt == other.pt) and (self.group == other.group)

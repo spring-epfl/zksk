@@ -13,6 +13,7 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 
 """
 from hashlib import sha256
+from urllib import response
 
 from petlib.bn import Bn
 
@@ -242,7 +243,7 @@ class DLRepProver(Prover):
         """
         order = self.stmt.bases[0].group.order()
         resps = [
-            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k) % order
+            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
             for i, k in enumerate(self.ks)
         ]
         return resps
