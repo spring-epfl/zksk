@@ -1,6 +1,6 @@
 from zksk import Secret, DLRep
 from zksk.utils import groups
-from zksk import rsa_group
+from zksk.rsa_group import RSAGroup, IntPt
 from zksk.primitives.dlrep import DLRepVerifier
 from petlib.bn import Bn, force_Bn
 
@@ -16,8 +16,14 @@ stmt = DLRep(y, x * g)
 prover = stmt.get_prover({x: 3})
 verifier = stmt.get_verifier()
 
+# Interactive proof:
 commitment = prover.commit()
 challenge = verifier.send_challenge(commitment)
 response = prover.compute_response(challenge)
 
 print(verifier.verify(response))
+
+# Non-interactive proof:
+proof = stmt.prove({x: 3})
+
+print(stmt.verify(proof))

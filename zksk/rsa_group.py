@@ -1,4 +1,6 @@
+from curses.ascii import RS
 from petlib.bn import Bn
+from petlib.pack import *
 from sympy import mod_inverse
 
 # Creates a class for RSA group elements which is structured in the same way as petlib.ec.EcPt, to allow users to use RSA groups in their proofs.
@@ -43,3 +45,24 @@ class IntPt:
 
     def __eq__(self, other):
         return (self.pt == other.pt) and (self.group == other.group)
+
+
+def enc_RSAGroup(obj):
+    return encode(obj.value)
+
+
+def dec_RSAGroup(data):
+    return RSAGroup(decode(data))
+
+
+def enc_IntPt(obj):
+    return encode([obj.pt, obj.group])
+
+
+def dec_IntPt(data):
+    d = decode(data)
+    return IntPt(d[0], d[1])
+
+
+register_coders(RSAGroup, 10, enc_RSAGroup, dec_RSAGroup)
+register_coders(IntPt, 11, enc_IntPt, dec_IntPt)
