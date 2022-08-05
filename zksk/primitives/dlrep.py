@@ -167,10 +167,6 @@ class DLRep(ComposableProofStmt):
                 of the proof.
         """
         output = {}
-        if isinstance(self.bases[0].group, EcGroup):
-            order = self.bases[0].group.order()
-            for sec in set(self.secret_vars):
-                output.update({sec: order.random()})
         if isinstance(self.bases[0].group, RSAGroup):
             rand_range = self.bases[0].group.value * pow(2, 2 * CHALLENGE_LENGTH)
             for sec in set(self.secret_vars):
@@ -178,6 +174,11 @@ class DLRep(ComposableProofStmt):
                 if Bn(2).random() == 0:
                     val = -val
                 output.update({sec: val})
+        else:
+            order = self.bases[0].group.order()
+            for sec in set(self.secret_vars):
+                output.update({sec: order.random()})
+
         return output
 
     def recompute_commitment(self, challenge, responses):
@@ -252,15 +253,16 @@ class DLRepProver(Prover):
             A list of responses
         """
         resps = []
-        if isinstance(self.stmt.bases[0].group, EcGroup):
-            order = self.stmt.bases[0].group.order()
-            resps = [
-                (self.secret_values[self.stmt.secret_vars[i]] * challenge + k) % order
-                for i, k in enumerate(self.ks)
-            ]
         if isinstance(self.stmt.bases[0].group, RSAGroup):
             resps = [
                 (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
                 for i, k in enumerate(self.ks)
             ]
+        else:
+            order = self.stmt.bases[0].group.order()
+            resps = [
+                (self.secret_values[self.stmt.secret_vars[i]] * challenge + k) % order
+                for i, k in enumerate(self.ks)
+            ]
+
         return resps
