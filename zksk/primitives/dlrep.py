@@ -13,11 +13,14 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 
 """
 from hashlib import sha256
+from black import out
 
 from petlib.bn import Bn
+from petlib.ec import EcGroup
 
 from zksk.base import Verifier, Prover, SimulationTranscript
 from zksk.expr import Secret, Expression
+from zksk.rsa_group import RSAGroup
 from zksk.utils import get_random_num
 from zksk.consts import CHALLENGE_LENGTH
 from zksk.composition import ComposableProofStmt
@@ -164,9 +167,17 @@ class DLRep(ComposableProofStmt):
                 of the proof.
         """
         output = {}
-        order = self.bases[0].group.order()
-        for sec in set(self.secret_vars):
-            output.update({sec: order.random()})
+        if isinstance(self.bases[0].group, EcGroup):
+            order = self.bases[0].group.order()
+            for sec in set(self.secret_vars):
+                output.update({sec: order.random()})
+        if isinstance(self.bases[0].group, RSAGroup):
+            rand_range = self.bases[0].group.value * pow(2, 2 * CHALLENGE_LENGTH)
+            for sec in set(self.secret_vars):
+                val = rand_range.random()
+                if Bn(2).random() == 0:
+                    val = -val
+                output.update({sec: val})
         return output
 
     def recompute_commitment(self, challenge, responses):
@@ -240,9 +251,16 @@ class DLRepProver(Prover):
         Returns:
             A list of responses
         """
-        order = self.stmt.bases[0].group.order()
-        resps = [
-            (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
-            for i, k in enumerate(self.ks)
-        ]
+        resps = []
+        if isinstance(self.stmt.bases[0].group, EcGroup):
+            order = self.stmt.bases[0].group.order()
+            resps = [
+                (self.secret_values[self.stmt.secret_vars[i]] * challenge + k) % order
+                for i, k in enumerate(self.ks)
+            ]
+        if isinstance(self.stmt.bases[0].group, RSAGroup):
+            resps = [
+                (self.secret_values[self.stmt.secret_vars[i]] * challenge + k)
+                for i, k in enumerate(self.ks)
+            ]
         return resps

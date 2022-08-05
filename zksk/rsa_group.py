@@ -11,9 +11,6 @@ class RSAGroup:
     def __init__(self, value):
         self.value = value
 
-    def order(self):
-        return self.value
-
     def infinite(self):
         return IntPt(1, self)
 
