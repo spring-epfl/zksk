@@ -5,10 +5,8 @@ import pytest
 
 from bplib.bp import BpGroup
 from petlib import pack
-from petlib.bn import Bn
 
 from zksk.pairings import BilinearGroupPair, G1Point, AdditivePoint
-from zksk.rsa_group import RSAGroup, IntPt
 
 
 @pytest.fixture
@@ -116,17 +114,3 @@ def test_pack_unpack_gt(group_pair):
     pt2 = pack.decode(data)
 
     assert pt1 == pt2
-
-
-def test_pack_unpack_rsa_group():
-    n = RSAGroup(Bn(15))
-    q = IntPt(Bn(4), n)
-
-    enc_n = pack.encode(n)
-    enc_q = pack.encode(q)
-
-    n2 = pack.decode(enc_n)
-    q2 = pack.decode(enc_q)
-
-    assert n == n2
-    assert q == q2

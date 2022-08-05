@@ -13,7 +13,6 @@ See "`Proof Systems for General Statements about Discrete Logarithms`_" by Camen
 
 """
 from hashlib import sha256
-from urllib import response
 
 from petlib.bn import Bn
 

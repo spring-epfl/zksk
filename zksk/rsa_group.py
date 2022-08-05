@@ -1,7 +1,9 @@
-from curses.ascii import RS
+"""
+Allow zero knowledge proofs in subgroups of RSA groups (groups of integers modulo the product of two safe primes), instead of only in groups of prime order.
+"""
+
 from petlib.bn import Bn
 from petlib.pack import *
-from sympy import mod_inverse
 
 # Creates a class for RSA group elements which is structured in the same way as petlib.ec.EcPt, to allow users to use RSA groups in their proofs.
 class RSAGroup:
