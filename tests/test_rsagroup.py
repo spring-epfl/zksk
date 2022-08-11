@@ -5,16 +5,12 @@ from petlib.bn import Bn
 from zksk import Secret
 from zksk.primitives.dlrep import DLRep, DLRepProver
 from zksk.utils.debug import SigmaProtocol
-from zksk.utils.groups import get_quad_res
+from zksk.rsa_group import rsa_dlrep_trusted_setup
 
 
 def test_rsagroup_interactive_1():
-    p = Bn.get_prime(256, safe=1)
-    q = Bn.get_prime(256, safe=1)
-    n = p * q
-
-    g = get_quad_res(n)
-    h = ((p - 1) * (q - 1)).random() * g
+    [g, h] = rsa_dlrep_trusted_setup(bits=1024, num=2)
+    n = g.group.modulus
     sk1, sk2 = n.random(), n.random()
     pk = sk1 * g + sk2 * h
 

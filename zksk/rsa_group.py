@@ -1,15 +1,46 @@
 """
 Allow zero knowledge proofs in subgroups of RSA groups (groups of integers modulo the product of two safe primes), instead of only in groups of prime order.
+
+Example:
+PK{(alpha): y = alpha * g}
+where y, and g are elements of a subgroup of an RSA group of order p * q, for two safe primes p and q. We assume there is a trusted setup which keeps p and q secret from both the Prover and the Verifier, which sends y, g, and p * q to both parties, and which sends alpha to the Prover.
+
+The protocol we follow for proofs of discrete logarithm representations is inspired from page 34 of Boneh, Bünz and Fisch, Batching Techniques for Accumulators with Applications to IOPs and Stateless Blockchains, Crypto 2019.
 """
+# To do: Allow ZKPs of other cryptographic primitives in RSA groups.
+import math
 
 from petlib.bn import Bn
 from petlib.pack import *
 
-# Creates a class for RSA group elements which is structured in the same way as petlib.ec.EcPt, to allow users to use RSA groups in their proofs.
+# This sets up the RSA group and the subgroup generators
+# Example:
+# [g,h] = rsa_dlrep_trusted_setup(bits=1024,num = 2)
+# g and h are two generators of the subgroup of quadratic residues of an RSA group of order the product of two 1024 bit primes.
+def rsa_dlrep_trusted_setup(bits=1024, num=1):
+    p = Bn.get_prime(bits, safe=1)
+    q = Bn.get_prime(bits, safe=1)
+    n = p * q
+    b = n.num_bits()
+    while True:
+        q = Bn.from_num(Bn(2).pow(bits).random())
+        if q < n and math.gcd(int(q), int(n)) == 1:
+            break
+    g = IntPt((q * q) % n, RSAGroup(n))
+    res = [g]
+
+    num -= 1
+    while num != 0:
+        res.append(((p - 1) * (q - 1)).random() * g)
+        num -= 1
+    return res
+
+
+# This class mimics petlib.ec.EcGroup, but for RSA groups.
 class RSAGroup:
     # Must take a Bignum as argument
-    def __init__(self, value):
-        self.value = value
+    def __init__(self, modulus):
+        self.modulus = modulus
 
     def infinite(self):
         return IntPt(1, self)
@@ -21,9 +52,10 @@ class RSAGroup:
         return res
 
     def __eq__(self, other):
-        return self.value == other.value
+        return self.modulus == other.modulus
 
 
+# This class mimics petlib.ec.EcPt, but for elements of RSA groups.
 class IntPt:
     # Must take one bignum and one RSAGroup as arguments
     def __init__(self, value, modulus):
@@ -31,23 +63,23 @@ class IntPt:
         self.group = modulus
 
     def __add__(self, o):
-        return IntPt((self.pt * o.pt) % self.group.value, self.group)
+        return IntPt((self.pt * o.pt) % self.group.modulus, self.group)
 
     def __rmul__(self, o):
         if o < 0:
             return IntPt(
-                pow(self.pt.mod_inverse(self.group.value), -o, self.group.value),
+                pow(self.pt.mod_inverse(self.group.modulus), -o, self.group.modulus),
                 self.group,
             )
         else:
-            return IntPt(pow(self.pt, o, self.group.value), self.group)
+            return IntPt(pow(self.pt, o, self.group.modulus), self.group)
 
     def __eq__(self, other):
         return (self.pt == other.pt) and (self.group == other.group)
 
 
 def enc_RSAGroup(obj):
-    return encode(obj.value)
+    return encode(obj.modulus)
 
 
 def dec_RSAGroup(data):

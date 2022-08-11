@@ -6,14 +6,10 @@ PK{ (x): y = x * g}
 from petlib.bn import Bn
 
 from zksk import Secret, DLRep
-from zksk.utils import groups
+from zksk.rsa_group import rsa_dlrep_trusted_setup
 
-p = Bn.get_prime(128, safe=1)
-q = Bn.get_prime(128, safe=1)
-n = p * q
-
-# Create a generator for a subgroup of the RSA group of order n.
-g = groups.get_quad_res(n)
+# Create a generator for a subgroup of an RSA group.
+[g] = rsa_dlrep_trusted_setup(bits=1024, num=1)
 
 # Preparing the secret.
 # In practice, this should probably be a big integer (petlib.bn.Bn)

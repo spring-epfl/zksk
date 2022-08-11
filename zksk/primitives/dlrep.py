@@ -168,7 +168,7 @@ class DLRep(ComposableProofStmt):
         """
         output = {}
         if isinstance(self.bases[0].group, RSAGroup):
-            rand_range = self.bases[0].group.value * pow(2, 2 * CHALLENGE_LENGTH)
+            rand_range = self.bases[0].group.modulus * pow(2, 2 * CHALLENGE_LENGTH)
             for sec in set(self.secret_vars):
                 val = rand_range.random()
                 if Bn(2).random() == 0:
