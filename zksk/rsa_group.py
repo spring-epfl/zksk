@@ -4,6 +4,7 @@ Allow zero knowledge proofs in subgroups of RSA groups (groups of integers modul
 Example:
 PK{(alpha): y = alpha * g}
 where y, and g are elements of a subgroup of an RSA group of order p * q, for two safe primes p and q. We assume there is a trusted setup which keeps p and q secret from both the Prover and the Verifier, which sends y, g, and p * q to both parties, and which sends alpha to the Prover.
+We use additive notation for the group operation, so alpha * g is g raised to the exponent alpha.
 
 The protocol we follow for proofs of discrete logarithm representations is inspired from page 34 of Boneh, Bünz and Fisch, Batching Techniques for Accumulators with Applications to IOPs and Stateless Blockchains, Crypto 2019.
 """
@@ -62,9 +63,11 @@ class IntPt:
         self.pt = value
         self.group = modulus
 
+    # We use additive notation for the group operation, so IntPt.__add__ is actually multiplication.
     def __add__(self, o):
         return IntPt((self.pt * o.pt) % self.group.modulus, self.group)
 
+    # Similarly, IntPt.__rmul__ is actually exponentiation.
     def __rmul__(self, o):
         if o < 0:
             return IntPt(
