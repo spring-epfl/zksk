@@ -1,6 +1,8 @@
 """
 Proof of knowledge of a discrete logarithm in a subgroup of an RSA group:
-PK{ (x): y = x * g}
+PK{ (x): y = x * g}.
+
+Here, the group operation is written additively, so x * g is g multiplied by itself x times.
 """
 
 from petlib.bn import Bn
