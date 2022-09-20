@@ -52,7 +52,7 @@ def test_additive_point(bp_group, group_pair):
     assert AdditivePoint(g ** (g.group.order()), group_pair) == group_pair.GT.infinite()
 
     r = bp_group.order().random()
-    g1, g1mg = g ** r, r * gmg
+    g1, g1mg = g**r, r * gmg
     assert g1 == g1mg.pt
     assert g1 * g1 * g1 == (g1mg + g1mg + g1mg).pt
     assert g1.export() == g1mg.export()

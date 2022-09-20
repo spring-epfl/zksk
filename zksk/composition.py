@@ -14,6 +14,7 @@ from petlib.pack import encode
 from zksk.consts import CHALLENGE_LENGTH
 from zksk.base import Prover, Verifier, SimulationTranscript
 from zksk.expr import Secret, update_secret_values
+from zksk.rsa_group import IntPt
 from zksk.utils import get_random_num, sum_bn_array
 from zksk.utils.misc import get_default_attr
 from zksk.exceptions import StatementSpecError, StatementMismatch
@@ -372,14 +373,22 @@ class _CommonComposedStmtMixin:
         # the same group
         for (word, gen_idx) in mydict.items():
             # Word is the key, gen_idx is the value = a list of indices
-            ref_order = bases[gen_idx[0]].group.order()
-
-            for index in gen_idx:
-                if bases[index].group.order() != ref_order:
-                    raise GroupMismatchError(
-                        "A shared secret has bases which yield different group orders: %s"
-                        % word
-                    )
+            if isinstance(bases[0], IntPt):
+                ref_modulus = bases[gen_idx[0]].group.modulus
+                for index in gen_idx:
+                    if bases[index].group.modulus != ref_modulus:
+                        raise GroupMismatchError(
+                            "A shared secret has bases which yield different group orders: %s"
+                            % word
+                        )
+            else:
+                ref_order = bases[gen_idx[0]].group.order()
+                for index in gen_idx:
+                    if bases[index].group.order() != ref_order:
+                        raise GroupMismatchError(
+                            "A shared secret has bases which yield different group orders: %s"
+                            % word
+                        )
 
     def get_proof_id(self, secret_id_map=None):
         secret_vars = self.get_secret_vars()
@@ -770,8 +779,19 @@ class AndProofStmt(_CommonComposedStmtMixin, ComposableProofStmt):
         dict_name_gen = {s: g for s, g in zip(self.get_secret_vars(), self.get_bases())}
 
         # Pair each Secret to a randomizer.
-        for u in dict_name_gen:
-            random_vals[u] = dict_name_gen[u].group.order().random()
+
+        if isinstance(self.get_bases()[0], IntPt):
+            rand_range = self.get_bases()[0].group.modulus * pow(
+                2, 2 * CHALLENGE_LENGTH
+            )
+            for u in dict_name_gen:
+                val = rand_range.random()
+                if Bn(2).random() == 0:
+                    val = -val
+                random_vals[u] = val
+        else:
+            for u in dict_name_gen:
+                random_vals[u] = dict_name_gen[u].group.order().random()
 
         return random_vals
 
